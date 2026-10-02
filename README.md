@@ -2,6 +2,11 @@
 
 > **Marketplace de mobilidade urbana 100% regional** conectando passageiros e motoristas parceiros com taxa zero sobre corridas em São Sebastião, Ilhabela e Litoral Norte de São Paulo.
 
+[![Status](https://img.shields.io/badge/Status-Online%20no%20Cloud%20Run-success?style=for-the-badge&logo=googlecloud)](https://vaicar-app-770203144889.southamerica-east1.run.app)
+[![Acessar](https://img.shields.io/badge/Acessar%20Plataforma-vaicar--app-blue?style=for-the-badge&logo=googlechrome)](https://vaicar-app-770203144889.southamerica-east1.run.app)
+
+🔗 **Link Oficial no Ar:** [https://vaicar-app-770203144889.southamerica-east1.run.app](https://vaicar-app-770203144889.southamerica-east1.run.app)
+
 ---
 
 ## 🚀 Visão Geral do Produto
