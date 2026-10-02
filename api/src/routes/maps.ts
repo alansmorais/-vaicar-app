@@ -65,7 +65,7 @@ mapsRouter.post('/geocode', async (req: Request, res: Response, next: NextFuncti
       try {
         const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address + ', São Sebastião, SP')}&key=${config.googleMaps.apiKey}`;
         const response = await fetch(url);
-        const data = await response.json();
+        const data = (await response.json()) as any;
         if (data.results && data.results.length > 0) {
           const first = data.results[0];
           return res.json({

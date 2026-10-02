@@ -1,0 +1,11 @@
+node_modules
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+dist
+tests/screenshots
+*.log
+.DS_Store
+Thumbs.db

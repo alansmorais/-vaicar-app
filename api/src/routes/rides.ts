@@ -158,7 +158,7 @@ ridesRouter.post('/:id/accept', async (req: Request, res: Response, next: NextFu
       throw new AppError(ErrorCode.FORBIDDEN, 'Você deve estar online para aceitar corridas.', 403);
     }
 
-    const ride = await getRide(req.params.id);
+    const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
     if (ride.status !== 'REQUESTED') {
@@ -195,7 +195,7 @@ ridesRouter.post('/:id/accept', async (req: Request, res: Response, next: NextFu
  */
 ridesRouter.post('/:id/arrived', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const ride = await getRide(req.params.id);
+    const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
     if (ride.driverId !== req.user!.uid && !req.user!.isAdmin) {
@@ -232,7 +232,7 @@ ridesRouter.post('/:id/arrived', async (req: Request, res: Response, next: NextF
  */
 ridesRouter.post('/:id/start', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const ride = await getRide(req.params.id);
+    const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
     if (ride.driverId !== req.user!.uid && !req.user!.isAdmin) {
@@ -269,7 +269,7 @@ ridesRouter.post('/:id/start', async (req: Request, res: Response, next: NextFun
  */
 ridesRouter.post('/:id/complete', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const ride = await getRide(req.params.id);
+    const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
     if (ride.driverId !== req.user!.uid && !req.user!.isAdmin) {
@@ -374,7 +374,7 @@ ridesRouter.post('/:id/complete', async (req: Request, res: Response, next: Next
  */
 ridesRouter.post('/:id/cancel', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const ride = await getRide(req.params.id);
+    const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
     const uid = req.user!.uid;
@@ -419,7 +419,7 @@ ridesRouter.post('/:id/cancel', async (req: Request, res: Response, next: NextFu
  */
 ridesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const ride = await getRide(req.params.id);
+    const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
     const uid = req.user!.uid;
@@ -442,7 +442,7 @@ ridesRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) 
  */
 ridesRouter.post('/:id/rate', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const ride = await getRide(req.params.id);
+    const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
     if (ride.passengerId !== req.user!.uid) {

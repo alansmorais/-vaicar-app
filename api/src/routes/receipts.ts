@@ -7,7 +7,7 @@ export const receiptsRouter = Router();
 
 receiptsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const receipt = await getReceipt(req.params.id);
+    const receipt = await getReceipt(String(req.params.id));
     if (!receipt) throw new AppError(ErrorCode.NOT_FOUND, 'Recibo não encontrado.', 404);
 
     res.json({
@@ -22,7 +22,7 @@ receiptsRouter.get('/:id', async (req: Request, res: Response, next: NextFunctio
 
 receiptsRouter.get('/:id/html', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const receipt = await getReceipt(req.params.id);
+    const receipt = await getReceipt(String(req.params.id));
     if (!receipt) throw new AppError(ErrorCode.NOT_FOUND, 'Recibo não encontrado.', 404);
 
     const html = `

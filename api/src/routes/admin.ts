@@ -51,7 +51,7 @@ adminRouter.get('/drivers', async (req: Request, res: Response, next: NextFuncti
 
 adminRouter.post('/drivers/:id/approve', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver = await getDriverProfile(req.params.id);
+    const driver = await getDriverProfile(String(req.params.id));
     if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
 
     const updated = {
@@ -78,7 +78,7 @@ adminRouter.post('/drivers/:id/approve', async (req: Request, res: Response, nex
 
 adminRouter.post('/drivers/:id/reject', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver = await getDriverProfile(req.params.id);
+    const driver = await getDriverProfile(String(req.params.id));
     if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
 
     const { reason } = req.body;
@@ -106,7 +106,7 @@ adminRouter.post('/drivers/:id/reject', async (req: Request, res: Response, next
 
 adminRouter.post('/drivers/:id/suspend', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver = await getDriverProfile(req.params.id);
+    const driver = await getDriverProfile(String(req.params.id));
     if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
 
     const { reason } = req.body;
