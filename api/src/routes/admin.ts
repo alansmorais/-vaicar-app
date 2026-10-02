@@ -8,7 +8,12 @@ import {
   getDriverProfile,
   saveDriverProfile,
   listAllPassengers,
+  getPassengerProfile,
+  savePassengerProfile,
   listAllRides,
+  listAllReports,
+  getReport,
+  saveReport,
   getPlatformPricing,
   updatePlatformPricing,
 } from '../services/firestore.js';
@@ -139,6 +144,97 @@ adminRouter.get('/passengers', async (req: Request, res: Response, next: NextFun
       success: true,
       requestId: req.id,
       data: passengers,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/passengers/:id/block', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const passenger = await getPassengerProfile(String(req.params.id));
+    if (!passenger) throw new AppError(ErrorCode.NOT_FOUND, 'Passageiro não encontrado.', 404);
+
+    const { reason, unpaidAmount } = req.body;
+    const updated = {
+      ...passenger,
+      isBlocked: true,
+      blockedReason: reason || 'Bloqueado administrativamente por falta de pagamento ou conduta inadequada.',
+      hasUnpaidDebt: unpaidAmount ? true : passenger.hasUnpaidDebt,
+      unpaidAmount: unpaidAmount !== undefined ? Number(unpaidAmount) : passenger.unpaidAmount,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await savePassengerProfile(updated);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/passengers/:id/unblock', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const passenger = await getPassengerProfile(String(req.params.id));
+    if (!passenger) throw new AppError(ErrorCode.NOT_FOUND, 'Passageiro não encontrado.', 404);
+
+    const updated = {
+      ...passenger,
+      isBlocked: false,
+      blockedReason: undefined,
+      hasUnpaidDebt: false,
+      unpaidAmount: 0,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await savePassengerProfile(updated);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/reports', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const reports = await listAllReports();
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: reports.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/reports/:id/resolve', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const report = await getReport(String(req.params.id));
+    if (!report) throw new AppError(ErrorCode.NOT_FOUND, 'Relato não encontrado.', 404);
+
+    const { resolutionNote, status } = req.body;
+    const updated = {
+      ...report,
+      status: status === 'DISMISSED' ? ('DISMISSED' as const) : ('RESOLVED' as const),
+      resolutionNote: resolutionNote || 'Resolvido pela administração.',
+      resolvedAt: new Date().toISOString(),
+    };
+
+    await saveReport(updated);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: updated,
     });
   } catch (error) {
     next(error);

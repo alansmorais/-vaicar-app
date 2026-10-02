@@ -18,6 +18,8 @@ import {
   Car,
   Clock,
   ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
   Star,
   X,
   AlertCircle,
@@ -25,6 +27,7 @@ import {
   CheckCircle,
   FileText,
 } from 'lucide-react';
+import { ReportModal } from '../../components/ReportModal.js';
 
 export const PassengerDashboardPage: React.FC = () => {
   const { user, profile, passenger, logout, devLogin } = useAuth();
@@ -53,6 +56,10 @@ export const PassengerDashboardPage: React.FC = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingStars, setRatingStars] = useState(5);
   const [ratingFeedback, setRatingFeedback] = useState('');
+
+  // Report modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ rideId?: string; targetName?: string } | null>(null);
 
   // Profile edit state
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -275,6 +282,35 @@ export const PassengerDashboardPage: React.FC = () => {
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Control Panel */}
         <div className="lg:col-span-5 space-y-5">
+          {/* PASSENGER BLOCKED ALERT */}
+          {passenger?.isBlocked && (
+            <div className="p-5 rounded-2xl bg-rose-950/80 border-2 border-rose-500 text-rose-200 text-xs space-y-2.5 shadow-2xl">
+              <div className="flex items-center gap-2 font-bold text-sm text-white">
+                <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
+                <span>Conta Suspensa por Falta de Pagamento</span>
+              </div>
+              <p className="leading-relaxed text-slate-200">
+                {passenger.blockedReason ||
+                  'Sua conta está impossibilitada de solicitar novas corridas devido a pendências de pagamento com motoristas parceiros.'}
+              </p>
+              {passenger.hasUnpaidDebt && passenger.unpaidAmount && (
+                <div className="p-2.5 rounded-xl bg-slate-950/70 border border-rose-800 font-semibold text-rose-300">
+                  Débito pendente: R$ {passenger.unpaidAmount.toFixed(2)}
+                </div>
+              )}
+              <div className="pt-1">
+                <a
+                  href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-colors shadow-lg"
+                >
+                  Regularizar Débito no WhatsApp Oficial
+                </a>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-600/60 text-rose-300 text-xs flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
@@ -357,29 +393,43 @@ export const PassengerDashboardPage: React.FC = () => {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
-                {activeRide.status !== 'COMPLETED' && (
-                  <button
-                    onClick={handleCancelRide}
-                    className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors"
-                  >
-                    Cancelar Corrida
-                  </button>
-                )}
-                {activeRide.receiptId && (
-                  <button
-                    onClick={() => {
-                      if (activeRide.receiptId) {
-                        import('../../api/receipts.js').then(({ receiptsApi }) => {
-                          receiptsApi.getById(activeRide.receiptId!).then(setReceiptToShow);
-                        });
-                      }
-                    }}
-                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5"
-                  >
-                    <FileText className="w-4 h-4" /> Ver Recibo
-                  </button>
-                )}
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  {activeRide.status !== 'COMPLETED' && (
+                    <button
+                      onClick={handleCancelRide}
+                      className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors"
+                    >
+                      Cancelar Corrida
+                    </button>
+                  )}
+                  {activeRide.receiptId && (
+                    <button
+                      onClick={() => {
+                        if (activeRide.receiptId) {
+                          import('../../api/receipts.js').then(({ receiptsApi }) => {
+                            receiptsApi.getById(activeRide.receiptId!).then(setReceiptToShow);
+                          });
+                        }
+                      }}
+                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5"
+                    >
+                      <FileText className="w-4 h-4" /> Ver Recibo
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReportTarget({ rideId: activeRide.id, targetName: activeRide.driverName });
+                    setShowReportModal(true);
+                  }}
+                  className="w-full py-2 rounded-xl bg-slate-950 hover:bg-rose-950/60 hover:text-rose-300 border border-slate-800 text-slate-400 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                  Reportar Problema com o Motorista
+                </button>
               </div>
             </div>
           ) : (
@@ -539,10 +589,18 @@ export const PassengerDashboardPage: React.FC = () => {
               {/* Request CTA */}
               <button
                 onClick={handleRequestRide}
-                disabled={loading || !destination}
-                className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/40 transition-all hover:scale-[1.01]"
+                disabled={loading || !destination || Boolean(passenger?.isBlocked)}
+                className={`w-full py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all ${
+                  passenger?.isBlocked
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                    : 'bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-emerald-950/40 hover:scale-[1.01]'
+                }`}
               >
-                {loading ? 'Solicitando...' : 'Confirmar e Pedir VaiCar'}
+                {loading
+                  ? 'Solicitando...'
+                  : passenger?.isBlocked
+                  ? 'Conta Suspensa por Falta de Pagamento'
+                  : 'Confirmar e Pedir VaiCar'}
               </button>
             </div>
           )}
@@ -671,6 +729,15 @@ export const PassengerDashboardPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* REPORT MODAL */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        rideId={reportTarget?.rideId}
+        targetRole="driver"
+        targetName={reportTarget?.targetName}
+      />
     </div>
   );
 };

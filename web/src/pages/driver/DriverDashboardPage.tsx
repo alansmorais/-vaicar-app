@@ -24,7 +24,9 @@ import {
   History,
   FileText,
   ArrowRight,
+  AlertTriangle,
 } from 'lucide-react';
+import { ReportModal } from '../../components/ReportModal.js';
 
 export const DriverDashboardPage: React.FC = () => {
   const { user, profile, logout } = useAuth();
@@ -36,6 +38,10 @@ export const DriverDashboardPage: React.FC = () => {
   const [activeRide, setActiveRide] = useState<Ride | null>(null);
   const [rideHistory, setRideHistory] = useState<Ride[]>([]);
   const [receiptToShow, setReceiptToShow] = useState<Receipt | null>(null);
+
+  // Report modal state
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
+  const [reportTarget, setReportTarget] = useState<{ rideId?: string; targetName?: string; amount?: number } | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
@@ -536,12 +542,48 @@ export const DriverDashboardPage: React.FC = () => {
               )}
 
               {activeRide.status === 'IN_PROGRESS' && (
+                <div className="space-y-2">
+                  <button
+                    onClick={handleCompleteRide}
+                    disabled={actionLoading}
+                    className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    Finalizar Viagem (COMPLETE) & Gerar Recibo
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReportTarget({
+                        rideId: activeRide.id,
+                        targetName: activeRide.passengerName,
+                        amount: activeRide.fareAmount,
+                      });
+                      setShowReportModal(true);
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-600/50 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-rose-400" />
+                    Passageiro Não Pagou (Reportar Calote & Bloquear)
+                  </button>
+                </div>
+              )}
+
+              {activeRide.status !== 'IN_PROGRESS' && activeRide.status !== 'COMPLETED' && (
                 <button
-                  onClick={handleCompleteRide}
-                  disabled={actionLoading}
-                  className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
+                  type="button"
+                  onClick={() => {
+                    setReportTarget({
+                      rideId: activeRide.id,
+                      targetName: activeRide.passengerName,
+                      amount: activeRide.fareAmount,
+                    });
+                    setShowReportModal(true);
+                  }}
+                  className="w-full mt-2 py-2 rounded-xl bg-slate-950 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-800 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
                 >
-                  Finalizar Viagem (COMPLETE) & Gerar Recibo
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                  Reportar Passageiro / Ocorrência
                 </button>
               )}
 
@@ -686,6 +728,21 @@ export const DriverDashboardPage: React.FC = () => {
 
       {/* RECEIPT MODAL */}
       {receiptToShow && <ReceiptModal receipt={receiptToShow} onClose={() => setReceiptToShow(null)} />}
+
+      {/* REPORT MODAL */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        rideId={reportTarget?.rideId}
+        targetRole="passenger"
+        targetName={reportTarget?.targetName}
+        defaultAmount={reportTarget?.amount}
+        onSuccess={() => {
+          if (activeRide) {
+            setActiveRide(null);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -37,6 +37,25 @@ export const adminApi = {
 
   getPassengers: () => apiFetch<PassengerProfile[]>('/admin/passengers'),
 
+  blockPassenger: (passengerId: string, reason?: string, unpaidAmount?: number) =>
+    apiFetch<PassengerProfile>(`/admin/passengers/${passengerId}/block`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, unpaidAmount }),
+    }),
+
+  unblockPassenger: (passengerId: string) =>
+    apiFetch<PassengerProfile>(`/admin/passengers/${passengerId}/unblock`, {
+      method: 'POST',
+    }),
+
+  getReports: () => apiFetch<any[]>('/admin/reports'),
+
+  resolveReport: (reportId: string, resolutionNote?: string, status: 'RESOLVED' | 'DISMISSED' = 'RESOLVED') =>
+    apiFetch<any>(`/admin/reports/${reportId}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ resolutionNote, status }),
+    }),
+
   getRides: () => apiFetch<Ride[]>('/admin/rides'),
 
   getPricing: () => apiFetch<PlatformPricingSettings>('/admin/pricing'),

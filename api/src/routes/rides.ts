@@ -95,6 +95,21 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
       throw new AppError(ErrorCode.FORBIDDEN, 'Apenas passageiros cadastrados podem solicitar corridas.', 403);
     }
 
+    // Check if passenger is blocked (e.g. for not paying the driver)
+    if (passenger.isBlocked) {
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        passenger.blockedReason ||
+          'Sua conta está impossibilitada de solicitar novas corridas devido a pendências de pagamento com motoristas. Entre em contato com o suporte para regularizar.',
+        403,
+        {
+          isBlocked: true,
+          hasUnpaidDebt: passenger.hasUnpaidDebt,
+          unpaidAmount: passenger.unpaidAmount,
+        }
+      );
+    }
+
     // Check if passenger already has active ride
     const existingActive = await getActiveRideForUser(passengerId, 'passenger');
     if (existingActive) {

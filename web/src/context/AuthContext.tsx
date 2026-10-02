@@ -185,9 +185,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       return cred.user;
     } catch (err: any) {
+      // If email is already in use (e.g. passenger registering as driver or vice-versa), sign in with existing credentials
+      if (err?.code === 'auth/email-already-in-use') {
+        try {
+          const signInCred = await signInWithEmailAndPassword(auth, email, pass);
+          return signInCred.user;
+        } catch (signInErr) {
+          console.warn('[VaiCar Auth] Existing account sign-in failed, proceeding with fallback token:', signInErr);
+        }
+      }
+
       console.warn('[VaiCar Auth] Firebase client register fallback triggered:', err?.message || err);
-      // If Firebase Auth Client has any error (e.g. Identity Toolkit blocked, invalid api key, etc.),
-      // create user session token so backend API can register the profile directly
+      // If Firebase Auth Client has any error or local mock, create user session token
       const uid = `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const dummyUser = {
         uid,

@@ -4,6 +4,8 @@ import { ErrorCode } from '../../../shared/src/errors.js';
 import {
   isValidEmail,
   isValidWhatsApp,
+  isValidInternationalPhone,
+  normalizeInternationalPhone,
   isValidCPF,
   isValidCNH,
   isValidPlate,
@@ -48,8 +50,8 @@ authRouter.post('/register-passenger', async (req: Request, res: Response, next:
     if (!name || typeof name !== 'string' || name.trim().length < 2) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Nome completo é obrigatório.', 400);
     }
-    if (!whatsapp || !isValidWhatsApp(whatsapp)) {
-      throw new AppError(ErrorCode.VALIDATION_ERROR, 'WhatsApp brasileiro válido é obrigatório.', 400);
+    if (!whatsapp || !isValidInternationalPhone(whatsapp)) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'WhatsApp / Telefone internacional válido é obrigatório.', 400);
     }
     if (!email || !isValidEmail(email)) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'E-mail válido é obrigatório.', 400);
@@ -61,35 +63,48 @@ authRouter.post('/register-passenger', async (req: Request, res: Response, next:
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Aceite dos termos de uso é obrigatório.', 400);
     }
 
-    // Check duplicate registrations
+    // Check duplicate registrations (allows existing driver to register as passenger)
     const existingByEmail = await findUserByEmail(email);
     if (existingByEmail && existingByEmail.uid !== uid) {
-      throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe uma conta cadastrada com este e-mail.', 409);
+      const existingPassenger = await getPassengerProfile(existingByEmail.uid);
+      if (existingPassenger) {
+        throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe uma conta de passageiro cadastrada com este e-mail.', 409);
+      }
     }
 
     const existingByPhone = await findUserByWhatsApp(whatsapp);
-    if (existingByPhone && existingByPhone.uid !== uid) {
-      throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe uma conta cadastrada com este WhatsApp.', 409);
+    if (existingByPhone && existingByPhone.uid !== uid && (!existingByEmail || existingByPhone.uid !== existingByEmail.uid)) {
+      const existingPassenger = await getPassengerProfile(existingByPhone.uid);
+      if (existingPassenger) {
+        throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe uma conta de passageiro cadastrada com este WhatsApp.', 409);
+      }
     }
 
+    const effectiveUid = existingByEmail ? existingByEmail.uid : uid;
     const now = new Date().toISOString();
     const hasRecordCheck = Boolean(hasCriminalRecordCheck || criminalRecordUrl);
+    const normalizedPhone = normalizeInternationalPhone(whatsapp);
+
+    const isDriverAlready = Boolean(existingByEmail?.isDriver || (await getDriverProfile(effectiveUid)));
+
     const userProfile: UserProfile = {
-      uid,
+      uid: effectiveUid,
       email: email.trim().toLowerCase(),
       displayName: name.trim(),
-      role: 'passenger',
+      role: isDriverAlready ? 'driver' : 'passenger',
+      isPassenger: true,
+      isDriver: isDriverAlready,
       photoUrl,
-      whatsapp: whatsapp.replace(/\D/g, ''),
-      createdAt: now,
+      whatsapp: normalizedPhone,
+      createdAt: existingByEmail?.createdAt || now,
       updatedAt: now,
     };
 
     const passengerProfile: PassengerProfile = {
-      uid,
+      uid: effectiveUid,
       name: name.trim(),
       email: email.trim().toLowerCase(),
-      whatsapp: whatsapp.replace(/\D/g, ''),
+      whatsapp: normalizedPhone,
       photoUrl,
       termsAccepted: true,
       hasCriminalRecordCheck: hasRecordCheck,
@@ -160,8 +175,8 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
     if (!birthDate || !isAdult(birthDate)) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Data de nascimento inválida. O motorista deve ser maior de 18 anos.', 400);
     }
-    if (!whatsapp || !isValidWhatsApp(whatsapp)) {
-      throw new AppError(ErrorCode.VALIDATION_ERROR, 'WhatsApp brasileiro válido é obrigatório.', 400);
+    if (!whatsapp || !isValidInternationalPhone(whatsapp)) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'WhatsApp / Telefone internacional válido é obrigatório.', 400);
     }
     if (!email || !isValidEmail(email)) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'E-mail válido é obrigatório.', 400);
@@ -191,39 +206,52 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Selecione ao menos uma região de atuação em São Sebastião.', 400);
     }
 
-    // Check duplicates
+    // Check duplicates (allows existing passenger to register as driver)
     const dupEmail = await findUserByEmail(email);
     if (dupEmail && dupEmail.uid !== uid) {
-      throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe cadastro com este e-mail.', 409);
+      const existingDriver = await getDriverProfile(dupEmail.uid);
+      if (existingDriver) {
+        throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe cadastro de motorista com este e-mail.', 409);
+      }
     }
     const dupPhone = await findUserByWhatsApp(whatsapp);
-    if (dupPhone && dupPhone.uid !== uid) {
-      throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe cadastro com este WhatsApp.', 409);
+    if (dupPhone && dupPhone.uid !== uid && (!dupEmail || dupPhone.uid !== dupEmail.uid)) {
+      const existingDriver = await getDriverProfile(dupPhone.uid);
+      if (existingDriver) {
+        throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe cadastro de motorista com este WhatsApp.', 409);
+      }
     }
     const dupCpf = await findDriverByCpf(cpf);
-    if (dupCpf && dupCpf.uid !== uid) {
+    if (dupCpf && dupCpf.uid !== uid && (!dupEmail || dupCpf.uid !== dupEmail.uid)) {
       throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe cadastro com este CPF.', 409);
     }
 
+    const effectiveUid = dupEmail ? dupEmail.uid : uid;
     const now = new Date().toISOString();
+    const normalizedPhone = normalizeInternationalPhone(whatsapp);
+
+    const isPassengerAlready = Boolean(dupEmail?.isPassenger || (await getPassengerProfile(effectiveUid)));
+
     const userProfile: UserProfile = {
-      uid,
+      uid: effectiveUid,
       email: email.trim().toLowerCase(),
       displayName: name.trim(),
       role: 'driver',
+      isDriver: true,
+      isPassenger: isPassengerAlready,
       photoUrl,
-      whatsapp: whatsapp.replace(/\D/g, ''),
-      createdAt: now,
+      whatsapp: normalizedPhone,
+      createdAt: dupEmail?.createdAt || now,
       updatedAt: now,
     };
 
     const driverProfile: DriverProfile = {
-      uid,
+      uid: effectiveUid,
       name: name.trim(),
       cpf: cpf.replace(/\D/g, ''),
       birthDate,
       email: email.trim().toLowerCase(),
-      whatsapp: whatsapp.replace(/\D/g, ''),
+      whatsapp: normalizedPhone,
       photoUrl,
       professionalCategory,
       cnhNumber: isBicycle ? (cnhNumber || 'ISENTO_BIKE') : cnhNumber.replace(/\D/g, ''),
@@ -346,23 +374,35 @@ authRouter.post('/verify-pin', async (req: Request, res: Response, next: NextFun
 authRouter.get('/me', authenticate, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const uid = req.user!.uid;
-    const user = await getUserProfile(uid);
-    let passenger: PassengerProfile | null = null;
-    let driver: DriverProfile | null = null;
-
-    if (user?.role === 'passenger') {
-      passenger = await getPassengerProfile(uid);
-    } else if (user?.role === 'driver') {
-      driver = await getDriverProfile(uid);
+    let user = await getUserProfile(uid);
+    let effectiveUid = uid;
+    if (!user && req.user!.email) {
+      const byEmail = await findUserByEmail(req.user!.email);
+      if (byEmail) {
+        user = byEmail;
+        effectiveUid = byEmail.uid;
+      }
     }
+    const passenger = await getPassengerProfile(effectiveUid);
+    const driver = await getDriverProfile(effectiveUid);
+
+    const userWithRoles = user
+      ? {
+          ...user,
+          isDriver: Boolean(driver),
+          isPassenger: Boolean(passenger),
+        }
+      : null;
 
     res.json({
       success: true,
       requestId: req.id,
       data: {
-        user,
+        user: userWithRoles,
         passenger,
         driver,
+        passengerProfile: passenger,
+        driverProfile: driver,
         isAdmin: req.user!.isAdmin || user?.isAdmin || false,
       },
     });

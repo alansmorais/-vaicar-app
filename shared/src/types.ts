@@ -12,6 +12,8 @@ export interface UserProfile {
   photoUrl?: string;
   whatsapp?: string;
   isAdmin?: boolean;
+  isDriver?: boolean;
+  isPassenger?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +28,10 @@ export interface PassengerProfile {
   hasCriminalRecordCheck?: boolean;
   criminalRecordUrl?: string;
   criminalRecordStatus?: 'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  isBlocked?: boolean;
+  blockedReason?: string;
+  hasUnpaidDebt?: boolean;
+  unpaidAmount?: number;
   rating?: number;
   totalRides?: number;
   createdAt: string;
@@ -175,4 +181,42 @@ export interface AdminMetrics {
   totalPassengers: number;
   totalDrivers: number;
   grossVolumeBRL: number;
+}
+
+export type ReportCategory =
+  | 'UNPAID_FARE'        // Passageiro não pagou a corrida (calote)
+  | 'OVERCHARGING'       // Cobrança indevida
+  | 'DANGEROUS_DRIVING'  // Direção perigosa
+  | 'VEHICLE_ISSUE'      // Problema com veículo
+  | 'MISCONDUCT'         // Mau comportamento
+  | 'NO_SHOW'            // Não compareceu
+  | 'OTHER';             // Outro
+
+export type ReportStatus = 'PENDING' | 'RESOLVED' | 'DISMISSED';
+
+export interface Report {
+  id: string;
+  rideId?: string;
+  reporterRole: 'driver' | 'passenger';
+  reporterId: string;
+  reporterName: string;
+  reporterPhone?: string;
+  targetRole: 'driver' | 'passenger';
+  targetId: string;
+  targetName: string;
+  category: ReportCategory;
+  description: string;
+  unpaidAmount?: number;
+  status: ReportStatus;
+  resolutionNote?: string;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface CreateReportInput {
+  rideId?: string;
+  category: ReportCategory;
+  description: string;
+  unpaidAmount?: number;
+  targetUserId?: string;
 }

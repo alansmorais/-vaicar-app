@@ -9,32 +9,64 @@ export function cleanDigits(value: string): string {
 }
 
 /**
- * Validates Brazilian WhatsApp number.
- * Must include 2-digit DDD + 9-digit mobile number starting with 9.
- * Optional country code 55. Total digits: 11 (or 13 with 55).
+ * Validates international phone / WhatsApp number (E.164 format or Brazilian standard).
+ * Supports numbers from 8 to 15 digits:
+ * - Brazilian numbers: 11 digits (DDD + 9 digits) or 13 digits (+55)
+ * - International numbers: 8 to 15 digits with or without leading '+'
  */
-export function isValidWhatsApp(phone: string | null | undefined): boolean {
+export function isValidInternationalPhone(phone: string | null | undefined): boolean {
   if (!phone || typeof phone !== 'string') return false;
-  const digits = cleanDigits(phone);
-  
-  // Reject obvious test dummy strings or emails disguised as phones
-  if (phone.includes('@') || phone.includes('vaicar.local')) return false;
+  const trimmed = phone.trim();
 
-  // With country code 55
+  // Reject obvious test dummy strings or emails disguised as phones
+  if (trimmed.includes('@') || trimmed.includes('vaicar.local')) return false;
+
+  const digits = cleanDigits(trimmed);
+  if (digits.length < 8 || digits.length > 15) return false;
+
+  // Reject all same repeated digits (e.g. 00000000000, 11111111111)
+  if (/^(\d)\1+$/.test(digits)) return false;
+
+  // If Brazilian format without country code (11 digits): validate DDD and mobile 9
+  if (digits.length === 11 && !trimmed.startsWith('+1') && !trimmed.startsWith('+4') && !trimmed.startsWith('+3')) {
+    const ddd = parseInt(digits.substring(0, 2), 10);
+    const ninthDigit = digits.charAt(2);
+    // If it's a Brazilian 11-digit number, ensure DDD is 11-99 and starts with 9
+    if (ddd >= 11 && ddd <= 99) {
+      return ninthDigit === '9';
+    }
+  }
+
+  // If Brazilian format with country code 55 (13 digits)
   if (digits.length === 13 && digits.startsWith('55')) {
     const ddd = parseInt(digits.substring(2, 4), 10);
     const ninthDigit = digits.charAt(4);
     return ddd >= 11 && ddd <= 99 && ninthDigit === '9';
   }
 
-  // Without country code (DDD + 9 digits)
-  if (digits.length === 11) {
-    const ddd = parseInt(digits.substring(0, 2), 10);
-    const ninthDigit = digits.charAt(2);
-    return ddd >= 11 && ddd <= 99 && ninthDigit === '9';
-  }
+  // Any other international number with 8 to 15 digits is accepted
+  return true;
+}
 
-  return false;
+export function isValidWhatsApp(phone: string | null | undefined): boolean {
+  return isValidInternationalPhone(phone);
+}
+
+/**
+ * Normalizes a phone number into international E.164 format (+[country code][number])
+ */
+export function normalizeInternationalPhone(phone: string): string {
+  const digits = cleanDigits(phone);
+  if (digits.length === 11) {
+    return `+55${digits}`;
+  }
+  if (digits.length === 13 && digits.startsWith('55')) {
+    return `+${digits}`;
+  }
+  if (phone.trim().startsWith('+')) {
+    return `+${digits}`;
+  }
+  return `+${digits}`;
 }
 
 /**

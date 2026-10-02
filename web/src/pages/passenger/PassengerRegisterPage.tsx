@@ -64,7 +64,7 @@ export const PassengerRegisterPage: React.FC = () => {
       return;
     }
     if (!whatsapp.trim() || !isValidWhatsApp(whatsapp)) {
-      setError('Informe um número de WhatsApp brasileiro válido com DDD (ex: 12 99123-4567).');
+      setError('Informe um WhatsApp ou telefone internacional válido (ex: +55 12 99123-4567 ou +1 415 555-0199).');
       return;
     }
     if (!email.trim() || !isValidEmail(email)) {
@@ -225,7 +225,9 @@ export const PassengerRegisterPage: React.FC = () => {
 
           {/* WhatsApp */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp Brasileiro *</label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              WhatsApp / Telefone Internacional *
+            </label>
             <div className="relative">
               <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
               <input
@@ -233,10 +235,13 @@ export const PassengerRegisterPage: React.FC = () => {
                 required
                 value={whatsapp}
                 onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder="Ex: (12) 99123-4567"
+                placeholder="Ex: +55 (12) 99123-4567 ou +1 415 555-0199"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
               />
             </div>
+            <span className="text-[10px] text-slate-500 mt-1 block">
+              Aceita números do Brasil (+55) ou internacionais (E.164). Já é motorista parceiro? Use seu mesmo e-mail e WhatsApp!
+            </span>
           </div>
 
           {/* Email */}

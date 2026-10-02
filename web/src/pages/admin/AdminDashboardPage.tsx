@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Lock,
   User,
+  ShieldAlert,
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
@@ -31,13 +32,14 @@ export const AdminDashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<
-    'metrics' | 'drivers' | 'passengers' | 'rides' | 'pricing' | 'emails'
+    'metrics' | 'drivers' | 'passengers' | 'rides' | 'pricing' | 'emails' | 'reports'
   >('metrics');
 
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [drivers, setDrivers] = useState<DriverProfile[]>([]);
   const [passengers, setPassengers] = useState<PassengerProfile[]>([]);
   const [rides, setRides] = useState<Ride[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [pricing, setPricing] = useState<PlatformPricingSettings | null>(null);
   const [emailLogs, setEmailLogs] = useState<EmailLogItem[]>([]);
 
@@ -57,13 +59,14 @@ export const AdminDashboardPage: React.FC = () => {
   const loadAllAdminData = useCallback(async () => {
     setLoading(true);
     try {
-      const [m, d, p, r, pr, em] = await Promise.all([
+      const [m, d, p, r, pr, em, rep] = await Promise.all([
         adminApi.getMetrics(),
         adminApi.getDrivers(),
         adminApi.getPassengers(),
         adminApi.getRides(),
         adminApi.getPricing(),
         adminApi.getEmailDiagnostics(),
+        adminApi.getReports(),
       ]);
 
       setMetrics(m);
@@ -72,6 +75,7 @@ export const AdminDashboardPage: React.FC = () => {
       setRides(r);
       setPricing(pr);
       setEmailLogs(em);
+      setReports(rep || []);
 
       if (pr) {
         setBaseFare(String(pr.baseFare));
@@ -123,6 +127,39 @@ export const AdminDashboardPage: React.FC = () => {
       loadAllAdminData();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Falha ao suspender motorista.' });
+    }
+  };
+
+  const handleBlockPassenger = async (passengerId: string) => {
+    const reason = window.prompt('Informe o motivo do bloqueio do passageiro:');
+    if (!reason) return;
+    try {
+      await adminApi.blockPassenger(passengerId, reason);
+      setMessage({ type: 'success', text: 'Passageiro bloqueado com sucesso.' });
+      loadAllAdminData();
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Falha ao bloquear passageiro.' });
+    }
+  };
+
+  const handleUnblockPassenger = async (passengerId: string) => {
+    try {
+      await adminApi.unblockPassenger(passengerId);
+      setMessage({ type: 'success', text: 'Passageiro desbloqueado com sucesso!' });
+      loadAllAdminData();
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Falha ao desbloquear passageiro.' });
+    }
+  };
+
+  const handleResolveReport = async (reportId: string) => {
+    const note = window.prompt('Nota de resolução da administração (opcional):') || undefined;
+    try {
+      await adminApi.resolveReport(reportId, note, 'RESOLVED');
+      setMessage({ type: 'success', text: 'Ocorrência resolvida com sucesso!' });
+      loadAllAdminData();
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Falha ao resolver ocorrência.' });
     }
   };
 
@@ -217,6 +254,7 @@ export const AdminDashboardPage: React.FC = () => {
             { id: 'metrics', label: 'Métricas Gerais', icon: DollarSign },
             { id: 'drivers', label: `Motoristas (${drivers.length})`, icon: Car },
             { id: 'passengers', label: `Passageiros (${passengers.length})`, icon: Users },
+            { id: 'reports', label: `Denúncias (${reports.filter((r) => r.status === 'PENDING').length})`, icon: ShieldAlert },
             { id: 'rides', label: `Corridas (${rides.length})`, icon: RefreshCw },
             { id: 'pricing', label: 'Tabela de Tarifas', icon: Sliders },
             { id: 'emails', label: `E-mails (${emailLogs.length})`, icon: Mail },
@@ -473,23 +511,194 @@ export const AdminDashboardPage: React.FC = () => {
                     <th className="p-3">E-mail</th>
                     <th className="p-3">Total de Viagens</th>
                     <th className="p-3">Cadastrado em</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
                   {passengers.map((p) => (
                     <tr key={p.uid} className="hover:bg-slate-950/40">
-                      <td className="p-3 font-semibold text-white">{p.name}</td>
+                      <td className="p-3 font-semibold text-white">
+                        <div className="flex items-center gap-1.5">
+                          <span>{p.name}</span>
+                          {p.hasUnpaidDebt && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
+                              Débito R$ {(p.unpaidAmount || 0).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="p-3">{p.whatsapp}</td>
                       <td className="p-3 text-slate-400">{p.email}</td>
                       <td className="p-3 font-bold text-emerald-400">{p.totalRides || 0}</td>
                       <td className="p-3 text-slate-500">
                         {new Date(p.createdAt).toLocaleDateString('pt-BR')}
                       </td>
+                      <td className="p-3">
+                        {p.isBlocked ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-950 text-rose-400 border border-rose-800">
+                            Bloqueado
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-950 text-emerald-400 border border-emerald-800">
+                            Ativo
+                          </span>
+                        )}
+                        {p.blockedReason && (
+                          <div className="text-[10px] text-rose-400 mt-0.5 truncate max-w-xs" title={p.blockedReason}>
+                            {p.blockedReason}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {p.isBlocked ? (
+                            <button
+                              onClick={() => handleUnblockPassenger(p.uid)}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px]"
+                            >
+                              Desbloquear
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleBlockPassenger(p.uid)}
+                              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 font-semibold text-[11px]"
+                            >
+                              Bloquear
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* 4. REPORTS TAB */}
+        {activeTab === 'reports' && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-white">Denúncias & Relatos de Ocorrências</h3>
+                <p className="text-xs text-slate-400">
+                  Relatos de calote/não pagamento, conduta inadequada, direção perigosa e outros incidentes.
+                </p>
+              </div>
+              <span className="text-xs text-slate-400">
+                Total: <strong className="text-white">{reports.length}</strong> | Pendentes:{' '}
+                <strong className="text-rose-400">{reports.filter((r) => r.status === 'PENDING').length}</strong>
+              </span>
+            </div>
+
+            {reports.length === 0 ? (
+              <div className="text-center py-12 text-slate-500 text-xs">
+                Nenhuma denúncia registrada até o momento.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                    <tr>
+                      <th className="p-3">Data / ID</th>
+                      <th className="p-3">Categoria</th>
+                      <th className="p-3">Autor (Quem relatou)</th>
+                      <th className="p-3">Alvo da Denúncia</th>
+                      <th className="p-3">Detalhes / Descrição</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {reports.map((rep) => (
+                      <tr key={rep.id} className="hover:bg-slate-950/40">
+                        <td className="p-3 font-mono text-[11px]">
+                          <div>{rep.id.slice(0, 10)}...</div>
+                          <div className="text-slate-500">{new Date(rep.createdAt).toLocaleString('pt-BR')}</div>
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              rep.category === 'UNPAID_FARE'
+                                ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                                : 'bg-amber-950 text-amber-300 border border-amber-800'
+                            }`}
+                          >
+                            {rep.category === 'UNPAID_FARE' ? 'NÃO PAGAMENTO / CALOTE' : rep.category}
+                          </span>
+                          {rep.unpaidAmount && (
+                            <div className="text-[11px] font-bold text-rose-400 mt-1">
+                              R$ {rep.unpaidAmount.toFixed(2)}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <div className="font-semibold text-white">
+                            {rep.reporterRole === 'driver' ? '🚗 Motorista' : '👤 Passageiro'}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono">{rep.reporterId}</div>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-semibold text-white">
+                            {rep.targetRole === 'passenger' ? '👤 Passageiro' : '🚗 Motorista'}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono">{rep.targetId}</div>
+                        </td>
+                        <td className="p-3 max-w-xs">
+                          <div className="text-slate-200 line-clamp-2 text-xs">{rep.description}</div>
+                          {rep.rideId && (
+                            <div className="text-[10px] text-emerald-400 mt-1 font-mono">
+                              Corrida: {rep.rideId.slice(0, 15)}...
+                            </div>
+                          )}
+                          {rep.adminNotes && (
+                            <div className="text-[10px] text-slate-400 mt-1 italic">
+                              Obs Admin: {rep.adminNotes}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                              rep.status === 'RESOLVED'
+                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                                : rep.status === 'PENDING'
+                                ? 'bg-rose-950 text-rose-400 border border-rose-800'
+                                : 'bg-slate-800 text-slate-300'
+                            }`}
+                          >
+                            {rep.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {rep.status !== 'RESOLVED' && (
+                              <button
+                                onClick={() => handleResolveReport(rep.id)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px]"
+                              >
+                                Resolver
+                              </button>
+                            )}
+                            {rep.targetRole === 'passenger' && (
+                              <button
+                                onClick={() => handleUnblockPassenger(rep.targetId)}
+                                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-[11px]"
+                                title="Desbloquear este passageiro se o débito for pago"
+                              >
+                                Desbloquear
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 

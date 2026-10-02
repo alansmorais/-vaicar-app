@@ -389,4 +389,188 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(res.body.data.passenger.photoUrl).toBe('/uploads/users/test-pass-relative-upload/photo.jpg');
     });
   });
+
+  describe('Dual Registration & International Phone Numbers', () => {
+    const dualUserEmail = 'dual.user@teste.vaicar.app';
+    const internationalPhone = '+55 12 99888-7766';
+
+    it('allows passenger registration with international phone format', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/register-passenger')
+        .send({
+          uid: 'test-dual-user-pass',
+          name: 'Carlos Dual',
+          whatsapp: internationalPhone,
+          email: dualUserEmail,
+          photoUrl: 'https://storage.googleapis.com/vaicar-bucket/users/photo.jpg',
+          termsAccepted: true,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.passenger.whatsapp).toContain('5512998887766');
+    });
+
+    it('allows the same user (same email & whatsapp) to also register as driver', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/register-driver')
+        .send({
+          uid: 'test-dual-user-driver',
+          name: 'Carlos Dual',
+          cpf: '11144477735',
+          birthDate: '1990-08-12',
+          cnhNumber: '12345678901',
+          professionalCategory: 'Motorista de Aplicativo / EAR',
+          operatingZones: ['Centro & Porto Grande'],
+          whatsapp: internationalPhone,
+          email: dualUserEmail,
+          photoUrl: 'https://storage.googleapis.com/vaicar-bucket/users/photo.jpg',
+          vehicle: {
+            plate: 'ABC1D23',
+            model: 'Onix',
+            brand: 'Chevrolet',
+            year: 2022,
+            color: 'Prata',
+            category: 'CAR',
+          },
+          criminalRecordDocUrl: 'https://storage.googleapis.com/vaicar-bucket/users/doc.pdf',
+          subscriptionPlan: 'weekly_percent_10',
+          termsAccepted: true,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.driver.subscriptionPlan).toBe('weekly_percent_10');
+    });
+
+    it('returns both passenger and driver profiles in /auth/me for dual account', async () => {
+      const res = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer test-dual-user-driver:${dualUserEmail}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.user.isDriver).toBe(true);
+      expect(res.body.data.user.isPassenger).toBe(true);
+      expect(res.body.data.driverProfile).toBeDefined();
+      expect(res.body.data.passengerProfile).toBeDefined();
+    });
+  });
+
+  describe('Non-Payment (Calote) Reporting & Automatic Account Blocking', () => {
+    const victimPassengerUid = 'test-calote-passenger';
+    const victimEmail = 'caloteiro@teste.vaicar.app';
+    const victimToken = `${victimPassengerUid}:${victimEmail}`;
+
+    it('registers a test passenger for non-payment testing', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/register-passenger')
+        .send({
+          uid: victimPassengerUid,
+          name: 'Caloteiro Teste',
+          whatsapp: '+55 12 99999-0001',
+          email: victimEmail,
+          photoUrl: 'https://storage.googleapis.com/vaicar-bucket/users/photo.jpg',
+          termsAccepted: true,
+        });
+
+      expect(res.status).toBe(201);
+    });
+
+    it('driver reports passenger for UNPAID_FARE and passenger gets immediately blocked', async () => {
+      const res = await request(app)
+        .post('/api/v1/reports')
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({
+          targetId: victimPassengerUid,
+          targetRole: 'passenger',
+          category: 'UNPAID_FARE',
+          description: 'Passageiro saiu do carro dizendo que faria Pix e não enviou comprovante.',
+          unpaidAmount: 45.0,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.report.category).toBe('UNPAID_FARE');
+      expect(res.body.data.passengerBlocked).toBe(true);
+    });
+
+    it('blocked passenger is rejected from requesting new rides with HTTP 403', async () => {
+      const res = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${victimToken}`)
+        .send({
+          origin: {
+            lat: -23.7788,
+            lng: -45.4123,
+            address: 'Praia Grande, São Sebastião',
+          },
+          destination: {
+            lat: -23.7654,
+            lng: -45.4012,
+            address: 'Maresias, São Sebastião',
+          },
+          paymentMethod: 'CASH',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.details.isBlocked).toBe(true);
+    });
+
+    it('admin can list reports and resolve the incident', async () => {
+      const reportsRes = await request(app)
+        .get('/api/v1/admin/reports')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(reportsRes.status).toBe(200);
+      expect(reportsRes.body.data.length).toBeGreaterThan(0);
+
+      const unpaidReport = reportsRes.body.data.find(
+        (r: any) => r.targetId === victimPassengerUid && r.category === 'UNPAID_FARE'
+      );
+      expect(unpaidReport).toBeDefined();
+
+      // Admin resolves report
+      const resolveRes = await request(app)
+        .post(`/api/v1/admin/reports/${unpaidReport.id}/resolve`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          resolution: 'RESOLVED',
+          adminNotes: 'Acordo firmado e comprovante de pagamento apresentado.',
+        });
+
+      expect(resolveRes.status).toBe(200);
+      expect(resolveRes.body.data.status).toBe('RESOLVED');
+    });
+
+    it('admin unblocks the passenger who can now request rides again', async () => {
+      const unblockRes = await request(app)
+        .post(`/api/v1/admin/passengers/${victimPassengerUid}/unblock`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(unblockRes.status).toBe(200);
+      expect(unblockRes.body.data.isBlocked).toBe(false);
+
+      // Now ride request proceeds past blocked check (may fail if no driver online, but not 403 PASSENGER_BLOCKED)
+      const rideRes = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${victimToken}`)
+        .send({
+          origin: {
+            lat: -23.7788,
+            lng: -45.4123,
+            address: 'Praia Grande, São Sebastião',
+          },
+          destination: {
+            lat: -23.7654,
+            lng: -45.4012,
+            address: 'Maresias, São Sebastião',
+          },
+          paymentMethod: 'CASH',
+        });
+
+      expect(rideRes.status).not.toBe(403);
+    });
+  });
 });

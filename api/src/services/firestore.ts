@@ -5,6 +5,7 @@ import {
   DriverProfile,
   Ride,
   Receipt,
+  Report,
   PlatformPricingSettings,
   AdminMetrics,
 } from '../../../shared/src/types.js';
@@ -59,14 +60,20 @@ export async function findUserByEmail(email: string): Promise<UserProfile | null
 
 export async function findUserByWhatsApp(whatsapp: string): Promise<UserProfile | null> {
   const cleaned = whatsapp.replace(/\D/g, '');
+  const alt = cleaned.length === 11 ? `55${cleaned}` : cleaned.startsWith('55') && cleaned.length === 13 ? cleaned.slice(2) : cleaned;
   const db = getFirebaseAdminFirestore();
   if (db) {
-    const snap = await db.collection('users').where('whatsapp', '==', cleaned).limit(1).get();
-    if (!snap.empty) return snap.docs[0].data() as UserProfile;
+    const snap1 = await db.collection('users').where('whatsapp', '==', cleaned).limit(1).get();
+    if (!snap1.empty) return snap1.docs[0].data() as UserProfile;
+    if (alt !== cleaned) {
+      const snap2 = await db.collection('users').where('whatsapp', '==', alt).limit(1).get();
+      if (!snap2.empty) return snap2.docs[0].data() as UserProfile;
+    }
     return null;
   }
   for (const user of localStore.users.values()) {
-    if (user.whatsapp?.replace(/\D/g, '') === cleaned) return user;
+    const userClean = user.whatsapp?.replace(/\D/g, '');
+    if (userClean === cleaned || userClean === alt) return user;
   }
   return null;
 }
@@ -325,3 +332,37 @@ export async function getAdminMetrics(): Promise<AdminMetrics> {
     grossVolumeBRL: Math.round(grossVolumeBRL * 100) / 100,
   };
 }
+
+// --- Reports Collection ---
+export async function saveReport(report: Report): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('reports').doc(report.id).set(report, { merge: true });
+  }
+  const existing = localStore.reports.get(report.id) || {};
+  localStore.reports.set(report.id, { ...existing, ...report });
+}
+
+export async function getReport(reportId: string): Promise<Report | null> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('reports').doc(reportId).get();
+    return snap.exists ? (snap.data() as Report) : null;
+  }
+  return localStore.reports.get(reportId) || null;
+}
+
+export async function listAllReports(): Promise<Report[]> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('reports').get();
+    return snap.docs.map(d => d.data() as Report);
+  }
+  return Array.from(localStore.reports.values());
+}
+
+export async function listReportsForUser(userId: string): Promise<Report[]> {
+  const all = await listAllReports();
+  return all.filter(r => r.reporterId === userId || r.targetId === userId);
+}
+

@@ -16,6 +16,7 @@ import { adminRouter } from './routes/admin.js';
 import { mapsRouter } from './routes/maps.js';
 import { receiptsRouter } from './routes/receipts.js';
 import { storageRouter } from './routes/storage.js';
+import { reportsRouter } from './routes/reports.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +59,7 @@ app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/maps', mapsRouter);
 app.use('/api/v1/receipts', receiptsRouter);
 app.use('/api/v1/storage', storageRouter);
+app.use('/api/v1/reports', reportsRouter);
 
 // Serve frontend build if dist/web exists (for Production Cloud Run container)
 const distWebPath = path.resolve(process.cwd(), 'dist', 'web');
