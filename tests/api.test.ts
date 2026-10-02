@@ -610,4 +610,109 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(approveRes.body.data.rejectionReason).toBeUndefined();
     });
   });
+
+  describe('Driver Partnership Plan Switching', () => {
+    const planDriverUid = 'test-plan-driver-uid';
+    const planDriverEmail = 'plan.driver@teste.vaicar.app';
+
+    it('registers a test driver with monthly_100 plan and plan dates', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/register-driver')
+        .send({
+          uid: planDriverUid,
+          name: 'Motorista Planos',
+          cpf: '22233344405',
+          birthDate: '1985-05-15',
+          whatsapp: '(12) 99999-8888',
+          email: planDriverEmail,
+          photoUrl: 'https://storage.googleapis.com/vaicar-bucket/users/photo.jpg',
+          professionalCategory: 'Motorista de Aplicativo / EAR',
+          cnhNumber: '98765432100',
+          vehicle: {
+            plate: 'BRA2E20',
+            model: 'Corolla',
+            brand: 'Toyota',
+            year: 2021,
+            color: 'Branco',
+          },
+          operatingZones: ['Centro & Porto Grande'],
+          subscriptionPlan: 'monthly_100',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.driver.subscriptionPlan).toBe('monthly_100');
+      expect(res.body.data.driver.subscriptionPlanSelectedAt).toBeDefined();
+      expect(res.body.data.driver.nextPlanSwitchAllowedAt).toBeDefined();
+    });
+
+    it('rejects plan switch before 1 month has elapsed for monthly_100', async () => {
+      const res = await request(app)
+        .post('/api/v1/drivers/change-plan')
+        .set('Authorization', `Bearer ${planDriverUid}:${planDriverEmail}`)
+        .send({ plan: 'weekly_percent_10' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.message).toContain('A troca de plano só é permitida após 1 mês (30 dias)');
+    });
+
+    it('allows plan switch after 1 month (simulated elapsed date)', async () => {
+      const { getDriverProfile, saveDriverProfile } = await import('../api/src/services/firestore.js');
+      const driver = await getDriverProfile(planDriverUid);
+      expect(driver).toBeDefined();
+
+      // Backdate plan selection date by 31 days
+      const thirtyOneDaysAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
+      const pastAllowedDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
+      await saveDriverProfile({
+        ...driver!,
+        subscriptionPlanSelectedAt: thirtyOneDaysAgo,
+        nextPlanSwitchAllowedAt: pastAllowedDate,
+      });
+
+      const res = await request(app)
+        .post('/api/v1/drivers/change-plan')
+        .set('Authorization', `Bearer ${planDriverUid}:${planDriverEmail}`)
+        .send({ plan: 'weekly_percent_10' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.driver.subscriptionPlan).toBe('weekly_percent_10');
+      expect(res.body.data.message).toContain('10% Semanal');
+    });
+
+    it('rejects switching back before 1 week has elapsed for weekly_percent_10', async () => {
+      const res = await request(app)
+        .post('/api/v1/drivers/change-plan')
+        .set('Authorization', `Bearer ${planDriverUid}:${planDriverEmail}`)
+        .send({ plan: 'monthly_100' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.message).toContain('A troca de plano só é permitida após 1 semana (7 dias)');
+    });
+
+    it('allows switching back after 1 week (simulated elapsed date for weekly)', async () => {
+      const { getDriverProfile, saveDriverProfile } = await import('../api/src/services/firestore.js');
+      const driver = await getDriverProfile(planDriverUid);
+      expect(driver).toBeDefined();
+
+      // Backdate by 8 days
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      const pastAllowedDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString();
+      await saveDriverProfile({
+        ...driver!,
+        subscriptionPlanSelectedAt: eightDaysAgo,
+        nextPlanSwitchAllowedAt: pastAllowedDate,
+      });
+
+      const res = await request(app)
+        .post('/api/v1/drivers/change-plan')
+        .set('Authorization', `Bearer ${planDriverUid}:${planDriverEmail}`)
+        .send({ plan: 'monthly_100' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.driver.subscriptionPlan).toBe('monthly_100');
+      expect(res.body.data.message).toContain('Mensalidade de R$ 100/mês');
+    });
+  });
 });

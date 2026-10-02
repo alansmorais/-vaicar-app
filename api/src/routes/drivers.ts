@@ -93,6 +93,91 @@ driversRouter.patch('/me', async (req: Request, res: Response, next: NextFunctio
 });
 
 /**
+ * Change Driver Subscription / Partnership Plan
+ * Business Rule:
+ * - Switching from monthly_100 (R$ 100/mês) is allowed after 1 month (30 days) from plan selection.
+ * - Switching from weekly_percent_10 (10% semanal) is allowed after 1 week (7 days) from plan selection.
+ */
+driversRouter.post('/change-plan', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const uid = req.user!.uid;
+    const { plan } = req.body;
+
+    if (plan !== 'monthly_100' && plan !== 'weekly_percent_10') {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        'Plano inválido. Escolha entre "monthly_100" (R$ 100/mês) ou "weekly_percent_10" (10% semanal).',
+        400
+      );
+    }
+
+    const driver = await getDriverProfile(uid);
+    if (!driver) {
+      throw new AppError(ErrorCode.NOT_FOUND, 'Perfil de motorista não encontrado.', 404);
+    }
+
+    if (driver.subscriptionPlan === plan) {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        `Você já está ativo no plano ${plan === 'weekly_percent_10' ? '10% Semanal' : 'Mensalidade R$ 100/mês'}.`,
+        400
+      );
+    }
+
+    const now = new Date();
+    const currentPlan = driver.subscriptionPlan || 'monthly_100';
+    const isWeekly = currentPlan === 'weekly_percent_10';
+    const minDays = isWeekly ? 7 : 30;
+
+    const selectedAt = driver.subscriptionPlanSelectedAt
+      ? new Date(driver.subscriptionPlanSelectedAt)
+      : new Date(driver.createdAt || Date.now());
+
+    const eligibleDate = driver.nextPlanSwitchAllowedAt
+      ? new Date(driver.nextPlanSwitchAllowedAt)
+      : new Date(selectedAt.getTime() + minDays * 24 * 60 * 60 * 1000);
+
+    if (now.getTime() < eligibleDate.getTime()) {
+      const msDiff = eligibleDate.getTime() - now.getTime();
+      const daysRemaining = Math.max(1, Math.ceil(msDiff / (1000 * 60 * 60 * 24)));
+      const formattedDate = eligibleDate.toLocaleDateString('pt-BR');
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        `A troca de plano só é permitida após ${isWeekly ? '1 semana (7 dias)' : '1 mês (30 dias)'}. Você poderá alterar em ${formattedDate} (faltam ${daysRemaining} dia(s)).`,
+        400
+      );
+    }
+
+    // Eligible: apply plan switch
+    const switchTimestamp = now.toISOString();
+    const nextAllowedDate = new Date(now.getTime() + (plan === 'weekly_percent_10' ? 7 : 30) * 24 * 60 * 60 * 1000);
+
+    const updated = {
+      ...driver,
+      subscriptionPlan: plan,
+      subscriptionPlanSelectedAt: switchTimestamp,
+      nextPlanSwitchAllowedAt: nextAllowedDate.toISOString(),
+      updatedAt: switchTimestamp,
+    };
+
+    await saveDriverProfile(updated);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: {
+        driver: updated,
+        message: `Plano alterado com sucesso para ${
+          plan === 'weekly_percent_10' ? '10% Semanal (Acerto Semanal)' : 'Mensalidade de R$ 100/mês'
+        }. Próxima alteração permitida a partir de ${nextAllowedDate.toLocaleDateString('pt-BR')}.`,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * Toggle Driver Online/Offline
  * Business Rule: Driver CANNOT go online before approval!
  */

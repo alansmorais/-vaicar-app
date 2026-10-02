@@ -40,8 +40,16 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      {/* Centralized sub-header banner */}
+      <div className="bg-slate-900/90 border-b border-slate-800/80 py-2 px-4 text-center">
+        <p className="text-xs sm:text-sm font-medium text-slate-300 max-w-4xl mx-auto flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0" />
+          <span>Mobilidade justa e entregas com <span className="text-emerald-400 font-bold">pagamento direto</span> em São Sebastião.</span>
+        </p>
+      </div>
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-20 lg:py-24 border-b border-slate-900 bg-gradient-to-b from-slate-950 via-slate-900/40 to-slate-950">
+      <section className="relative overflow-hidden pt-10 pb-20 lg:py-20 border-b border-slate-900 bg-gradient-to-b from-slate-950 via-slate-900/40 to-slate-950">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(22,163,74,0.15),rgba(255,255,255,0))] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -53,15 +61,12 @@ export const HomePage: React.FC = () => {
                 Transporte 100% Local • São Sebastião - SP
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
-                Mobilidade justa e entregas com <span className="text-emerald-500 underline decoration-emerald-500/40">pagamento direto</span> em São Sebastião.
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Seu aplicativo de corridas e entregas no <span className="text-emerald-400">Litoral Norte</span>.
               </h1>
 
-              <p className="text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                Corridas e entregas locais (carro, moto e bicicleta). 
-                Motoristas escolhem entre <strong>R$ 100/mês</strong> ou <strong>10% semanal</strong>. 
-                Passageiros verificados com antecedentes criminais ganham <strong>5% de desconto</strong>. 
-                Pagamento direto ao condutor via Pix ou dinheiro.
+              <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                Corridas e entregas locais (carro, moto e bicicleta). Motoristas escolhem entre <strong>R$ 100/mês</strong> ou <strong>10% semanal</strong>. Passageiros verificados ganham <strong>5% de desconto</strong>. Pagamento direto ao condutor via Pix ou dinheiro.
               </p>
 
               {/* CTAs */}
@@ -194,9 +199,9 @@ export const HomePage: React.FC = () => {
               <div className="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">Segurança & 5% de Desconto</h3>
+              <h3 className="text-lg font-bold text-white">Verificação & 5% de Desconto</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Atestado de antecedentes criminais obrigatório para todos os condutores. Passageiros cadastrados que enviam seus antecedentes ganham <strong>5% de desconto automático</strong> em todas as viagens!
+                Segurança reforçada com verificação de condutores e veículos. Passageiros cadastrados e verificados ganham <strong>5% de desconto automático</strong> em todas as viagens!
               </p>
             </div>
 

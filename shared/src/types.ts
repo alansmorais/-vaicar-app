@@ -64,6 +64,8 @@ export interface DriverProfile {
   criminalRecordUrl?: string;
   criminalRecordStatus?: 'PENDING' | 'VERIFIED' | 'REJECTED';
   subscriptionPlan?: DriverSubscriptionPlan;
+  subscriptionPlanSelectedAt?: string;
+  nextPlanSwitchAllowedAt?: string;
   vehicle: VehicleInfo;
   operatingZones: string[];
   status: DriverApprovalStatus;

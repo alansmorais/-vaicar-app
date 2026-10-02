@@ -48,4 +48,10 @@ export const driversApi = {
   getActiveRide: () => apiFetch<Ride | null>('/drivers/active-ride'),
 
   getRides: () => apiFetch<Ride[]>('/drivers/rides'),
+
+  changePlan: (plan: 'monthly_100' | 'weekly_percent_10') =>
+    apiFetch<{ driver: DriverProfile; message: string }>('/drivers/change-plan', {
+      method: 'POST',
+      body: JSON.stringify({ plan }),
+    }),
 };

@@ -25,6 +25,7 @@ import {
   FileText,
   ArrowRight,
   AlertTriangle,
+  X,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
 
@@ -38,6 +39,12 @@ export const DriverDashboardPage: React.FC = () => {
   const [activeRide, setActiveRide] = useState<Ride | null>(null);
   const [rideHistory, setRideHistory] = useState<Ride[]>([]);
   const [receiptToShow, setReceiptToShow] = useState<Receipt | null>(null);
+
+  // Plan change modal state
+  const [showPlanModal, setShowPlanModal] = useState<boolean>(false);
+  const [selectedNewPlan, setSelectedNewPlan] = useState<'monthly_100' | 'weekly_percent_10'>('monthly_100');
+  const [planChangeLoading, setPlanChangeLoading] = useState<boolean>(false);
+  const [planSuccessMessage, setPlanSuccessMessage] = useState<string | null>(null);
 
   // Report modal state
   const [showReportModal, setShowReportModal] = useState<boolean>(false);
@@ -241,6 +248,41 @@ export const DriverDashboardPage: React.FC = () => {
 
   const isApproved = driver?.status === 'APPROVED';
 
+  // Plan switch logic & eligibility
+  const currentPlan = driver?.subscriptionPlan || 'monthly_100';
+  const isWeekly = currentPlan === 'weekly_percent_10';
+  const minDays = isWeekly ? 7 : 30;
+
+  const planSelectedAt = driver?.subscriptionPlanSelectedAt
+    ? new Date(driver.subscriptionPlanSelectedAt)
+    : new Date(driver?.createdAt || Date.now());
+
+  const eligibleDate = driver?.nextPlanSwitchAllowedAt
+    ? new Date(driver.nextPlanSwitchAllowedAt)
+    : new Date(planSelectedAt.getTime() + minDays * 24 * 60 * 60 * 1000);
+
+  const now = new Date();
+  const isSwitchEligible = now.getTime() >= eligibleDate.getTime();
+  const msRemaining = eligibleDate.getTime() - now.getTime();
+  const daysRemaining = Math.max(1, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+
+  const handleChangePlan = async () => {
+    if (!selectedNewPlan) return;
+    setPlanChangeLoading(true);
+    setError(null);
+    try {
+      const res = await driversApi.changePlan(selectedNewPlan);
+      setDriver(res.driver);
+      setPlanSuccessMessage(res.message);
+      setShowPlanModal(false);
+      setTimeout(() => setPlanSuccessMessage(null), 8000);
+    } catch (err: any) {
+      setError(err.message || 'Falha ao alterar plano.');
+    } finally {
+      setPlanChangeLoading(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-16">
@@ -309,7 +351,7 @@ export const DriverDashboardPage: React.FC = () => {
               </div>
             </div>
             <p className="text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/80">
-              💵 <strong>Pagamento Direto:</strong> O cliente paga diretamente a você via Pix ou dinheiro. Exigido atestado de antecedentes criminais para todos os parceiros.
+              💵 <strong>Pagamento Direto:</strong> O cliente paga diretamente a você via Pix ou dinheiro no veículo.
             </p>
           </div>
 
@@ -375,6 +417,13 @@ export const DriverDashboardPage: React.FC = () => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
+        {planSuccessMessage && (
+          <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-200 text-xs flex items-start gap-2.5">
+            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <span>{planSuccessMessage}</span>
+          </div>
+        )}
+
         {error && (
           <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-600/60 text-rose-300 text-xs flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
@@ -434,13 +483,39 @@ export const DriverDashboardPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
-            <span className="text-[11px] text-slate-400 block font-medium">Plano de Parceria</span>
-            <span className="text-sm font-extrabold text-emerald-400 mt-0.5 block">
-              {driver?.subscriptionPlan === 'weekly_percent_10'
-                ? '10% (Acerto Semanal)'
-                : 'R$ 100/mês (Mensalidade)'}
-            </span>
+          <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 block font-medium">Plano de Parceria</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 font-bold">
+                  {driver?.subscriptionPlan === 'weekly_percent_10' ? 'Semanal' : 'Mensal'}
+                </span>
+              </div>
+              <span className="text-sm font-extrabold text-emerald-400 mt-0.5 block">
+                {driver?.subscriptionPlan === 'weekly_percent_10'
+                  ? '10% (Acerto Semanal)'
+                  : 'R$ 100/mês (Mensalidade)'}
+              </span>
+              <p className="text-[10px] text-slate-400 mt-1">
+                {isSwitchEligible ? (
+                  <span className="text-emerald-400 font-medium">✓ Troca de plano liberada</span>
+                ) : (
+                  <span>
+                    Troca permitida após {isWeekly ? '1 semana' : '1 mês'} ({daysRemaining}d restantes)
+                  </span>
+                )}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedNewPlan(currentPlan === 'weekly_percent_10' ? 'monthly_100' : 'weekly_percent_10');
+                setShowPlanModal(true);
+              }}
+              className="mt-2.5 w-full py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-white transition-colors border border-slate-700 flex items-center justify-center gap-1"
+            >
+              Trocar de Plano
+            </button>
           </div>
         </div>
 
@@ -743,6 +818,128 @@ export const DriverDashboardPage: React.FC = () => {
           }
         }}
       />
+
+      {/* PLAN CHANGE MODAL */}
+      {showPlanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-emerald-400" /> Alterar Plano de Parceria
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPlanModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Você pode alternar entre a mensalidade fixa e o percentual semanal.
+              A troca é permitida após <strong>1 mês (30 dias)</strong> para planos mensais ou <strong>1 semana (7 dias)</strong> para planos de 10% semanal.
+            </p>
+
+            {/* Current plan status notice */}
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+              <span className="text-slate-400 block text-[11px] font-medium">Plano Atual:</span>
+              <span className="font-bold text-white block text-sm">
+                {currentPlan === 'weekly_percent_10' ? '10% Semanal (Acerto Semanal)' : 'R$ 100/mês (Mensalidade Fixa)'}
+              </span>
+              <span className="text-[11px] text-slate-400 block pt-1 border-t border-slate-800/80">
+                {isSwitchEligible ? (
+                  <span className="text-emerald-400 font-semibold">
+                    ✓ Você já cumpriu o período mínimo e pode trocar de plano agora.
+                  </span>
+                ) : (
+                  <span>
+                    Próxima troca liberada em: <strong>{eligibleDate.toLocaleDateString('pt-BR')}</strong> (faltam {daysRemaining} dia(s)).
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {/* Selection Options */}
+            <div className="space-y-2.5">
+              <label
+                onClick={() => setSelectedNewPlan('monthly_100')}
+                className={`p-3.5 rounded-xl border flex items-start gap-3 cursor-pointer transition-all ${
+                  selectedNewPlan === 'monthly_100'
+                    ? 'bg-emerald-950/60 border-emerald-500 text-white'
+                    : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="modalPlan"
+                  checked={selectedNewPlan === 'monthly_100'}
+                  onChange={() => setSelectedNewPlan('monthly_100')}
+                  className="mt-1 text-emerald-500 focus:ring-emerald-500"
+                />
+                <div className="flex-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-sm">Mensalidade: R$ 100,00 / mês</span>
+                    <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                      Taxa Fixa
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-1">
+                    Corridas ilimitadas com taxa fixa. Fidelidade mínima de 1 mês antes da próxima troca.
+                  </p>
+                </div>
+              </label>
+
+              <label
+                onClick={() => setSelectedNewPlan('weekly_percent_10')}
+                className={`p-3.5 rounded-xl border flex items-start gap-3 cursor-pointer transition-all ${
+                  selectedNewPlan === 'weekly_percent_10'
+                    ? 'bg-emerald-950/60 border-emerald-500 text-white'
+                    : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="modalPlan"
+                  checked={selectedNewPlan === 'weekly_percent_10'}
+                  onChange={() => setSelectedNewPlan('weekly_percent_10')}
+                  className="mt-1 text-emerald-500 focus:ring-emerald-500"
+                />
+                <div className="flex-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-sm">10% por Corrida (Semanal)</span>
+                    <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                      Semanal
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-1">
+                    Pague 10% somente das corridas realizadas, acertado semanalmente. Flexibilidade mínima de 1 semana antes da próxima troca.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="pt-2 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowPlanModal(false)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleChangePlan}
+                disabled={planChangeLoading || !isSwitchEligible || selectedNewPlan === currentPlan}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-1.5"
+              >
+                {planChangeLoading ? 'Salvando...' : 'Confirmar Troca'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

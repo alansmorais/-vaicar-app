@@ -258,6 +258,10 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       criminalRecordUrl: criminalRecordUrl || undefined,
       criminalRecordStatus: criminalRecordUrl ? 'PENDING' : undefined,
       subscriptionPlan: subscriptionPlan === 'weekly_percent_10' ? 'weekly_percent_10' : 'monthly_100',
+      subscriptionPlanSelectedAt: now,
+      nextPlanSwitchAllowedAt: new Date(
+        Date.now() + (subscriptionPlan === 'weekly_percent_10' ? 7 : 30) * 24 * 60 * 60 * 1000
+      ).toISOString(),
       vehicle: {
         type: vehicle.type || 'car',
         brand: vehicle.brand.trim(),
