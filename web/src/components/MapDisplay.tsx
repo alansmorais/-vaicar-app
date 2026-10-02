@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api';
 import { PublicDriverMarker } from '../api/drivers.js';
+import { mapsApi } from '../api/maps.js';
 import { MapPin, Navigation, Car, AlertCircle } from 'lucide-react';
+
+const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
 
 interface MapProps {
   pickup: { lat: number; lng: number; address?: string };
   destination?: { lat: number; lng: number; address?: string } | null;
-  onPickupChange?: (lat: number, lng: number) => void;
+  onPickupChange?: (lat: number, lng: number, address?: string) => void;
+  onDestinationChange?: (lat: number, lng: number, address?: string) => void;
+  onMapClick?: (lat: number, lng: number, address?: string) => void;
   drivers?: PublicDriverMarker[];
   driverLocation?: { lat: number; lng: number; heading?: number } | null;
   height?: string;
@@ -28,6 +33,8 @@ export const MapDisplay: React.FC<MapProps> = ({
   pickup,
   destination,
   onPickupChange,
+  onDestinationChange,
+  onMapClick,
   drivers = [],
   driverLocation,
   height = '400px',
@@ -38,6 +45,7 @@ export const MapDisplay: React.FC<MapProps> = ({
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: apiKey,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -67,9 +75,59 @@ export const MapDisplay: React.FC<MapProps> = ({
     }
   }, [map, pickup, destination]);
 
-  const handleMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
+  // Helper to reverse geocode coordinate
+  const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
+    if (window.google?.maps?.Geocoder) {
+      try {
+        const geocoder = new window.google.maps.Geocoder();
+        const response = await geocoder.geocode({ location: { lat, lng } });
+        if (response.results && response.results[0]) {
+          return response.results[0].formatted_address;
+        }
+      } catch (err) {
+        console.warn('Browser geocoder fallback to API:', err);
+      }
+    }
+    try {
+      const res = await mapsApi.reverseGeocode(lat, lng);
+      return res.address;
+    } catch {
+      return `Ponto (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    }
+  }, []);
+
+  const handlePickupDragEnd = async (e: google.maps.MapMouseEvent) => {
     if (e.latLng && onPickupChange) {
-      onPickupChange(e.latLng.lat(), e.latLng.lng());
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      const address = await reverseGeocode(lat, lng);
+      onPickupChange(lat, lng, address);
+    }
+  };
+
+  const handleDestinationDragEnd = async (e: google.maps.MapMouseEvent) => {
+    if (e.latLng && onDestinationChange) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      const address = await reverseGeocode(lat, lng);
+      onDestinationChange(lat, lng, address);
+    }
+  };
+
+  const handleMapClick = async (e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+
+    // If destination change handler exists, clicking map sets or repositions destination
+    if (onDestinationChange || onMapClick) {
+      const address = await reverseGeocode(lat, lng);
+      if (onDestinationChange) {
+        onDestinationChange(lat, lng, address);
+      }
+      if (onMapClick) {
+        onMapClick(lat, lng, address);
+      }
     }
   };
 
@@ -94,6 +152,7 @@ export const MapDisplay: React.FC<MapProps> = ({
           zoom={14}
           onLoad={onLoad}
           onUnmount={onUnmount}
+          onClick={handleMapClick}
           options={{
             disableDefaultUI: false,
             zoomControl: true,
@@ -116,8 +175,8 @@ export const MapDisplay: React.FC<MapProps> = ({
             <Marker
               position={{ lat: pickup.lat, lng: pickup.lng }}
               draggable={!!onPickupChange}
-              onDragEnd={handleMarkerDragEnd}
-              title="Local de Partida (Arraste para ajustar)"
+              onDragEnd={handlePickupDragEnd}
+              title="Ponto de Partida (Arraste para reposicionar)"
               icon={{
                 path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
                 scale: 10,
@@ -129,11 +188,13 @@ export const MapDisplay: React.FC<MapProps> = ({
             />
           )}
 
-          {/* Destination Marker */}
+          {/* Draggable Destination Marker */}
           {destination && (
             <Marker
               position={{ lat: destination.lat, lng: destination.lng }}
-              title="Destino da Corrida"
+              draggable={!!onDestinationChange}
+              onDragEnd={handleDestinationDragEnd}
+              title="Destino da Corrida (Arraste para reposicionar ou clique no mapa)"
               icon={{
                 path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
                 scale: 10,
@@ -195,6 +256,19 @@ export const MapDisplay: React.FC<MapProps> = ({
             />
           )}
         </GoogleMap>
+
+        {/* Floating Draggable & Click Hint Badge */}
+        <div className="absolute bottom-3 left-3 right-3 z-10 pointer-events-none flex justify-center">
+          <div className="bg-slate-950/90 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-1.5 shadow-xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm" /> Arraste a Partida
+            </span>
+            <span className="text-slate-600 hidden sm:inline">|</span>
+            <span className="flex items-center gap-1.5 font-semibold text-rose-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-sm" /> Arraste o Destino ou clique no mapa
+            </span>
+          </div>
+        </div>
       </div>
     );
   }

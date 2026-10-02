@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { MapDisplay } from '../../components/MapDisplay.js';
+import { PlaceAutocompleteInput } from '../../components/PlaceAutocompleteInput.js';
 import { WaitingTimer } from '../../components/WaitingTimer.js';
 import { ReceiptModal } from '../../components/ReceiptModal.js';
 import { ridesApi, EstimateRideResult } from '../../api/rides.js';
@@ -39,9 +40,10 @@ export const PassengerDashboardPage: React.FC = () => {
     lat: -23.8055,
     lng: -45.4011,
   });
+  const [pickupInput, setPickupInput] = useState('Av. Dr. Altino Arantes, Centro, São Sebastião - SP');
   const [destination, setDestination] = useState<{ address: string; lat: number; lng: number } | null>(null);
+  const [destinationInput, setDestinationInput] = useState('');
   const [popularPlaces, setPopularPlaces] = useState<KnownLocation[]>([]);
-  const [customDestinationInput, setCustomDestinationInput] = useState('');
 
   // Drivers and estimate
   const [onlineDrivers, setOnlineDrivers] = useState<PublicDriverMarker[]>([]);
@@ -152,13 +154,30 @@ export const PassengerDashboardPage: React.FC = () => {
     }
   }, [pickup, destination]);
 
-  const handlePickupChange = (lat: number, lng: number) => {
-    setPickup((prev) => ({
-      ...prev,
-      lat,
-      lng,
-      address: `Ponto ajustado (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
-    }));
+  const handleSelectPickup = (place: { address: string; lat: number; lng: number }) => {
+    setPickup(place);
+    setPickupInput(place.address);
+    setError(null);
+  };
+
+  const handlePickupMarkerChange = (lat: number, lng: number, address?: string) => {
+    const finalAddress = address || `Ponto ajustado (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    setPickup({ lat, lng, address: finalAddress });
+    setPickupInput(finalAddress);
+    setError(null);
+  };
+
+  const handleSelectDestination = (place: { address: string; lat: number; lng: number }) => {
+    setDestination(place);
+    setDestinationInput(place.address);
+    setError(null);
+  };
+
+  const handleDestinationMarkerChange = (lat: number, lng: number, address?: string) => {
+    const finalAddress = address || `Destino no mapa (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    setDestination({ lat, lng, address: finalAddress });
+    setDestinationInput(finalAddress);
+    setError(null);
   };
 
   const handleSelectPopular = (place: KnownLocation) => {
@@ -167,21 +186,8 @@ export const PassengerDashboardPage: React.FC = () => {
       lat: place.lat,
       lng: place.lng,
     });
-    setCustomDestinationInput(place.name);
-  };
-
-  const handleCustomGeocode = async () => {
-    if (!customDestinationInput.trim()) return;
-    try {
-      const res = await mapsApi.geocode(customDestinationInput.trim());
-      setDestination({
-        address: res.address,
-        lat: res.lat,
-        lng: res.lng,
-      });
-    } catch {
-      setError('Não foi possível localizar o endereço informado.');
-    }
+    setDestinationInput(place.name);
+    setError(null);
   };
 
   const handleRequestRide = async () => {
@@ -444,48 +450,32 @@ export const PassengerDashboardPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Pickup field */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-400" /> Ponto de Partida
-                </label>
-                <input
-                  type="text"
-                  value={pickup.address}
-                  onChange={(e) => setPickup((p) => ({ ...p, address: e.target.value }))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
-                />
-                <span className="text-[10px] text-slate-500 mt-1 block">
-                  Dica: Você também pode arrastar o pino verde no mapa ao lado.
-                </span>
-              </div>
+              {/* Pickup PlaceAutocompleteInput */}
+              <PlaceAutocompleteInput
+                label="Ponto de Partida (Embarque)"
+                placeholder="Digite a rua, bairro ou número..."
+                value={pickupInput}
+                onChange={setPickupInput}
+                onSelectPlace={handleSelectPickup}
+                icon="pickup"
+                helperText="Busca inteligente Google Maps. Você também pode arrastar o pino verde no mapa."
+              />
 
-              {/* Destination search */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
-                  <Navigation className="w-3.5 h-3.5 text-rose-400" /> Para onde vamos?
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customDestinationInput}
-                    onChange={(e) => setCustomDestinationInput(e.target.value)}
-                    placeholder="Digite a praia, rua ou bairro..."
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
-                  />
-                  <button
-                    onClick={handleCustomGeocode}
-                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white"
-                  >
-                    Buscar
-                  </button>
-                </div>
-              </div>
+              {/* Destination PlaceAutocompleteInput */}
+              <PlaceAutocompleteInput
+                label="Para onde vamos? (Destino)"
+                placeholder="Digite a praia, rua, condomínio ou clique no mapa..."
+                value={destinationInput}
+                onChange={setDestinationInput}
+                onSelectPlace={handleSelectDestination}
+                icon="destination"
+                helperText="Busca inteligente Google Maps. Você também pode arrastar o pino vermelho ou clicar no mapa."
+              />
 
-              {/* Quick Popular Destinos */}
+              {/* Quick Popular Destinos (Shortcuts) */}
               <div>
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                  Locais Frequentes:
+                  Atalhos Rápidos de São Sebastião:
                 </span>
                 <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
                   {popularPlaces.map((place) => (
@@ -611,7 +601,8 @@ export const PassengerDashboardPage: React.FC = () => {
           <MapDisplay
             pickup={pickup}
             destination={destination}
-            onPickupChange={handlePickupChange}
+            onPickupChange={handlePickupMarkerChange}
+            onDestinationChange={handleDestinationMarkerChange}
             drivers={onlineDrivers}
             driverLocation={
               activeRide?.driverId && onlineDrivers.find((d) => d.uid === activeRide.driverId)?.currentLocation
