@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { authApi } from '../../api/auth.js';
 import { storageApi } from '../../api/storage.js';
+import { processImageFile } from '../../utils/imageUtils.js';
 import { zones } from '../../../../shared/src/tokens.js';
 import {
   isValidEmail,
@@ -71,31 +72,18 @@ export const DriverRegisterPage: React.FC = () => {
     );
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Formato inválido. Selecione um arquivo de imagem (JPG, PNG ou WebP).');
-      return;
-    }
-    if (file.type === 'image/svg+xml') {
-      setError('Arquivos SVG não são permitidos por segurança.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('A foto deve ter no máximo 5MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setPhotoData(result);
-      setPhotoPreview(result);
+    try {
       setError(null);
-    };
-    reader.readAsDataURL(file);
+      const normalizedDataUrl = await processImageFile(file);
+      setPhotoData(normalizedDataUrl);
+      setPhotoPreview(normalizedDataUrl);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao carregar foto. Selecione JPG, PNG ou WebP.');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -250,7 +238,7 @@ export const DriverRegisterPage: React.FC = () => {
               <input
                 id="driver-photo-upload"
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/heic,image/heif"
                 onChange={handlePhotoUpload}
                 className="hidden"
               />

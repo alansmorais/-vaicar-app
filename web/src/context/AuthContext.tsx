@@ -20,6 +20,7 @@ interface AuthContextType {
   role: 'passenger' | 'driver' | 'admin' | null;
   loading: boolean;
   loginEmailPassword: (email: string, pass: string) => Promise<void>;
+  adminLogin: (email: string, pass: string) => Promise<void>;
   registerEmailPassword: (email: string, pass: string) => Promise<FirebaseUser>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -47,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.warn('[AuthContext] Backend profile fetch notice:', err);
       // Construct fallback profile if newly registered
-      const isAdm = email.includes('admin@vaicar.app');
+      const isAdm = email.includes('admin@vaicar.app') || email.includes('vaicar@alansmsolutions.com');
       setIsAdmin(isAdm);
       setProfile({
         uid,
@@ -124,24 +125,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   }, [fetchBackendProfile]);
 
+  const adminLogin = useCallback(async (email: string, pass: string) => {
+    setLoading(true);
+    try {
+      const res = await authApi.adminLogin({ email, password: pass });
+      const token = res.token;
+      setAuthToken(token);
+
+      const devData = {
+        uid: res.user.uid,
+        email: res.user.email,
+        displayName: res.user.displayName,
+        role: 'admin' as const,
+      };
+      localStorage.setItem('vaicar_dev_session', JSON.stringify(devData));
+
+      const adminUser = {
+        uid: res.user.uid,
+        email: res.user.email,
+        displayName: res.user.displayName,
+        getIdToken: async () => token,
+      } as unknown as FirebaseUser;
+
+      setUser(adminUser);
+      setProfile(res.user);
+      setIsAdmin(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const loginEmailPassword = useCallback(async (email: string, pass: string) => {
     setLoading(true);
+    const normalized = email.trim().toLowerCase();
+    const isAdminTarget = normalized === 'admin@vaicar.app' || normalized === 'vaicar@alansmsolutions.com' || normalized.includes('admin');
+
+    if (isAdminTarget) {
+      return await adminLogin(email, pass);
+    }
+
     try {
       const cred = await signInWithEmailAndPassword(auth, email, pass);
       const token = await cred.user.getIdToken();
       await fetchBackendProfile(token, cred.user.uid, cred.user.email || '');
     } catch (err: any) {
       console.warn('[VaiCar Auth] Firebase client login fallback triggered:', err?.message || err);
-      // Fallback: If Firebase Client auth fails (API key, blocked service, network, etc.), log in via backend profile
+      // Fallback: If Firebase Client auth fails, log in via backend profile for passenger/driver
       const uid = `user-${Math.abs(email.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0))}`;
-      const isAdm = email.toLowerCase().includes('admin');
-      const role = isAdm ? 'admin' : email.toLowerCase().includes('motorista') ? 'driver' : 'passenger';
+      const role = normalized.includes('motorista') ? 'driver' : 'passenger';
       await devLogin(uid, email, role);
       return;
     } finally {
       setLoading(false);
     }
-  }, [fetchBackendProfile, devLogin]);
+  }, [fetchBackendProfile, devLogin, adminLogin]);
 
   const registerEmailPassword = useCallback(async (email: string, pass: string): Promise<FirebaseUser> => {
     try {
@@ -202,12 +239,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role,
       loading,
       loginEmailPassword,
+      adminLogin,
       registerEmailPassword,
       logout,
       refreshProfile,
       devLogin,
     }),
-    [user, profile, passenger, driver, isAdmin, role, loading, loginEmailPassword, registerEmailPassword, logout, refreshProfile, devLogin]
+    [user, profile, passenger, driver, isAdmin, role, loading, loginEmailPassword, adminLogin, registerEmailPassword, logout, refreshProfile, devLogin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -68,4 +68,10 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ targetUid }),
     }),
+
+  adminLogin: (credentials: { email: string; password: string }) =>
+    apiFetch<{ token: string; user: UserProfile }>('/auth/admin-login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    }),
 };

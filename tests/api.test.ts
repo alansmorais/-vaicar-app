@@ -313,5 +313,80 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.data)).toBe(true);
     });
+
+    it('rejects admin login with incorrect password', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/admin-login')
+        .send({
+          email: 'admin@vaicar.app',
+          password: 'WrongPassword123',
+        });
+
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('rejects admin login with non-admin email', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/admin-login')
+        .send({
+          email: 'imposter@random.com',
+          password: 'VaiCar#2026Admin',
+        });
+
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('successfully authenticates admin with admin@vaicar.app and VaiCar#2026Admin', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/admin-login')
+        .send({
+          email: 'admin@vaicar.app',
+          password: 'VaiCar#2026Admin',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.token).toBeDefined();
+      expect(res.body.data.user.role).toBe('admin');
+      expect(res.body.data.user.isAdmin).toBe(true);
+
+      // Verify that the generated token works on admin metrics
+      const metricsRes = await request(app)
+        .get('/api/v1/admin/metrics')
+        .set('Authorization', `Bearer ${res.body.data.token}`);
+      expect(metricsRes.status).toBe(200);
+    });
+
+    it('successfully authenticates admin with vaicar@alansmsolutions.com', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/admin-login')
+        .send({
+          email: 'vaicar@alansmsolutions.com',
+          password: 'VaiCar#2026Admin',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.user.email).toBe('vaicar@alansmsolutions.com');
+    });
+
+    it('accepts passenger registration with relative /uploads/ path', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/register-passenger')
+        .send({
+          uid: 'test-pass-relative-upload',
+          name: 'Renata Litoral',
+          whatsapp: '(12) 99765-4321',
+          email: 'renata.uploads@teste.vaicar.app',
+          photoUrl: '/uploads/users/test-pass-relative-upload/photo.jpg',
+          termsAccepted: true,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.passenger.photoUrl).toBe('/uploads/users/test-pass-relative-upload/photo.jpg');
+    });
   });
 });

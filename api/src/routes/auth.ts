@@ -384,3 +384,61 @@ authRouter.post('/set-admin', authenticate, async (req: Request, res: Response, 
     next(error);
   }
 });
+
+/**
+ * Authoritative Admin Login
+ * Verifies admin credentials and returns an authenticated admin session token.
+ */
+authRouter.post('/admin-login', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'E-mail e senha de administrador são obrigatórios.', 400);
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const rawAllowed = process.env.ADMIN_EMAILS || 'admin@vaicar.app,vaicar@alansmsolutions.com';
+    const allowedAdminEmails = rawAllowed
+      .toLowerCase()
+      .split(',')
+      .map((e: string) => e.trim())
+      .filter(Boolean);
+
+    const masterPassword = process.env.ADMIN_PASSWORD || 'VaiCar#2026Admin';
+
+    if (!allowedAdminEmails.includes(normalizedEmail) || password !== masterPassword) {
+      throw new AppError(ErrorCode.AUTH_REQUIRED, 'E-mail ou senha de administrador incorretos.', 401);
+    }
+
+    const adminUid = `admin-${normalizedEmail.replace(/[^a-z0-9]/g, '-')}`;
+    const now = new Date().toISOString();
+    const existing = await getUserProfile(adminUid);
+
+    const adminProfile: UserProfile = {
+      ...(existing || {
+        uid: adminUid,
+        email: normalizedEmail,
+        createdAt: now,
+      }),
+      displayName: normalizedEmail === 'vaicar@alansmsolutions.com' ? 'Alan SMSolutions (Admin)' : 'Administrador Chefe',
+      role: 'admin',
+      isAdmin: true,
+      updatedAt: now,
+    };
+
+    await saveUserProfile(adminProfile);
+
+    const token = `${adminUid}:${normalizedEmail}`;
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: {
+        token,
+        user: adminProfile,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+

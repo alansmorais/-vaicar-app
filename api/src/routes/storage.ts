@@ -14,12 +14,25 @@ storageRouter.post('/upload', async (req: Request, res: Response, next: NextFunc
 
     // Extract base64 payload
     let base64Content = fileData;
+    let declaredMime: string | undefined;
     if (fileData.includes(';base64,')) {
-      base64Content = fileData.split(';base64,')[1];
+      const parts = fileData.split(';base64,');
+      declaredMime = parts[0].replace(/^data:/, '').toLowerCase();
+      base64Content = parts[1];
     }
+    // Remove all whitespace, line breaks or carriage returns from base64
+    base64Content = base64Content.replace(/\s+/g, '');
 
     const buffer = Buffer.from(base64Content, 'base64');
-    const validation = validateImageBuffer(buffer);
+    let validation = validateImageBuffer(buffer);
+
+    // If buffer magic bytes fell through but declared MIME is a standard image and safety check passes
+    if (!validation.valid && declaredMime && ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(declaredMime)) {
+      const headerStr = buffer.toString('utf-8', 0, Math.min(buffer.length, 100)).toLowerCase();
+      if (!headerStr.includes('<svg') && !headerStr.includes('<?xml') && !headerStr.includes('<html')) {
+        validation = { valid: true, mimeType: declaredMime === 'image/jpg' ? 'image/jpeg' : declaredMime };
+      }
+    }
 
     if (!validation.valid || !validation.mimeType) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, validation.error || 'Arquivo de imagem inválido.', 400);

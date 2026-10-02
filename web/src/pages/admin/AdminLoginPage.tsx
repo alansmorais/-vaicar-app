@@ -5,7 +5,7 @@ import { Shield, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { loginEmailPassword, devLogin } = useAuth();
+  const { adminLogin } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,23 +18,11 @@ export const AdminLoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await loginEmailPassword(email.trim(), password);
+      await adminLogin(email.trim(), password);
       navigate('/admin');
     } catch (err: any) {
       console.error('Admin login error:', err);
       setError(err.message || 'Credenciais de administrador inválidas.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTestAdminLogin = async () => {
-    setLoading(true);
-    try {
-      await devLogin('test-admin-01', 'admin@vaicar.app', 'admin', 'Administrador Chefe');
-      navigate('/admin');
-    } catch (err: any) {
-      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -103,16 +91,6 @@ export const AdminLoginPage: React.FC = () => {
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-        <div className="pt-2 border-t border-slate-800">
-          <button
-            type="button"
-            onClick={handleTestAdminLogin}
-            className="w-full py-2.5 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-emerald-500/30 text-emerald-400 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
-          >
-            <Shield className="w-4 h-4" /> Acesso Rápido de Teste (Admin Geral)
-          </button>
-        </div>
       </div>
     </div>
   );

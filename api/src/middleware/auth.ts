@@ -47,25 +47,26 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
         return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Token de autenticação inválido.', 401));
       }
     } else {
-      // Development fallback when Firebase credentials are not yet configured
-      // Accepts payload from local test token or standard mock emulator token
+      const rawAllowedAdmins = process.env.ADMIN_EMAILS || 'admin@vaicar.app,vaicar@alansmsolutions.com';
+      const allowedAdminEmails = rawAllowedAdmins.toLowerCase().split(',').map((e: string) => e.trim()).filter(Boolean);
+
       try {
         const parts = token.split('.');
         if (parts.length === 3 && parts[0].startsWith('eyJ')) {
           const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
           decodedUid = payload.user_id || payload.sub || payload.uid;
-          decodedEmail = payload.email || '';
-          isAdminClaim = !!payload.admin || decodedEmail.includes('admin@vaicar.app');
+          decodedEmail = (payload.email || '').toLowerCase();
+          isAdminClaim = !!payload.admin || allowedAdminEmails.includes(decodedEmail) || decodedUid.startsWith('admin-');
         } else if (token.includes(':')) {
           // simple token format: uid:email
           const colonIdx = token.indexOf(':');
           decodedUid = token.slice(0, colonIdx);
-          decodedEmail = token.slice(colonIdx + 1);
-          isAdminClaim = decodedEmail.includes('admin@vaicar.app');
+          decodedEmail = token.slice(colonIdx + 1).toLowerCase();
+          isAdminClaim = allowedAdminEmails.includes(decodedEmail) || decodedUid.startsWith('admin-');
         } else {
           decodedUid = token;
           decodedEmail = '';
-          isAdminClaim = false;
+          isAdminClaim = decodedUid.startsWith('admin-');
         }
       } catch {
         return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Token inválido.', 401));

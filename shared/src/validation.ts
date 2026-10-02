@@ -134,16 +134,31 @@ export function isAdult(birthDate: string | null | undefined): boolean {
 export function isValidPhotoData(photo: string | null | undefined): boolean {
   if (!photo || typeof photo !== 'string') return false;
   const trimmed = photo.trim();
-  if (trimmed.length < 10) return false;
+  if (trimmed.length < 5) return false;
 
   // Reject SVG, default avatars or unallowed placeholders
   if (trimmed.includes('image/svg+xml') || trimmed.endsWith('.svg')) return false;
   if (trimmed.includes('default-avatar') || trimmed.includes('unsplash.com/photo-fake')) return false;
 
-  // Either a real HTTP/HTTPS URL or valid image data URL (png, jpeg, webp)
-  const isHttpUrl = /^https?:\/\/.+\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(trimmed);
-  const isDataUrl = /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(trimmed);
-  const isStoragePath = trimmed.startsWith('users/') || trimmed.startsWith('drivers/') || trimmed.startsWith('https://storage.googleapis.com');
+  // 1. Relative upload paths (/uploads/users/..., uploads/drivers/..., etc.)
+  if (trimmed.startsWith('/uploads/') || trimmed.startsWith('uploads/')) {
+    return true;
+  }
 
-  return isHttpUrl || isDataUrl || isStoragePath;
+  // 2. Storage bucket paths (users/..., drivers/...)
+  if (trimmed.startsWith('users/') || trimmed.startsWith('drivers/')) {
+    return true;
+  }
+
+  // 3. HTTP or HTTPS URLs (Google Cloud Storage, Firebase Storage, S3, CDNs, etc.)
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed.length >= 10;
+  }
+
+  // 4. Data URLs (data:image/jpeg;base64,..., data:image/png;base64, etc.)
+  if (/^data:image\/(jpeg|jpg|png|webp|avif|heic);base64,/i.test(trimmed)) {
+    return trimmed.length >= 25;
+  }
+
+  return false;
 }

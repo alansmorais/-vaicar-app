@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
-  const { user, isAdmin, role, devLogin } = useAuth();
+  const { user, isAdmin, role } = useAuth();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<
@@ -171,19 +171,13 @@ export const AdminDashboardPage: React.FC = () => {
           <p className="text-xs text-slate-400">
             Você precisa estar logado com credenciais de administrador para acessar este painel.
           </p>
-          <div className="space-y-2 pt-2">
+          <div className="pt-2">
             <Link
               to="/admin/login"
               className="block w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-xs uppercase text-white"
             >
               Fazer Login como Administrador
             </Link>
-            <button
-              onClick={() => devLogin('test-admin-01', 'admin@vaicar.app', 'admin', 'Administrador Chefe')}
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs"
-            >
-              Usar Sessão de Teste (Admin)
-            </button>
           </div>
         </div>
       </div>
