@@ -106,6 +106,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, [fetchBackendProfile]);
 
+  const devLogin = useCallback(async (uid: string, email: string, role: 'passenger' | 'driver' | 'admin', name?: string) => {
+    setLoading(true);
+    const token = `${uid}:${email}`;
+    const devData = { uid, email, displayName: name || email.split('@')[0], role };
+    localStorage.setItem('vaicar_dev_session', JSON.stringify(devData));
+
+    const dummyUser = {
+      uid,
+      email,
+      displayName: name || email.split('@')[0],
+      getIdToken: async () => token,
+    } as unknown as FirebaseUser;
+
+    setUser(dummyUser);
+    await fetchBackendProfile(token, uid, email);
+    setLoading(false);
+  }, [fetchBackendProfile]);
+
   const loginEmailPassword = useCallback(async (email: string, pass: string) => {
     setLoading(true);
     try {
@@ -144,24 +162,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return dummyUser;
     }
   }, []);
-
-  const devLogin = useCallback(async (uid: string, email: string, role: 'passenger' | 'driver' | 'admin', name?: string) => {
-    setLoading(true);
-    const token = `${uid}:${email}`;
-    const devData = { uid, email, displayName: name || email.split('@')[0], role };
-    localStorage.setItem('vaicar_dev_session', JSON.stringify(devData));
-
-    const dummyUser = {
-      uid,
-      email,
-      displayName: name || email.split('@')[0],
-      getIdToken: async () => token,
-    } as unknown as FirebaseUser;
-
-    setUser(dummyUser);
-    await fetchBackendProfile(token, uid, email);
-    setLoading(false);
-  }, [fetchBackendProfile]);
 
   const logout = useCallback(async () => {
     localStorage.removeItem('vaicar_dev_session');
