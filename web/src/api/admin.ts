@@ -48,6 +48,11 @@ export const adminApi = {
       method: 'POST',
     }),
 
+  deletePassenger: (passengerId: string) =>
+    apiFetch<{ message: string }>(`/admin/passengers/${passengerId}`, {
+      method: 'DELETE',
+    }),
+
   getReports: () => apiFetch<any[]>('/admin/reports'),
 
   resolveReport: (reportId: string, resolutionNote?: string, status: 'RESOLVED' | 'DISMISSED' = 'RESOLVED') =>

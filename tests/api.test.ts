@@ -572,5 +572,42 @@ describe('VaiCar Platform - API Automated Tests', () => {
 
       expect(rideRes.status).not.toBe(403);
     });
+
+    it('admin can delete a passenger from the platform', async () => {
+      const deleteRes = await request(app)
+        .delete(`/api/v1/admin/passengers/${victimPassengerUid}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(deleteRes.status).toBe(200);
+      expect(deleteRes.body.success).toBe(true);
+
+      const listRes = await request(app)
+        .get('/api/v1/admin/passengers')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      const found = listRes.body.data.find((p: any) => p.uid === victimPassengerUid);
+      expect(found).toBeUndefined();
+    });
+
+    it('admin can reject a driver and re-approve without undefined field errors', async () => {
+      // 1. Reject driver
+      const rejectRes = await request(app)
+        .post('/api/v1/admin/drivers/test-driv-01/reject')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ reason: 'Foto de CNH ilegível, reenvie por favor.' });
+
+      expect(rejectRes.status).toBe(200);
+      expect(rejectRes.body.data.status).toBe('REJECTED');
+      expect(rejectRes.body.data.rejectionReason).toBeDefined();
+
+      // 2. Re-approve driver (previously threw Firestore undefined error on rejectionReason)
+      const approveRes = await request(app)
+        .post('/api/v1/admin/drivers/test-driv-01/approve')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(approveRes.status).toBe(200);
+      expect(approveRes.body.data.status).toBe('APPROVED');
+      expect(approveRes.body.data.rejectionReason).toBeUndefined();
+    });
   });
 });

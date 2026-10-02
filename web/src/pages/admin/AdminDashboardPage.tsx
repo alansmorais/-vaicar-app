@@ -25,6 +25,7 @@ import {
   Lock,
   User,
   ShieldAlert,
+  Trash2,
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
@@ -149,6 +150,20 @@ export const AdminDashboardPage: React.FC = () => {
       loadAllAdminData();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Falha ao desbloquear passageiro.' });
+    }
+  };
+
+  const handleDeletePassenger = async (passengerId: string, name: string) => {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja EXCLUIR permanentemente o passageiro "${name}"?\nEsta ação removerá o cadastro e não poderá ser desfeita.`
+    );
+    if (!confirmed) return;
+    try {
+      await adminApi.deletePassenger(passengerId);
+      setMessage({ type: 'success', text: `Passageiro "${name}" excluído com sucesso!` });
+      loadAllAdminData();
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Falha ao excluir passageiro.' });
     }
   };
 
@@ -567,6 +582,13 @@ export const AdminDashboardPage: React.FC = () => {
                               Bloquear
                             </button>
                           )}
+                          <button
+                            onClick={() => handleDeletePassenger(p.uid, p.name)}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 transition-colors"
+                            title="Excluir passageiro permanentemente"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>

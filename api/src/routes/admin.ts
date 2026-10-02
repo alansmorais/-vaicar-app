@@ -10,6 +10,7 @@ import {
   listAllPassengers,
   getPassengerProfile,
   savePassengerProfile,
+  deletePassengerProfile,
   listAllRides,
   listAllReports,
   getReport,
@@ -62,9 +63,9 @@ adminRouter.post('/drivers/:id/approve', async (req: Request, res: Response, nex
     const updated = {
       ...driver,
       status: 'APPROVED' as const,
-      rejectionReason: undefined,
       updatedAt: new Date().toISOString(),
     };
+    delete (updated as any).rejectionReason;
 
     await saveDriverProfile(updated);
 
@@ -185,11 +186,11 @@ adminRouter.post('/passengers/:id/unblock', async (req: Request, res: Response, 
     const updated = {
       ...passenger,
       isBlocked: false,
-      blockedReason: undefined,
       hasUnpaidDebt: false,
       unpaidAmount: 0,
       updatedAt: new Date().toISOString(),
     };
+    delete (updated as any).blockedReason;
 
     await savePassengerProfile(updated);
 
@@ -197,6 +198,42 @@ adminRouter.post('/passengers/:id/unblock', async (req: Request, res: Response, 
       success: true,
       requestId: req.id,
       data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.delete('/passengers/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const passengerId = String(req.params.id);
+    const passenger = await getPassengerProfile(passengerId);
+    if (!passenger) throw new AppError(ErrorCode.NOT_FOUND, 'Passageiro não encontrado.', 404);
+
+    await deletePassengerProfile(passengerId);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      message: `Passageiro ${passenger.name} excluído com sucesso.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/passengers/:id/delete', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const passengerId = String(req.params.id);
+    const passenger = await getPassengerProfile(passengerId);
+    if (!passenger) throw new AppError(ErrorCode.NOT_FOUND, 'Passageiro não encontrado.', 404);
+
+    await deletePassengerProfile(passengerId);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      message: `Passageiro ${passenger.name} excluído com sucesso.`,
     });
   } catch (error) {
     next(error);

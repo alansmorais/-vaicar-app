@@ -6,6 +6,16 @@ let authInstance: admin.auth.Auth | null = null;
 let firestoreInstance: admin.firestore.Firestore | null = null;
 let storageInstance: admin.storage.Storage | null = null;
 
+function setupFirestore(): admin.firestore.Firestore {
+  const fs = admin.firestore();
+  try {
+    fs.settings({ ignoreUndefinedProperties: true });
+  } catch {
+    // Settings already applied
+  }
+  return fs;
+}
+
 export function initFirebaseAdmin(): boolean {
   if (initialized) return true;
 
@@ -13,7 +23,7 @@ export function initFirebaseAdmin(): boolean {
     if (admin.apps.length > 0) {
       initialized = true;
       authInstance = admin.auth();
-      firestoreInstance = admin.firestore();
+      firestoreInstance = setupFirestore();
       storageInstance = admin.storage();
       return true;
     }
@@ -32,7 +42,7 @@ export function initFirebaseAdmin(): boolean {
       });
       initialized = true;
       authInstance = admin.auth();
-      firestoreInstance = admin.firestore();
+      firestoreInstance = setupFirestore();
       storageInstance = admin.storage();
       console.log(`[Firebase Admin] Initialized with Service Account for project: ${projectId}`);
       return true;
@@ -47,7 +57,7 @@ export function initFirebaseAdmin(): boolean {
       });
       initialized = true;
       authInstance = admin.auth();
-      firestoreInstance = admin.firestore();
+      firestoreInstance = setupFirestore();
       storageInstance = admin.storage();
       console.log(`[Firebase Admin] Initialized with Application Default Credentials for: ${projectId}`);
       return true;
@@ -60,7 +70,7 @@ export function initFirebaseAdmin(): boolean {
       });
       initialized = true;
       authInstance = admin.auth();
-      firestoreInstance = admin.firestore();
+      firestoreInstance = setupFirestore();
       console.log('[Firebase Admin] Initialized with Firebase Emulators');
       return true;
     }

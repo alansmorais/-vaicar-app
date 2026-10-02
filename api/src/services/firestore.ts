@@ -78,13 +78,35 @@ export async function findUserByWhatsApp(whatsapp: string): Promise<UserProfile 
   return null;
 }
 
+/**
+ * Recursively removes keys with undefined values so Firestore never complains about undefined properties.
+ */
+export function sanitizeFirestoreData<T extends Record<string, any>>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => (typeof item === 'object' && item !== null ? sanitizeFirestoreData(item) : item)) as any;
+  }
+  const clean: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+        clean[key] = sanitizeFirestoreData(value);
+      } else {
+        clean[key] = value;
+      }
+    }
+  }
+  return clean;
+}
+
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
+  const clean = sanitizeFirestoreData(profile);
   const db = getFirebaseAdminFirestore();
   if (db) {
-    await db.collection('users').doc(profile.uid).set(profile, { merge: true });
+    await db.collection('users').doc(profile.uid).set(clean, { merge: true });
   }
   const existing = localStore.users.get(profile.uid) || {};
-  localStore.users.set(profile.uid, { ...existing, ...profile });
+  localStore.users.set(profile.uid, { ...existing, ...clean });
 }
 
 // --- Passengers Collection ---
@@ -98,12 +120,34 @@ export async function getPassengerProfile(uid: string): Promise<PassengerProfile
 }
 
 export async function savePassengerProfile(profile: PassengerProfile): Promise<void> {
+  const clean = sanitizeFirestoreData(profile);
   const db = getFirebaseAdminFirestore();
   if (db) {
-    await db.collection('passengers').doc(profile.uid).set(profile, { merge: true });
+    await db.collection('passengers').doc(profile.uid).set(clean, { merge: true });
   }
   const existing = localStore.passengers.get(profile.uid) || {};
-  localStore.passengers.set(profile.uid, { ...existing, ...profile });
+  localStore.passengers.set(profile.uid, { ...existing, ...clean });
+}
+
+export async function deletePassengerProfile(uid: string): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('passengers').doc(uid).delete();
+  }
+  localStore.passengers.delete(uid);
+
+  const user = await getUserProfile(uid);
+  if (user) {
+    if (!user.isDriver) {
+      if (db) {
+        await db.collection('users').doc(uid).delete();
+      }
+      localStore.users.delete(uid);
+    } else {
+      user.isPassenger = false;
+      await saveUserProfile(user);
+    }
+  }
 }
 
 export async function listAllPassengers(): Promise<PassengerProfile[]> {
@@ -140,12 +184,34 @@ export async function findDriverByCpf(cpf: string): Promise<DriverProfile | null
 }
 
 export async function saveDriverProfile(profile: DriverProfile): Promise<void> {
+  const clean = sanitizeFirestoreData(profile);
   const db = getFirebaseAdminFirestore();
   if (db) {
-    await db.collection('drivers').doc(profile.uid).set(profile, { merge: true });
+    await db.collection('drivers').doc(profile.uid).set(clean, { merge: true });
   }
   const existing = localStore.drivers.get(profile.uid) || {};
-  localStore.drivers.set(profile.uid, { ...existing, ...profile });
+  localStore.drivers.set(profile.uid, { ...existing, ...clean });
+}
+
+export async function deleteDriverProfile(uid: string): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('drivers').doc(uid).delete();
+  }
+  localStore.drivers.delete(uid);
+
+  const user = await getUserProfile(uid);
+  if (user) {
+    if (!user.isPassenger) {
+      if (db) {
+        await db.collection('users').doc(uid).delete();
+      }
+      localStore.users.delete(uid);
+    } else {
+      user.isDriver = false;
+      await saveUserProfile(user);
+    }
+  }
 }
 
 export async function listAllDrivers(): Promise<DriverProfile[]> {
@@ -183,12 +249,13 @@ export async function getRide(rideId: string): Promise<Ride | null> {
 }
 
 export async function saveRide(ride: Ride): Promise<void> {
+  const clean = sanitizeFirestoreData(ride);
   const db = getFirebaseAdminFirestore();
   if (db) {
-    await db.collection('rides').doc(ride.id).set(ride, { merge: true });
+    await db.collection('rides').doc(ride.id).set(clean, { merge: true });
   }
   const existing = localStore.rides.get(ride.id) || {};
-  localStore.rides.set(ride.id, { ...existing, ...ride });
+  localStore.rides.set(ride.id, { ...existing, ...clean });
 }
 
 export async function listRidesForPassenger(passengerId: string): Promise<Ride[]> {
@@ -226,11 +293,12 @@ export async function getActiveRideForUser(uid: string, role: 'passenger' | 'dri
 
 // --- Receipts Collection ---
 export async function saveReceipt(receipt: Receipt): Promise<void> {
+  const clean = sanitizeFirestoreData(receipt);
   const db = getFirebaseAdminFirestore();
   if (db) {
-    await db.collection('receipts').doc(receipt.id).set(receipt);
+    await db.collection('receipts').doc(receipt.id).set(clean);
   }
-  localStore.receipts.set(receipt.id, receipt);
+  localStore.receipts.set(receipt.id, clean);
 }
 
 export async function getReceipt(receiptId: string): Promise<Receipt | null> {
@@ -335,12 +403,13 @@ export async function getAdminMetrics(): Promise<AdminMetrics> {
 
 // --- Reports Collection ---
 export async function saveReport(report: Report): Promise<void> {
+  const clean = sanitizeFirestoreData(report);
   const db = getFirebaseAdminFirestore();
   if (db) {
-    await db.collection('reports').doc(report.id).set(report, { merge: true });
+    await db.collection('reports').doc(report.id).set(clean, { merge: true });
   }
   const existing = localStore.reports.get(report.id) || {};
-  localStore.reports.set(report.id, { ...existing, ...report });
+  localStore.reports.set(report.id, { ...existing, ...clean });
 }
 
 export async function getReport(reportId: string): Promise<Report | null> {
