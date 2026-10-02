@@ -1,0 +1,69 @@
+import { apiFetch } from './client.js';
+import { Ride, Receipt, PaymentMethod, PlatformPricingSettings } from '../../../shared/src/types.js';
+
+export interface EstimateRideInput {
+  origin: { address: string; lat: number; lng: number };
+  destination: { address: string; lat: number; lng: number };
+}
+
+export interface EstimateRideResult {
+  distanceKm: number;
+  durationMinutes: number;
+  fareAmount: number;
+  pricing: PlatformPricingSettings;
+}
+
+export interface RequestRideInput {
+  origin: { address: string; lat: number; lng: number };
+  destination: { address: string; lat: number; lng: number };
+  paymentMethod: PaymentMethod;
+}
+
+export const ridesApi = {
+  estimate: (input: EstimateRideInput) =>
+    apiFetch<EstimateRideResult>('/rides/estimate', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  request: (input: RequestRideInput) =>
+    apiFetch<Ride>('/rides/request', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  accept: (rideId: string) =>
+    apiFetch<Ride>(`/rides/${rideId}/accept`, {
+      method: 'POST',
+    }),
+
+  arrived: (rideId: string) =>
+    apiFetch<Ride>(`/rides/${rideId}/arrived`, {
+      method: 'POST',
+    }),
+
+  start: (rideId: string) =>
+    apiFetch<Ride>(`/rides/${rideId}/start`, {
+      method: 'POST',
+    }),
+
+  complete: (rideId: string) =>
+    apiFetch<{ ride: Ride; receipt: Receipt }>(`/rides/${rideId}/complete`, {
+      method: 'POST',
+    }),
+
+  cancel: (rideId: string, reason?: string) =>
+    apiFetch<Ride>(`/rides/${rideId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  getById: (rideId: string) =>
+    apiFetch<Ride>(`/rides/${rideId}`),
+
+  rate: (rideId: string, rating: number, feedback?: string) =>
+    apiFetch<Ride>(`/rides/${rideId}/rate`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, feedback }),
+    }),
+};

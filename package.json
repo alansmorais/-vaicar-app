@@ -1,0 +1,56 @@
+{
+  "name": "vaicar-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:api": "tsx watch api/src/server.ts",
+    "dev:web": "vite",
+    "build:web": "vite build",
+    "build:api": "tsc -p api/tsconfig.json",
+    "build": "vite build",
+    "start": "tsx api/src/server.ts",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "test:browser": "tsx tests/browser-test.ts",
+    "test:watch": "vitest",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@react-google-maps/api": "^2.20.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase": "^11.4.0",
+    "firebase-admin": "^13.1.0",
+    "lucide-react": "^1.49.0",
+    "nodemailer": "^6.10.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.2.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.13.3",
+    "@types/nodemailer": "^6.4.17",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@types/supertest": "^6.0.2",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.4.20",
+    "oxlint": "^1.81.0",
+    "postcss": "^8.5.3",
+    "puppeteer-core": "^24.4.0",
+    "supertest": "^7.0.0",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.3",
+    "typescript": "~5.7.3",
+    "vite": "^8.3.0",
+    "vitest": "^3.0.7"
+  },
+  "overrides": {
+    "baseline-browser-mapping": "2.11.26"
+  }
+}

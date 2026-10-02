@@ -1,0 +1,327 @@
+import { getFirebaseAdminFirestore } from './firebaseAdmin.js';
+import {
+  UserProfile,
+  PassengerProfile,
+  DriverProfile,
+  Ride,
+  Receipt,
+  PlatformPricingSettings,
+  AdminMetrics,
+} from '../../../shared/src/types.js';
+
+// In-memory document store for local dev / testing fallback when cloud credentials are not supplied
+const localStore: Record<string, Map<string, any>> = {
+  users: new Map(),
+  passengers: new Map(),
+  drivers: new Map(),
+  vehicles: new Map(),
+  rides: new Map(),
+  pendingPins: new Map(),
+  receipts: new Map(),
+  reports: new Map(),
+  platformSettings: new Map(),
+};
+
+// Default pricing settings for São Sebastião
+const defaultSettings: PlatformPricingSettings = {
+  baseFare: 7.00,
+  perKmRate: 3.50,
+  perMinuteRate: 0.50,
+  minimumFare: 12.00,
+  nightSurchargeMultiplier: 1.20,
+  updatedAt: new Date().toISOString(),
+};
+localStore.platformSettings.set('pricing', defaultSettings);
+
+// --- Users Collection ---
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('users').doc(uid).get();
+    return snap.exists ? (snap.data() as UserProfile) : null;
+  }
+  return localStore.users.get(uid) || null;
+}
+
+export async function findUserByEmail(email: string): Promise<UserProfile | null> {
+  const normalized = email.trim().toLowerCase();
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('users').where('email', '==', normalized).limit(1).get();
+    if (!snap.empty) return snap.docs[0].data() as UserProfile;
+    return null;
+  }
+  for (const user of localStore.users.values()) {
+    if (user.email?.toLowerCase() === normalized) return user;
+  }
+  return null;
+}
+
+export async function findUserByWhatsApp(whatsapp: string): Promise<UserProfile | null> {
+  const cleaned = whatsapp.replace(/\D/g, '');
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('users').where('whatsapp', '==', cleaned).limit(1).get();
+    if (!snap.empty) return snap.docs[0].data() as UserProfile;
+    return null;
+  }
+  for (const user of localStore.users.values()) {
+    if (user.whatsapp?.replace(/\D/g, '') === cleaned) return user;
+  }
+  return null;
+}
+
+export async function saveUserProfile(profile: UserProfile): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('users').doc(profile.uid).set(profile, { merge: true });
+  }
+  const existing = localStore.users.get(profile.uid) || {};
+  localStore.users.set(profile.uid, { ...existing, ...profile });
+}
+
+// --- Passengers Collection ---
+export async function getPassengerProfile(uid: string): Promise<PassengerProfile | null> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('passengers').doc(uid).get();
+    return snap.exists ? (snap.data() as PassengerProfile) : null;
+  }
+  return localStore.passengers.get(uid) || null;
+}
+
+export async function savePassengerProfile(profile: PassengerProfile): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('passengers').doc(profile.uid).set(profile, { merge: true });
+  }
+  const existing = localStore.passengers.get(profile.uid) || {};
+  localStore.passengers.set(profile.uid, { ...existing, ...profile });
+}
+
+export async function listAllPassengers(): Promise<PassengerProfile[]> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('passengers').get();
+    return snap.docs.map(d => d.data() as PassengerProfile);
+  }
+  return Array.from(localStore.passengers.values());
+}
+
+// --- Drivers Collection ---
+export async function getDriverProfile(uid: string): Promise<DriverProfile | null> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('drivers').doc(uid).get();
+    return snap.exists ? (snap.data() as DriverProfile) : null;
+  }
+  return localStore.drivers.get(uid) || null;
+}
+
+export async function findDriverByCpf(cpf: string): Promise<DriverProfile | null> {
+  const cleaned = cpf.replace(/\D/g, '');
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('drivers').where('cpf', '==', cleaned).limit(1).get();
+    if (!snap.empty) return snap.docs[0].data() as DriverProfile;
+    return null;
+  }
+  for (const driver of localStore.drivers.values()) {
+    if (driver.cpf?.replace(/\D/g, '') === cleaned) return driver;
+  }
+  return null;
+}
+
+export async function saveDriverProfile(profile: DriverProfile): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('drivers').doc(profile.uid).set(profile, { merge: true });
+  }
+  const existing = localStore.drivers.get(profile.uid) || {};
+  localStore.drivers.set(profile.uid, { ...existing, ...profile });
+}
+
+export async function listAllDrivers(): Promise<DriverProfile[]> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('drivers').get();
+    return snap.docs.map(d => d.data() as DriverProfile);
+  }
+  return Array.from(localStore.drivers.values());
+}
+
+export async function listOnlineDrivers(): Promise<DriverProfile[]> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db
+      .collection('drivers')
+      .where('status', '==', 'APPROVED')
+      .where('isOnline', '==', true)
+      .get();
+    return snap.docs.map(d => d.data() as DriverProfile);
+  }
+  return Array.from(localStore.drivers.values()).filter(
+    d => d.status === 'APPROVED' && d.isOnline === true
+  );
+}
+
+// --- Rides Collection ---
+export async function getRide(rideId: string): Promise<Ride | null> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('rides').doc(rideId).get();
+    return snap.exists ? (snap.data() as Ride) : null;
+  }
+  return localStore.rides.get(rideId) || null;
+}
+
+export async function saveRide(ride: Ride): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('rides').doc(ride.id).set(ride, { merge: true });
+  }
+  const existing = localStore.rides.get(ride.id) || {};
+  localStore.rides.set(ride.id, { ...existing, ...ride });
+}
+
+export async function listRidesForPassenger(passengerId: string): Promise<Ride[]> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('rides').where('passengerId', '==', passengerId).get();
+    return snap.docs.map(d => d.data() as Ride);
+  }
+  return Array.from(localStore.rides.values()).filter(r => r.passengerId === passengerId);
+}
+
+export async function listRidesForDriver(driverId: string): Promise<Ride[]> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('rides').where('driverId', '==', driverId).get();
+    return snap.docs.map(d => d.data() as Ride);
+  }
+  return Array.from(localStore.rides.values()).filter(r => r.driverId === driverId);
+}
+
+export async function listAllRides(): Promise<Ride[]> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('rides').get();
+    return snap.docs.map(d => d.data() as Ride);
+  }
+  return Array.from(localStore.rides.values());
+}
+
+export async function getActiveRideForUser(uid: string, role: 'passenger' | 'driver'): Promise<Ride | null> {
+  const activeStatuses = ['REQUESTED', 'OFFERED', 'ACCEPTED', 'DRIVER_ARRIVING', 'ARRIVED', 'IN_PROGRESS'];
+  const rides = role === 'passenger' ? await listRidesForPassenger(uid) : await listRidesForDriver(uid);
+  return rides.find(r => activeStatuses.includes(r.status)) || null;
+}
+
+// --- Receipts Collection ---
+export async function saveReceipt(receipt: Receipt): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('receipts').doc(receipt.id).set(receipt);
+  }
+  localStore.receipts.set(receipt.id, receipt);
+}
+
+export async function getReceipt(receiptId: string): Promise<Receipt | null> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('receipts').doc(receiptId).get();
+    return snap.exists ? (snap.data() as Receipt) : null;
+  }
+  return localStore.receipts.get(receiptId) || null;
+}
+
+// --- Platform Settings ---
+export async function getPlatformPricing(): Promise<PlatformPricingSettings> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('platformSettings').doc('pricing').get();
+    if (snap.exists) return snap.data() as PlatformPricingSettings;
+  }
+  return localStore.platformSettings.get('pricing') || defaultSettings;
+}
+
+export async function updatePlatformPricing(settings: Partial<PlatformPricingSettings>): Promise<PlatformPricingSettings> {
+  const current = await getPlatformPricing();
+  const updated: PlatformPricingSettings = {
+    ...current,
+    ...settings,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('platformSettings').doc('pricing').set(updated);
+  }
+  localStore.platformSettings.set('pricing', updated);
+  return updated;
+}
+
+// --- PIN Collection ---
+export async function savePendingPin(key: string, pin: string, expiresMinutes = 15): Promise<void> {
+  const data = {
+    key,
+    pin,
+    expiresAt: new Date(Date.now() + expiresMinutes * 60 * 1000).toISOString(),
+    attempts: 0,
+    createdAt: new Date().toISOString(),
+  };
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    await db.collection('pendingPins').doc(key).set(data);
+  }
+  localStore.pendingPins.set(key, data);
+}
+
+export async function verifyPendingPin(key: string, pin: string): Promise<boolean> {
+  const db = getFirebaseAdminFirestore();
+  let data: any = null;
+  if (db) {
+    const snap = await db.collection('pendingPins').doc(key).get();
+    if (snap.exists) data = snap.data();
+  } else {
+    data = localStore.pendingPins.get(key);
+  }
+
+  if (!data) return false;
+  if (new Date(data.expiresAt).getTime() < Date.now()) {
+    return false; // Expired
+  }
+  if (data.pin !== pin) {
+    return false;
+  }
+
+  // Delete after successful verification
+  if (db) {
+    await db.collection('pendingPins').doc(key).delete();
+  }
+  localStore.pendingPins.delete(key);
+  return true;
+}
+
+// --- Admin Metrics ---
+export async function getAdminMetrics(): Promise<AdminMetrics> {
+  const allRides = await listAllRides();
+  const allDrivers = await listAllDrivers();
+  const allPassengers = await listAllPassengers();
+
+  const completed = allRides.filter(r => r.status === 'COMPLETED');
+  const activeOnline = allDrivers.filter(d => d.status === 'APPROVED' && d.isOnline);
+  const pendingApprovals = allDrivers.filter(d => d.status === 'PENDING_APPROVAL');
+
+  const grossVolumeBRL = completed.reduce((acc, r) => acc + (r.fareAmount || 0), 0);
+
+  return {
+    totalRides: allRides.length,
+    completedRides: completed.length,
+    activeOnlineDrivers: activeOnline.length,
+    pendingDriverApprovals: pendingApprovals.length,
+    totalPassengers: allPassengers.length,
+    totalDrivers: allDrivers.length,
+    grossVolumeBRL: Math.round(grossVolumeBRL * 100) / 100,
+  };
+}
