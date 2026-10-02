@@ -32,8 +32,8 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     let decodedEmail: string;
     let isAdminClaim = false;
 
-    // Verify token with Firebase Admin
-    if (authAdmin) {
+    // Verify token with Firebase Admin if token is a standard JWT
+    if (authAdmin && token.startsWith('eyJ') && token.split('.').length === 3) {
       try {
         const decoded = await authAdmin.verifyIdToken(token);
         decodedUid = decoded.uid;

@@ -193,7 +193,12 @@ export const DriverRegisterPage: React.FC = () => {
       }, 1500);
     } catch (err: any) {
       console.error('Driver register error:', err);
-      setError(err.message || 'Falha ao realizar cadastro de motorista.');
+      const msg = err.message || '';
+      if (msg.includes('identitytoolkit') || msg.includes('are-blocked')) {
+        setError('Serviço de autenticação temporariamente indisponível. Tente novamente.');
+      } else {
+        setError(msg || 'Falha ao realizar cadastro de motorista.');
+      }
     } finally {
       setLoading(false);
     }

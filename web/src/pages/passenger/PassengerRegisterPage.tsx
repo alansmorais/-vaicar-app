@@ -114,7 +114,12 @@ export const PassengerRegisterPage: React.FC = () => {
       }, 1200);
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError(err.message || 'Falha ao processar o cadastro. Tente novamente.');
+      const msg = err.message || '';
+      if (msg.includes('identitytoolkit') || msg.includes('are-blocked')) {
+        setError('Serviço de autenticação temporariamente indisponível. Tente novamente.');
+      } else {
+        setError(msg || 'Falha ao processar o cadastro. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }

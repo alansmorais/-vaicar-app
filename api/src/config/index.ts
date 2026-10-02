@@ -5,10 +5,10 @@ export const config = {
   port: parseInt(process.env.PORT || '5001', 10),
   env: process.env.NODE_ENV || 'development',
   firebase: {
-    projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || 'vaicar-app-prod',
+    projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || 'gen-lang-client-0068493335',
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'vaicar-app-prod.appspot.com',
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'gen-lang-client-0068493335.appspot.com',
   },
   email: {
     smtpHost: process.env.SMTP_HOST,
