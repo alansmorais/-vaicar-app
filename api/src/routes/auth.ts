@@ -40,7 +40,7 @@ export const authRouter = Router();
  */
 authRouter.post('/register-passenger', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { uid, name, whatsapp, email, photoUrl, termsAccepted } = req.body;
+    const { uid, name, whatsapp, email, photoUrl, termsAccepted, hasCriminalRecordCheck, criminalRecordUrl } = req.body;
 
     if (!uid || typeof uid !== 'string') {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Identificador de usuário (uid) obrigatório.', 400);
@@ -73,6 +73,7 @@ authRouter.post('/register-passenger', async (req: Request, res: Response, next:
     }
 
     const now = new Date().toISOString();
+    const hasRecordCheck = Boolean(hasCriminalRecordCheck || criminalRecordUrl);
     const userProfile: UserProfile = {
       uid,
       email: email.trim().toLowerCase(),
@@ -91,6 +92,9 @@ authRouter.post('/register-passenger', async (req: Request, res: Response, next:
       whatsapp: whatsapp.replace(/\D/g, ''),
       photoUrl,
       termsAccepted: true,
+      hasCriminalRecordCheck: hasRecordCheck,
+      criminalRecordUrl: criminalRecordUrl || undefined,
+      criminalRecordStatus: hasRecordCheck ? 'VERIFIED' : 'NONE',
       rating: 5.0,
       totalRides: 0,
       createdAt: now,
@@ -140,6 +144,8 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       photoUrl,
       professionalCategory,
       cnhNumber,
+      criminalRecordUrl,
+      subscriptionPlan,
       vehicle,
       operatingZones,
     } = req.body;
@@ -166,12 +172,21 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
     if (!professionalCategory) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Categoria profissional é obrigatória.', 400);
     }
-    if (!cnhNumber || !isValidCNH(cnhNumber)) {
-      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Número da CNH válido é obrigatório.', 400);
+
+    const isBicycle = vehicle?.type === 'bicycle';
+    if (!isBicycle) {
+      if (!cnhNumber || !isValidCNH(cnhNumber)) {
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Número da CNH válido é obrigatório para veículos automotores.', 400);
+      }
+      if (!vehicle || !vehicle.brand || !vehicle.model || !vehicle.year || !vehicle.color || !isValidPlate(vehicle.plate)) {
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Dados completos do veículo (marca, modelo, ano, cor, placa válida) são obrigatórios.', 400);
+      }
+    } else {
+      if (!vehicle || !vehicle.brand || !vehicle.model || !vehicle.color) {
+        throw new AppError(ErrorCode.VALIDATION_ERROR, 'Informe marca/fabricante, modelo e cor da bicicleta.', 400);
+      }
     }
-    if (!vehicle || !vehicle.brand || !vehicle.model || !vehicle.year || !vehicle.color || !isValidPlate(vehicle.plate)) {
-      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Dados completos do veículo (marca, modelo, ano, cor, placa válida) são obrigatórios.', 400);
-    }
+
     if (!Array.isArray(operatingZones) || operatingZones.length === 0) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Selecione ao menos uma região de atuação em São Sebastião.', 400);
     }
@@ -211,14 +226,19 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       whatsapp: whatsapp.replace(/\D/g, ''),
       photoUrl,
       professionalCategory,
-      cnhNumber: cnhNumber.replace(/\D/g, ''),
+      cnhNumber: isBicycle ? (cnhNumber || 'ISENTO_BIKE') : cnhNumber.replace(/\D/g, ''),
+      criminalRecordUrl: criminalRecordUrl || undefined,
+      criminalRecordStatus: criminalRecordUrl ? 'PENDING' : undefined,
+      subscriptionPlan: subscriptionPlan === 'weekly_percent_10' ? 'weekly_percent_10' : 'monthly_100',
       vehicle: {
         type: vehicle.type || 'car',
         brand: vehicle.brand.trim(),
         model: vehicle.model.trim(),
-        year: parseInt(vehicle.year, 10),
+        year: parseInt(vehicle.year || '2023', 10),
         color: vehicle.color.trim(),
-        plate: vehicle.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase(),
+        plate: isBicycle
+          ? (vehicle.plate || 'BIKE').toUpperCase()
+          : vehicle.plate.replace(/[^a-zA-Z0-9]/g, '').toUpperCase(),
       },
       operatingZones,
       status: 'PENDING_APPROVAL',

@@ -77,6 +77,15 @@ export const Navbar: React.FC = () => {
             >
               Painel Admin
             </Link>
+            <a
+              href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 rounded-lg text-xs font-bold text-emerald-400 hover:text-emerald-300 hover:bg-slate-900/60 transition-colors flex items-center gap-1 border border-emerald-500/20"
+            >
+              <span>Grupo WhatsApp</span>
+              <span className="text-[10px]">↗</span>
+            </a>
           </div>
 
           {/* User Auth Info / Actions */}
@@ -180,6 +189,15 @@ export const Navbar: React.FC = () => {
           >
             Painel Admin
           </Link>
+          <a
+            href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-base font-bold text-emerald-400 hover:bg-slate-800"
+          >
+            Grupo Oficial WhatsApp ↗
+          </a>
 
           {user ? (
             <div className="pt-3 border-t border-slate-800 flex items-center justify-between">

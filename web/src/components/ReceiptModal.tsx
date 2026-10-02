@@ -50,6 +50,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ receipt, onClose }) 
           </div>
         </div>
 
+        {receipt.discountApplied && (
+          <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-lg p-2.5 text-center text-xs text-emerald-300 font-semibold mb-4">
+            🏷️ 5% Desconto Passageiro Verificado aplicado (-R$ {receipt.discountAmount?.toFixed(2)})
+          </div>
+        )}
+
+        <div className="text-[11px] text-slate-400 text-center mb-4">
+          💵 Pagamento realizado diretamente ao motorista via {receipt.paymentMethod}.
+        </div>
+
         {/* Breakdown rows */}
         <div className="space-y-3 text-xs mb-6 divide-y divide-slate-800/80">
           <div className="flex justify-between pt-2">

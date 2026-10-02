@@ -35,7 +35,10 @@ export const DriverRegisterPage: React.FC = () => {
 
   // Activity Mode & Vehicle Type
   const [activityMode, setActivityMode] = useState<'driver' | 'delivery'>('driver');
-  const [vehicleType, setVehicleType] = useState<'car' | 'motorcycle' | 'van'>('car');
+  const [vehicleType, setVehicleType] = useState<'car' | 'motorcycle' | 'van' | 'bicycle'>('car');
+
+  // Partnership Subscription Plan
+  const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly_100' | 'weekly_percent_10'>('monthly_100');
 
   // Personal
   const [name, setName] = useState('');
@@ -55,6 +58,10 @@ export const DriverRegisterPage: React.FC = () => {
   const [professionalCategory, setProfessionalCategory] = useState('Motorista com EAR / Autônomo');
   const [cnhNumber, setCnhNumber] = useState('');
 
+  // Criminal Record (Obligatory)
+  const [criminalRecordData, setCriminalRecordData] = useState<string>('');
+  const [criminalRecordFileName, setCriminalRecordFileName] = useState<string>('');
+
   // Vehicle
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
@@ -72,18 +79,25 @@ export const DriverRegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSelectActivity = (mode: 'driver' | 'delivery') => {
+  const handleSelectActivity = (mode: 'driver' | 'delivery', vType?: 'car' | 'motorcycle' | 'van' | 'bicycle') => {
     setActivityMode(mode);
-    if (mode === 'delivery') {
-      setVehicleType('motorcycle');
+    const targetType = vType || (mode === 'delivery' ? 'motorcycle' : 'car');
+    setVehicleType(targetType);
+    if (targetType === 'bicycle') {
+      setProfessionalCategory('Entregador / Ciclista (Bike e Encomendas)');
+      if (!brand || brand === 'Chevrolet' || brand === 'Honda') setBrand('Caloi');
+      if (!model || model === 'Onix' || model === 'CG 160 Fan') setModel('Aro 29');
+      setPlate('BIKE');
+    } else if (targetType === 'motorcycle') {
       setProfessionalCategory('Entregador / Motoboy (Delivery e Encomendas)');
-      if (!brand || brand === 'Chevrolet') setBrand('Honda');
-      if (!model || model === 'Onix') setModel('CG 160 Fan');
+      if (!brand || brand === 'Chevrolet' || brand === 'Caloi') setBrand('Honda');
+      if (!model || model === 'Onix' || model === 'Aro 29') setModel('CG 160 Fan');
+      if (plate === 'BIKE') setPlate('');
     } else {
-      setVehicleType('car');
       setProfessionalCategory('Motorista com EAR / Autônomo');
-      if (brand === 'Honda') setBrand('');
-      if (model === 'CG 160 Fan') setModel('');
+      if (brand === 'Honda' || brand === 'Caloi') setBrand('');
+      if (model === 'CG 160 Fan' || model === 'Aro 29') setModel('');
+      if (plate === 'BIKE') setPlate('');
     }
   };
 
@@ -104,6 +118,20 @@ export const DriverRegisterPage: React.FC = () => {
       setPhotoPreview(normalizedDataUrl);
     } catch (err: any) {
       setError(err?.message || 'Falha ao carregar foto. Selecione JPG, PNG ou WebP.');
+    }
+  };
+
+  const handleCriminalRecordUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setError(null);
+      const normalized = await processImageFile(file);
+      setCriminalRecordData(normalized);
+      setCriminalRecordFileName(file.name);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao processar arquivo de antecedentes criminais.');
     }
   };
 
@@ -140,16 +168,23 @@ export const DriverRegisterPage: React.FC = () => {
       setError('Sua foto de identificação/selfie é obrigatória.');
       return;
     }
-    if (!cnhNumber || !isValidCNH(cnhNumber)) {
-      setError('Informe o número da CNH com 11 dígitos.');
+    const isBicycle = vehicleType === 'bicycle';
+    if (!isBicycle) {
+      if (!cnhNumber || !isValidCNH(cnhNumber)) {
+        setError('Informe o número da CNH com 11 dígitos.');
+        return;
+      }
+      if (!isValidPlate(plate)) {
+        setError('Informe uma placa de veículo válida (Mercosul ou Tradicional).');
+        return;
+      }
+    }
+    if (!brand.trim() || !model.trim() || !color.trim()) {
+      setError('Preencha os dados do veículo/bicicleta.');
       return;
     }
-    if (!brand.trim() || !model.trim() || !color.trim() || !plate.trim()) {
-      setError('Preencha todos os dados do veículo.');
-      return;
-    }
-    if (!isValidPlate(plate)) {
-      setError('Informe uma placa de veículo válida (Mercosul ou Tradicional).');
+    if (!criminalRecordData) {
+      setError('O Atestado de Antecedentes Criminais é obrigatório para cadastro de parceiro.');
       return;
     }
     if (selectedZones.length === 0) {
@@ -172,7 +207,18 @@ export const DriverRegisterPage: React.FC = () => {
         console.warn('Storage upload note:', uploadErr);
       }
 
-      // 3. Register Driver in backend
+      // 3. Upload criminal record
+      let finalCriminalUrl = criminalRecordData;
+      if (criminalRecordData) {
+        try {
+          const uploadRec = await storageApi.uploadImage(criminalRecordData, 'drivers', `${fbUser.uid}_antecedentes`);
+          finalCriminalUrl = uploadRec.url;
+        } catch (uploadErr) {
+          console.warn('Criminal record upload note:', uploadErr);
+        }
+      }
+
+      // 4. Register Driver in backend
       await authApi.registerDriver({
         uid: fbUser.uid,
         name: name.trim(),
@@ -182,19 +228,21 @@ export const DriverRegisterPage: React.FC = () => {
         email: email.trim().toLowerCase(),
         photoUrl: finalPhotoUrl,
         professionalCategory,
-        cnhNumber: cnhNumber.trim(),
+        cnhNumber: isBicycle ? (cnhNumber || 'ISENTO_BIKE') : cnhNumber.trim(),
+        criminalRecordUrl: finalCriminalUrl,
+        subscriptionPlan,
         vehicle: {
           type: vehicleType,
           brand: brand.trim(),
           model: model.trim(),
-          year: parseInt(year, 10),
+          year: parseInt(year, 10) || 2023,
           color: color.trim(),
-          plate: plate.trim().toUpperCase(),
+          plate: isBicycle ? 'BIKE' : plate.trim().toUpperCase(),
         },
         operatingZones: selectedZones,
       });
 
-      // 4. Set session
+      // 5. Set session
       await devLogin(fbUser.uid, email.trim(), 'driver', name.trim());
 
       setSuccess('Cadastro enviado com sucesso! Seus dados estão em análise pela equipe administrativa.');
@@ -222,24 +270,24 @@ export const DriverRegisterPage: React.FC = () => {
             <img src="/vaicar_logo.png" alt="VaiCar" className="h-10 mx-auto rounded object-contain" />
           </Link>
           <h2 className="text-2xl font-black text-white">
-            {activityMode === 'delivery'
-              ? 'Cadastro de Entregador / Motoboy Parceiro'
-              : 'Cadastro de Motorista Parceiro'}
+            {vehicleType === 'bicycle'
+              ? 'Cadastro de Entregador (Bike / Ciclista)'
+              : activityMode === 'delivery'
+              ? 'Cadastro de Entregador / Motoboy (Moto)'
+              : 'Cadastro de Motorista Parceiro (Carro / Van)'}
           </h2>
           <p className="text-xs text-slate-400">
-            {activityMode === 'delivery'
-              ? 'Faça entregas e delivery em São Sebastião com taxa zero sobre seus ganhos.'
-              : 'Transporte passageiros em São Sebastião com taxa zero sobre suas corridas.'}
+            Trabalhe com autonomia em São Sebastião. Pagamento 100% direto entre passageiro/cliente e você.
           </p>
         </div>
 
-        {/* Modalidade: Motorista ou Entregador */}
-        <div className="grid grid-cols-2 gap-3 p-1.5 bg-slate-950 border border-slate-800 rounded-2xl">
+        {/* Modalidade: Carro, Moto ou Bike */}
+        <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-950 border border-slate-800 rounded-2xl">
           <button
             type="button"
-            onClick={() => handleSelectActivity('driver')}
-            className={`py-3 px-4 rounded-xl flex items-center justify-center gap-2.5 font-bold text-xs transition-all ${
-              activityMode === 'driver'
+            onClick={() => handleSelectActivity('driver', 'car')}
+            className={`py-2.5 px-2 rounded-xl flex flex-col sm:flex-row items-center justify-center gap-1.5 font-bold text-xs transition-all ${
+              activityMode === 'driver' && vehicleType !== 'bicycle'
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
             }`}
@@ -249,16 +297,83 @@ export const DriverRegisterPage: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => handleSelectActivity('delivery')}
-            className={`py-3 px-4 rounded-xl flex items-center justify-center gap-2.5 font-bold text-xs transition-all ${
-              activityMode === 'delivery'
+            onClick={() => handleSelectActivity('delivery', 'motorcycle')}
+            className={`py-2.5 px-2 rounded-xl flex flex-col sm:flex-row items-center justify-center gap-1.5 font-bold text-xs transition-all ${
+              activityMode === 'delivery' && vehicleType === 'motorcycle'
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
             }`}
           >
             <Bike className="w-4 h-4" />
-            <span>Entregador (Moto / Delivery)</span>
+            <span>Entregador (Moto)</span>
           </button>
+          <button
+            type="button"
+            onClick={() => handleSelectActivity('delivery', 'bicycle')}
+            className={`py-2.5 px-2 rounded-xl flex flex-col sm:flex-row items-center justify-center gap-1.5 font-bold text-xs transition-all ${
+              vehicleType === 'bicycle'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <Bike className="w-4 h-4" />
+            <span>Entregador (Bike)</span>
+          </button>
+        </div>
+
+        {/* Escolha do Plano de Parceria */}
+        <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block">
+              Escolha seu Modelo de Parceria
+            </span>
+            <span className="text-[10px] text-slate-400 font-medium">Você escolhe como pagar</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setSubscriptionPlan('monthly_100')}
+              className={`p-3.5 rounded-xl border text-left transition-all ${
+                subscriptionPlan === 'monthly_100'
+                  ? 'bg-emerald-950/60 border-emerald-500 text-white shadow-md'
+                  : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-extrabold text-sm text-white">Mensalidade Fixa</span>
+                <span className="text-xs font-black text-emerald-400">R$ 100/mês</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-snug">
+                Corridas e entregas ilimitadas. 100% dos ganhos ficam com você, sem comissão por corrida.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSubscriptionPlan('weekly_percent_10')}
+              className={`p-3.5 rounded-xl border text-left transition-all ${
+                subscriptionPlan === 'weekly_percent_10'
+                  ? 'bg-emerald-950/60 border-emerald-500 text-white shadow-md'
+                  : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-extrabold text-sm text-white">10% por Corrida</span>
+                <span className="text-xs font-black text-emerald-400">Acerto Semanal</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-snug">
+                Pague apenas 10% do que produzir na semana. Ideal para quem roda esporadicamente.
+              </p>
+            </button>
+          </div>
+
+          <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] text-amber-300/90 flex items-start gap-2">
+            <span className="text-sm">💵</span>
+            <span>
+              <strong>Pagamento Direto:</strong> O passageiro/cliente paga diretamente a você via Pix ou dinheiro. A plataforma não retém nem intermedia os valores das viagens.
+            </span>
+          </div>
         </div>
 
         {error && (
@@ -397,20 +512,27 @@ export const DriverRegisterPage: React.FC = () => {
           {/* 4. DADOS PROFISSIONAIS & CNH */}
           <div className="space-y-3">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block pb-1 border-b border-slate-800">
-              3. Habilitação Profissional
+              3. Habilitação & Antecedentes Criminais
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Número da CNH (11 dígitos) *</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {vehicleType === 'bicycle' ? 'Documento (RG ou CPF) *' : 'Número da CNH (11 dígitos) *'}
+                </label>
                 <input
                   type="text"
                   required
-                  value={cnhNumber}
+                  value={vehicleType === 'bicycle' ? (cnhNumber || 'ISENTO_BIKE') : cnhNumber}
                   onChange={(e) => setCnhNumber(e.target.value)}
-                  placeholder="12345678901"
+                  placeholder={vehicleType === 'bicycle' ? 'Informe seu RG ou CPF' : '12345678901'}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
+                {vehicleType === 'bicycle' && (
+                  <span className="text-[10px] text-emerald-400 mt-0.5 block">
+                    ✓ CNH dispensada para entregadores de bicicleta.
+                  </span>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Categoria Profissional</label>
@@ -421,9 +543,48 @@ export const DriverRegisterPage: React.FC = () => {
                 >
                   <option value="Motorista com EAR / Autônomo">Motorista com EAR / Autônomo</option>
                   <option value="Entregador / Motoboy (Delivery e Encomendas)">Entregador / Motoboy (Delivery e Encomendas)</option>
+                  <option value="Entregador / Ciclista (Bicicleta / Bike)">Entregador / Ciclista (Bicicleta / Bike)</option>
                   <option value="Taxista Convencional Credenciado">Taxista Convencional Credenciado</option>
                   <option value="Motorista Particular de Turismo">Motorista Particular de Turismo</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Atestado de Antecedentes Criminais (Obrigatório) */}
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-emerald-400" /> Atestado de Antecedentes Criminais *
+                </span>
+                <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700">
+                  Obrigatório
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Exigido para todos os motoristas e entregadores parceiros para garantir a máxima segurança dos passageiros e comerciantes de São Sebastião.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                <label
+                  htmlFor="driver-record-upload"
+                  className="w-full sm:w-auto text-center py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer transition-colors"
+                >
+                  {criminalRecordFileName ? `✓ Anexado: ${criminalRecordFileName}` : 'Anexar Certidão de Antecedentes (Foto ou PDF) *'}
+                </label>
+                <input
+                  id="driver-record-upload"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleCriminalRecordUpload}
+                  className="hidden"
+                />
+                <a
+                  href="https://www.policiacivil.sp.gov.br"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-emerald-400 hover:underline"
+                >
+                  Emitir grátis online na Polícia Civil ↗
+                </a>
               </div>
             </div>
           </div>
@@ -431,7 +592,7 @@ export const DriverRegisterPage: React.FC = () => {
           {/* 5. VEÍCULO */}
           <div className="space-y-3">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block pb-1 border-b border-slate-800">
-              4. Dados do Veículo
+              4. Dados do Veículo ou Bicicleta
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -440,39 +601,52 @@ export const DriverRegisterPage: React.FC = () => {
                 <select
                   value={vehicleType}
                   onChange={(e) => {
-                    const newType = e.target.value as 'car' | 'motorcycle' | 'van';
+                    const newType = e.target.value as 'car' | 'motorcycle' | 'van' | 'bicycle';
                     setVehicleType(newType);
-                    if (newType === 'motorcycle') {
+                    if (newType === 'bicycle') {
+                      setActivityMode('delivery');
+                      setProfessionalCategory('Entregador / Ciclista (Bicicleta / Bike)');
+                      if (!brand || brand === 'Chevrolet' || brand === 'Honda') setBrand('Caloi');
+                      if (!model || model === 'Onix' || model === 'CG 160 Fan') setModel('Aro 29');
+                      setPlate('BIKE');
+                    } else if (newType === 'motorcycle') {
                       setActivityMode('delivery');
                       setProfessionalCategory('Entregador / Motoboy (Delivery e Encomendas)');
-                      if (!brand || brand === 'Chevrolet') setBrand('Honda');
-                      if (!model || model === 'Onix') setModel('CG 160 Fan');
+                      if (!brand || brand === 'Chevrolet' || brand === 'Caloi') setBrand('Honda');
+                      if (!model || model === 'Onix' || model === 'Aro 29') setModel('CG 160 Fan');
+                      if (plate === 'BIKE') setPlate('');
                     } else if (newType === 'car') {
                       setActivityMode('driver');
                       setProfessionalCategory('Motorista com EAR / Autônomo');
-                      if (brand === 'Honda') setBrand('');
-                      if (model === 'CG 160 Fan') setModel('');
+                      if (brand === 'Honda' || brand === 'Caloi') setBrand('');
+                      if (model === 'CG 160 Fan' || model === 'Aro 29') setModel('');
+                      if (plate === 'BIKE') setPlate('');
                     } else if (newType === 'van') {
                       setActivityMode('driver');
                       setProfessionalCategory('Motorista Particular de Turismo');
+                      if (plate === 'BIKE') setPlate('');
                     }
                   }}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
                 >
                   <option value="car">🚗 Carro / Automóvel (Passageiros)</option>
                   <option value="motorcycle">🛵 Moto / Motocicleta (Delivery / Motoboy)</option>
+                  <option value="bicycle">🚲 Bicicleta / Bike (Delivery / Ciclista)</option>
                   <option value="van">🚐 Van / Utilitário / Turismo</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Placa (Mercosul ou Tradicional) *</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {vehicleType === 'bicycle' ? 'Placa do Veículo' : 'Placa (Mercosul ou Tradicional) *'}
+                </label>
                 <input
                   type="text"
-                  required
-                  value={plate}
+                  required={vehicleType !== 'bicycle'}
+                  disabled={vehicleType === 'bicycle'}
+                  value={vehicleType === 'bicycle' ? 'BIKE (ISENTO)' : plate}
                   onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                  placeholder="ABC1D23"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono uppercase focus:outline-none focus:border-emerald-500"
+                  placeholder={vehicleType === 'bicycle' ? 'Isento de Placa' : 'ABC1D23'}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono uppercase focus:outline-none focus:border-emerald-500 disabled:text-slate-500"
                 />
               </div>
             </div>
@@ -485,7 +659,13 @@ export const DriverRegisterPage: React.FC = () => {
                   required
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
-                  placeholder={vehicleType === 'motorcycle' ? 'Ex: Honda, Yamaha' : 'Ex: Chevrolet, VW'}
+                  placeholder={
+                    vehicleType === 'bicycle'
+                      ? 'Ex: Caloi, Sense, Oggi'
+                      : vehicleType === 'motorcycle'
+                      ? 'Ex: Honda, Yamaha'
+                      : 'Ex: Chevrolet, VW'
+                  }
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -496,7 +676,13 @@ export const DriverRegisterPage: React.FC = () => {
                   required
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  placeholder={vehicleType === 'motorcycle' ? 'Ex: CG 160, Fazer 250' : 'Ex: Onix, HB20'}
+                  placeholder={
+                    vehicleType === 'bicycle'
+                      ? 'Ex: Aro 29, Mountain Bike'
+                      : vehicleType === 'motorcycle'
+                      ? 'Ex: CG 160, Fazer 250'
+                      : 'Ex: Onix, HB20'
+                  }
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>

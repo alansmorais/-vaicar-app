@@ -238,7 +238,7 @@ export const DriverDashboardPage: React.FC = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-16">
-        <div className="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl text-center space-y-8">
+        <div className="max-w-3xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl text-center space-y-7">
           <div className="space-y-3">
             <Link to="/" className="inline-block">
               <img src="/vaicar_logo.png" alt="VaiCar" className="h-12 mx-auto rounded object-contain" />
@@ -249,41 +249,70 @@ export const DriverDashboardPage: React.FC = () => {
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Trabalhe com autonomia e <span className="text-emerald-400">taxa zero</span> em São Sebastião
+              Trabalhe com autonomia em São Sebastião
             </h1>
-            <p className="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed">
-              Você fica com 100% do valor da corrida ou entrega. Sem comissões abusivas, recebimento direto e suporte local no município.
+            <p className="text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
+              O passageiro/cliente paga <strong>diretamente a você</strong> via Pix ou dinheiro. Escolha entre <strong>Mensalidade Fixa de R$ 100/mês</strong> ou <strong>10% por corrida semanal</strong>.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-            <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+            <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <Car className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-white">Motorista (Carro / Van)</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Atenda passageiros, moradores e turistas do Centro à Costa Sul com conforto, segurança e tarifas justas.
+              <h3 className="text-sm font-bold text-white">Motorista (Carro / Van)</h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Transporte passageiros no Centro e praias da Costa Sul e Norte.
               </p>
             </div>
 
-            <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <Bike className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-white">Entregador / Motoboy (Moto)</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Faça entregas ágeis de encomendas, delivery de restaurantes e comércios locais em São Sebastião.
+              <h3 className="text-sm font-bold text-white">Entregador (Moto)</h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Entregas rápidas de comida e encomendas com agilidade no trânsito.
+              </p>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-2">
+              <div className="w-9 h-9 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <Bike className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white">Entregador (Bike)</h3>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Entregas sustentáveis de bicicleta em comércios e bairros locais.
               </p>
             </div>
           </div>
 
-          <div className="space-y-3 pt-2">
+          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-left space-y-2">
+            <span className="font-bold text-emerald-400 block uppercase tracking-wider text-[11px]">
+              Modelos de Parceria Transparentes:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300 text-[11px]">
+              <div className="flex items-center gap-1.5">
+                <span className="text-emerald-400 font-bold">•</span>
+                <span><strong>Opção 1:</strong> Mensalidade Fixa de R$ 100/mês (taxa zero por corrida)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-emerald-400 font-bold">•</span>
+                <span><strong>Opção 2:</strong> 10% por corrida com acerto semanal</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/80">
+              💵 <strong>Pagamento Direto:</strong> O cliente paga diretamente a você via Pix ou dinheiro. Exigido atestado de antecedentes criminais para todos os parceiros.
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-1">
             <Link
               to="/driver/register"
               className="w-full py-4 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/60 transition-all hover:scale-[1.02]"
             >
-              Cadastre-se como Motorista ou Entregador (Taxa Zero)
+              Cadastre-se como Motorista ou Entregador
               <ArrowRight className="w-5 h-5" />
             </Link>
 
@@ -400,9 +429,11 @@ export const DriverDashboardPage: React.FC = () => {
           </div>
 
           <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
-            <span className="text-[11px] text-slate-400 block font-medium">Taxa Cobrada</span>
+            <span className="text-[11px] text-slate-400 block font-medium">Plano de Parceria</span>
             <span className="text-sm font-extrabold text-emerald-400 mt-0.5 block">
-              0% (Taxa Zero)
+              {driver?.subscriptionPlan === 'weekly_percent_10'
+                ? '10% (Acerto Semanal)'
+                : 'R$ 100/mês (Mensalidade)'}
             </span>
           </div>
         </div>
@@ -447,8 +478,20 @@ export const DriverDashboardPage: React.FC = () => {
 
               <div className="text-right">
                 <span className="text-xs text-slate-400 block">Receber do Passageiro:</span>
-                <span className="text-2xl font-black text-emerald-400">R$ {activeRide.fareAmount.toFixed(2)}</span>
-                <span className="text-[11px] text-slate-400 block">Forma: {activeRide.paymentMethod}</span>
+                <div className="flex items-center justify-end gap-1.5">
+                  {activeRide.discountApplied && activeRide.originalFareAmount && (
+                    <span className="text-xs line-through text-slate-400">
+                      R$ {activeRide.originalFareAmount.toFixed(2)}
+                    </span>
+                  )}
+                  <span className="text-2xl font-black text-emerald-400">R$ {activeRide.fareAmount.toFixed(2)}</span>
+                </div>
+                {activeRide.discountApplied && (
+                  <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 rounded mt-0.5">
+                    5% OFF (Passageiro Verificado)
+                  </span>
+                )}
+                <span className="text-[11px] text-slate-400 block mt-1">💵 Pagamento direto: {activeRide.paymentMethod}</span>
               </div>
             </div>
 
@@ -562,9 +605,21 @@ export const DriverDashboardPage: React.FC = () => {
                       </div>
 
                       <div className="text-right">
-                        <span className="text-xl font-black text-emerald-400">
-                          R$ {ride.fareAmount.toFixed(2)}
-                        </span>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {ride.discountApplied && ride.originalFareAmount && (
+                            <span className="text-[11px] line-through text-slate-400">
+                              R$ {ride.originalFareAmount.toFixed(2)}
+                            </span>
+                          )}
+                          <span className="text-xl font-black text-emerald-400">
+                            R$ {ride.fareAmount.toFixed(2)}
+                          </span>
+                        </div>
+                        {ride.discountApplied && (
+                          <span className="text-[10px] text-emerald-300 font-bold block">
+                            5% OFF Verificado
+                          </span>
+                        )}
                         <span className="text-[10px] text-slate-400 block">{ride.paymentMethod}</span>
                       </div>
                     </div>

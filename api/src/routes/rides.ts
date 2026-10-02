@@ -54,13 +54,28 @@ ridesRouter.post('/estimate', async (req: Request, res: Response, next: NextFunc
     }
     fare = Math.round(fare * 100) / 100;
 
+    let hasDiscount = Boolean(req.body.hasCriminalRecordCheck);
+    if (!hasDiscount && req.user) {
+      const passenger = await getPassengerProfile(req.user.uid);
+      if (passenger?.hasCriminalRecordCheck || passenger?.criminalRecordStatus === 'VERIFIED') {
+        hasDiscount = true;
+      }
+    }
+    const originalFare = fare;
+    const finalFare = hasDiscount ? Math.round(fare * 0.95 * 100) / 100 : fare;
+    const discountAmount = hasDiscount ? Math.round((originalFare - finalFare) * 100) / 100 : 0;
+
     res.json({
       success: true,
       requestId: req.id,
       data: {
         distanceKm,
         durationMinutes,
-        fareAmount: fare,
+        fareAmount: finalFare,
+        originalFareAmount: originalFare,
+        discountAmount,
+        discountApplied: hasDiscount,
+        discountPercentage: hasDiscount ? 5 : 0,
         pricing,
       },
     });
@@ -103,6 +118,11 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
     if (fare < pricing.minimumFare) fare = pricing.minimumFare;
     fare = Math.round(fare * 100) / 100;
 
+    const hasDiscount = Boolean(passenger.hasCriminalRecordCheck || passenger.criminalRecordStatus === 'VERIFIED');
+    const originalFare = fare;
+    const finalFare = hasDiscount ? Math.round(fare * 0.95 * 100) / 100 : fare;
+    const discountAmount = hasDiscount ? Math.round((originalFare - finalFare) * 100) / 100 : 0;
+
     const rideId = `ride-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const now = new Date().toISOString();
 
@@ -124,7 +144,10 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
       },
       distanceKm,
       durationMinutes,
-      fareAmount: fare,
+      fareAmount: finalFare,
+      originalFareAmount: originalFare,
+      discountAmount,
+      discountApplied: hasDiscount,
       paymentMethod: method,
       paymentStatus: 'PENDING',
       status: 'REQUESTED',
@@ -303,6 +326,9 @@ ridesRouter.post('/:id/complete', async (req: Request, res: Response, next: Next
       distanceKm: ride.distanceKm,
       durationMinutes: ride.durationMinutes,
       fareAmount: ride.fareAmount,
+      originalFareAmount: ride.originalFareAmount,
+      discountAmount: ride.discountAmount,
+      discountApplied: ride.discountApplied,
       paymentMethod: ride.paymentMethod,
       paymentStatus: 'PAID',
       generatedAt: now,

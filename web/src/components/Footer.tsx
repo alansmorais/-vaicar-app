@@ -81,12 +81,20 @@ export const Footer: React.FC = () => {
               <Phone className="w-3.5 h-3.5 text-emerald-500" /> Atendimento & Plantão
             </h4>
             <p className="text-xs text-slate-400 mb-2">
-              Dúvidas ou suporte emergencial durante sua corrida em São Sebastião:
+              Dúvidas, suporte da comunidade ou atendimento em São Sebastião:
             </p>
-            <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+            <div className="p-3 rounded-lg bg-slate-900 border border-emerald-500/30 text-xs">
               <span className="text-slate-400 block text-[11px]">Canal Oficial WhatsApp:</span>
-              <span className="text-emerald-400 font-bold text-sm">(12) 99123-4567</span>
-              <span className="text-[10px] text-slate-500 block mt-1">Atendimento das 06h às 02h</span>
+              <a
+                href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-400 hover:text-emerald-300 font-bold text-sm hover:underline inline-flex items-center gap-1.5 mt-1"
+              >
+                <span>Entrar no Grupo Oficial</span>
+                <span className="text-xs">↗</span>
+              </a>
+              <span className="text-[10px] text-slate-500 block mt-1">Grupo de motoristas, entregadores e passageiros</span>
             </div>
           </div>
         </div>

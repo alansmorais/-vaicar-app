@@ -10,6 +10,10 @@ export interface EstimateRideResult {
   distanceKm: number;
   durationMinutes: number;
   fareAmount: number;
+  originalFareAmount?: number;
+  discountAmount?: number;
+  discountApplied?: boolean;
+  discountPercentage?: number;
   pricing: PlatformPricingSettings;
 }
 

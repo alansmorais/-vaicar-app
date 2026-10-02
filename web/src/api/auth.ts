@@ -8,6 +8,8 @@ export interface RegisterPassengerInput {
   email: string;
   photoUrl: string;
   termsAccepted: boolean;
+  hasCriminalRecordCheck?: boolean;
+  criminalRecordUrl?: string;
 }
 
 export interface RegisterDriverInput {
@@ -20,8 +22,10 @@ export interface RegisterDriverInput {
   photoUrl: string;
   professionalCategory: string;
   cnhNumber: string;
+  criminalRecordUrl?: string;
+  subscriptionPlan?: 'monthly_100' | 'weekly_percent_10';
   vehicle: {
-    type?: 'car' | 'motorcycle' | 'van';
+    type?: 'car' | 'motorcycle' | 'van' | 'bicycle';
     brand: string;
     model: string;
     year: number;

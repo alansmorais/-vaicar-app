@@ -23,6 +23,9 @@ export interface PassengerProfile {
   whatsapp: string;
   photoUrl: string;
   termsAccepted: boolean;
+  hasCriminalRecordCheck?: boolean;
+  criminalRecordUrl?: string;
+  criminalRecordStatus?: 'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED';
   rating?: number;
   totalRides?: number;
   createdAt: string;
@@ -31,8 +34,10 @@ export interface PassengerProfile {
 
 export type DriverApprovalStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
 
+export type DriverSubscriptionPlan = 'monthly_100' | 'weekly_percent_10';
+
 export interface VehicleInfo {
-  type?: 'car' | 'motorcycle' | 'van';
+  type?: 'car' | 'motorcycle' | 'van' | 'bicycle';
   brand: string;
   model: string;
   year: number;
@@ -50,6 +55,9 @@ export interface DriverProfile {
   photoUrl: string;
   professionalCategory: string;
   cnhNumber: string;
+  criminalRecordUrl?: string;
+  criminalRecordStatus?: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  subscriptionPlan?: DriverSubscriptionPlan;
   vehicle: VehicleInfo;
   operatingZones: string[];
   status: DriverApprovalStatus;
@@ -105,6 +113,9 @@ export interface Ride {
   distanceKm: number;
   durationMinutes: number;
   fareAmount: number;
+  originalFareAmount?: number;
+  discountAmount?: number;
+  discountApplied?: boolean;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentState;
   status: RideStatus;
@@ -139,6 +150,9 @@ export interface Receipt {
   distanceKm: number;
   durationMinutes: number;
   fareAmount: number;
+  originalFareAmount?: number;
+  discountAmount?: number;
+  discountApplied?: boolean;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentState;
   generatedAt: string;

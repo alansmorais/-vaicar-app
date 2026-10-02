@@ -345,6 +345,15 @@ export const PassengerDashboardPage: React.FC = () => {
                   <span>Valor: R$ {activeRide.fareAmount.toFixed(2)}</span>
                   <span>Forma: {activeRide.paymentMethod}</span>
                 </div>
+                {activeRide.discountApplied && (
+                  <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <span>🏷️</span>
+                    <span>5% de Desconto de Passageiro Verificado incluso</span>
+                  </div>
+                )}
+                <div className="text-[11px] text-amber-300/90 pt-1.5 border-t border-slate-800/80">
+                  💵 <strong>Pagamento Direto:</strong> Pague diretamente ao motorista via Pix ou dinheiro.
+                </div>
               </div>
 
               {/* Actions */}
@@ -485,16 +494,44 @@ export const PassengerDashboardPage: React.FC = () => {
 
               {/* Fare Estimate Box */}
               {estimate && (
-                <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Tarifa Prevista:</span>
-                    <span className="text-3xl font-extrabold text-emerald-400">
-                      R$ {estimate.fareAmount.toFixed(2)}
-                    </span>
+                <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Tarifa Estimada:</span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-extrabold text-emerald-400">
+                          R$ {estimate.fareAmount.toFixed(2)}
+                        </span>
+                        {estimate.discountApplied && estimate.originalFareAmount && (
+                          <span className="text-sm line-through text-slate-500">
+                            R$ {estimate.originalFareAmount.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-slate-300 space-y-0.5">
+                      <span className="block font-semibold">~{estimate.durationMinutes} min de viagem</span>
+                      <span className="block text-[11px] text-slate-500">{estimate.distanceKm.toFixed(1)} km</span>
+                    </div>
                   </div>
-                  <div className="text-right text-xs text-slate-300 space-y-0.5">
-                    <span className="block font-semibold">~{estimate.durationMinutes} min de viagem</span>
-                    <span className="block text-[11px] text-slate-500">{estimate.distanceKm.toFixed(1)} km</span>
+
+                  {estimate.discountApplied ? (
+                    <div className="pt-2 border-t border-slate-800 text-[11px] text-emerald-400 flex items-center justify-between font-semibold">
+                      <span>🏷️ 5% Desconto Passageiro Verificado incluso!</span>
+                      <span>-R$ {estimate.discountAmount?.toFixed(2)}</span>
+                    </div>
+                  ) : (
+                    <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                      <span>💡 Ganhe 5% de desconto em todas as corridas</span>
+                      <Link to="/passenger/register" className="text-emerald-400 font-semibold hover:underline">
+                        Anexar Antecedentes
+                      </Link>
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-slate-800/80 text-[11px] text-amber-300/90 flex items-center gap-1.5">
+                    <span>💵</span>
+                    <span>Pagamento direto ao motorista (Pix ou dinheiro) no veículo.</span>
                   </div>
                 </div>
               )}

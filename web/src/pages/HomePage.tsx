@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Car, Bike, ShieldCheck, MapPin, ArrowRight, Zap, CheckCircle2, DollarSign, Clock, Users } from 'lucide-react';
+import { Car, Bike, ShieldCheck, MapPin, ArrowRight, Zap, CheckCircle2, DollarSign, Clock, Users, MessageCircle } from 'lucide-react';
 import { ridesApi } from '../api/rides.js';
 import { mapsApi, KnownLocation } from '../api/maps.js';
 import { driversApi, PublicDriverMarker } from '../api/drivers.js';
@@ -54,12 +54,14 @@ export const HomePage: React.FC = () => {
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
-                Mobilidade justa com <span className="text-emerald-500 underline decoration-emerald-500/40">taxa zero</span> em São Sebastião.
+                Mobilidade justa e entregas com <span className="text-emerald-500 underline decoration-emerald-500/40">pagamento direto</span> em São Sebastião.
               </h1>
 
               <p className="text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                Conectamos passageiros e motoristas profissionais do Centro à Costa Sul. 
-                Sem taxas abusivas de aplicativos multinacionais: o motorista recebe mais e você paga menos.
+                Corridas e entregas locais (carro, moto e bicicleta). 
+                Motoristas escolhem entre <strong>R$ 100/mês</strong> ou <strong>10% semanal</strong>. 
+                Passageiros verificados com antecedentes criminais ganham <strong>5% de desconto</strong>. 
+                Pagamento direto ao condutor via Pix ou dinheiro.
               </p>
 
               {/* CTAs */}
@@ -76,25 +78,23 @@ export const HomePage: React.FC = () => {
                   className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 font-bold text-base transition-all hover:scale-105 flex items-center justify-center gap-2"
                 >
                   <DollarSign className="w-5 h-5 text-emerald-400" />
-                  Cadastre-se como Motorista ou Entregador
+                  Quero Dirigir ou Fazer Entregas
                 </Link>
               </div>
 
               {/* Key Highlights */}
               <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-800/80 max-w-lg mx-auto lg:mx-0 text-left">
                 <div>
-                  <span className="block text-2xl font-black text-emerald-400">0%</span>
-                  <span className="text-xs text-slate-400 font-medium">Taxa sobre viagens</span>
+                  <span className="block text-2xl font-black text-emerald-400">5% OFF</span>
+                  <span className="text-xs text-slate-400 font-medium">Passageiro verificado</span>
                 </div>
                 <div>
-                  <span className="block text-2xl font-black text-emerald-400">100%</span>
-                  <span className="text-xs text-slate-400 font-medium">Motoristas checados</span>
+                  <span className="block text-2xl font-black text-emerald-400">R$ 100/mês</span>
+                  <span className="text-xs text-slate-400 font-medium">Ou 10% por corrida</span>
                 </div>
                 <div>
-                  <span className="block text-2xl font-black text-emerald-400">
-                    {onlineDrivers.length > 0 ? `${onlineDrivers.length}` : '24h'}
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium">Cobertura municipal</span>
+                  <span className="block text-2xl font-black text-emerald-400">100% Direto</span>
+                  <span className="text-xs text-slate-400 font-medium">Pix ou dinheiro</span>
                 </div>
               </div>
             </div>
@@ -194,9 +194,9 @@ export const HomePage: React.FC = () => {
               <div className="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">Segurança & Verificação Rigorosa</h3>
+              <h3 className="text-lg font-bold text-white">Segurança & 5% de Desconto</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Todos os motoristas parceiros passam por checagem presencial e documental de CNH com EAR, antecedentes criminais e condições do veículo.
+                Atestado de antecedentes criminais obrigatório para todos os condutores. Passageiros cadastrados que enviam seus antecedentes ganham <strong>5% de desconto automático</strong> em todas as viagens!
               </p>
             </div>
 
@@ -204,20 +204,28 @@ export const HomePage: React.FC = () => {
               <div className="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <DollarSign className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">Taxa Zero sobre as Corridas</h3>
+              <h3 className="text-lg font-bold text-white">Pagamento Direto & Planos Justos</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Diferente de multinacionais que retêm até 40% do ganho dos trabalhadores, no VaiCar o valor pago pelo passageiro vai integralmente para o motorista local.
+                O passageiro paga diretamente ao motorista via Pix ou dinheiro. Motoristas e entregadores escolhem entre <strong>Mensalidade de R$ 100/mês</strong> ou <strong>10% por corrida com acerto semanal</strong>.
               </p>
             </div>
 
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-2xl space-y-3">
               <div className="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <Users className="w-6 h-6" />
+                <MessageCircle className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">Atendimento Humano em São Sebastião</h3>
+              <h3 className="text-lg font-bold text-white">Canal Oficial no WhatsApp</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Suporte por WhatsApp direto com nossa equipe local. Nada de robôs ou semanas aguardando uma resposta para resolver seu problema.
+                Entre no nosso grupo oficial no WhatsApp para suporte ágil, atualizações sobre a balsa, trânsito na SP-055 e contato direto com a equipe.
               </p>
+              <a
+                href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 pt-1"
+              >
+                Entrar no Grupo Oficial <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
         </div>
@@ -271,15 +279,15 @@ export const HomePage: React.FC = () => {
                 Oportunidade para Profissionais de São Sebastião
               </span>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
-                Dirija ou Faça Entregas com <span className="text-emerald-400">0% de Taxa</span>
+                Dirija ou Faça Entregas de <span className="text-emerald-400">Carro, Moto ou Bike</span>
               </h2>
               <p className="text-sm text-slate-300 leading-relaxed">
-                Cadastre seu carro (motorista) ou moto (motoboy/entregador). No VaiCar, você tem autonomia total, recebe direto no seu Pix ou dinheiro, e não divide seu suor com multinacionais.
+                Trabalhe com autonomia total. Entregadores podem se cadastrar inclusive com <strong>bicicleta</strong>. Escolha entre o plano de <strong>R$ 100/mês</strong> ou <strong>10% por corrida semanal</strong>. Receba diretamente no seu Pix ou dinheiro!
               </p>
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-slate-300">
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Vistoria e aprovação rápida</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Taxa zero definitiva</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Suporte humanizado local</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Planos transparentes (R$ 100 ou 10%)</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Carro, Moto ou Bicicleta</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Pagamento 100% direto</span>
               </div>
             </div>
 
@@ -296,6 +304,14 @@ export const HomePage: React.FC = () => {
               >
                 Já sou parceiro • Fazer Login
               </Link>
+              <a
+                href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-3 rounded-xl bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors text-center"
+              >
+                <MessageCircle className="w-4 h-4" /> Canal Oficial WhatsApp
+              </a>
             </div>
           </div>
         </div>

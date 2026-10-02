@@ -18,10 +18,27 @@ export const PassengerRegisterPage: React.FC = () => {
   const [photoData, setPhotoData] = useState<string>('');
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [wantDiscount, setWantDiscount] = useState(false);
+  const [criminalRecordData, setCriminalRecordData] = useState<string>('');
+  const [criminalRecordFileName, setCriminalRecordFileName] = useState<string>('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const handleCriminalRecordUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setError(null);
+      const normalized = await processImageFile(file);
+      setCriminalRecordData(normalized);
+      setCriminalRecordFileName(file.name);
+      setWantDiscount(true);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao processar arquivo de antecedentes criminais.');
+    }
+  };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,20 +97,32 @@ export const PassengerRegisterPage: React.FC = () => {
         finalPhotoUrl = uploadRes.url;
       } catch (uploadErr) {
         console.warn('Storage upload note:', uploadErr);
-        // If upload endpoint returns local path or fails, proceed with data url
       }
 
-      // 3. Register passenger profile in Firestore via authoritative API
-      const res = await authApi.registerPassenger({
+      // 3. Upload criminal record if provided
+      let finalCriminalUrl = criminalRecordData;
+      if (criminalRecordData) {
+        try {
+          const uploadRec = await storageApi.uploadImage(criminalRecordData, 'users', `${fbUser.uid}_antecedentes`);
+          finalCriminalUrl = uploadRec.url;
+        } catch (uploadErr) {
+          console.warn('Criminal record upload note:', uploadErr);
+        }
+      }
+
+      // 4. Register passenger profile in Firestore via authoritative API
+      await authApi.registerPassenger({
         uid: fbUser.uid,
         name: name.trim(),
         whatsapp: whatsapp.trim(),
         email: email.trim().toLowerCase(),
         photoUrl: finalPhotoUrl,
         termsAccepted: true,
+        hasCriminalRecordCheck: Boolean(wantDiscount && finalCriminalUrl),
+        criminalRecordUrl: finalCriminalUrl || undefined,
       });
 
-      // 4. Authenticate session
+      // 5. Authenticate session
       await devLogin(fbUser.uid, email.trim(), 'passenger', name.trim());
 
       setSuccess('Cadastro concluído com sucesso! Redirecionando...');
@@ -237,6 +266,48 @@ export const PassengerRegisterPage: React.FC = () => {
               placeholder="Mínimo 6 caracteres"
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
             />
+          </div>
+
+          {/* 5% Discount with Antecedentes Criminais */}
+          <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-base">🏷️</span>
+                <span className="text-xs font-bold text-white">5% de Desconto em Todas as Corridas</span>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                Opcional VIP
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Passageiro com <strong>Antecedentes Criminais</strong> verificado ganha <strong>5% de desconto automático</strong> em todas as viagens!
+            </p>
+            <div className="flex flex-col gap-2 pt-1">
+              <label
+                htmlFor="passenger-record-upload"
+                className="w-full text-center py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer transition-colors shadow-sm"
+              >
+                {criminalRecordFileName ? `✓ Anexado: ${criminalRecordFileName}` : 'Anexar Antecedentes (+5% OFF)'}
+              </label>
+              <input
+                id="passenger-record-upload"
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleCriminalRecordUpload}
+                className="hidden"
+              />
+              <div className="flex items-center justify-between text-[10px] text-slate-400">
+                <span>Certidão da Polícia Civil ou Federal</span>
+                <a
+                  href="https://www.policiacivil.sp.gov.br"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 hover:underline"
+                >
+                  Emitir grátis online ↗
+                </a>
+              </div>
+            </div>
           </div>
 
           {/* Terms checkbox */}
