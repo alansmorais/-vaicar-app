@@ -75,6 +75,28 @@ if (fs.existsSync(distWebPath)) {
     if (req.path.startsWith('/api/')) return next();
     res.sendFile(path.join(fallbackDistPath, 'index.html'));
   });
+} else {
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8">
+        <title>VaiCar — Servidor Ativo</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: system-ui, -apple-system, sans-serif; background: #020617; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;">
+        <div style="background: #0f172a; padding: 32px; border-radius: 16px; border: 1px solid #1e293b; max-width: 480px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+          <h2 style="color: #22c55e; margin: 0 0 12px;">VaiCar — Servidor Ativo</h2>
+          <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">A API está operando na porta 5001. Para carregar a interface web completa, compile o frontend executando:</p>
+          <div style="background: #020617; color: #22c55e; padding: 12px; border-radius: 8px; font-family: monospace; font-weight: bold; margin-bottom: 12px; border: 1px solid #334155; text-align: left;">npm run build</div>
+          <p style="color: #64748b; font-size: 13px; margin: 0;">Ou utilize <code style="color: #38bdf8;">npm run dev</code> para modo desenvolvedor na porta 5173.</p>
+        </div>
+      </body>
+      </html>
+    `);
+  });
 }
 
 // Global Error Handler
