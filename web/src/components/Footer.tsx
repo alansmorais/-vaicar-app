@@ -59,12 +59,12 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <Link to="/driver" className="hover:text-emerald-400 transition-colors">
-                  Portal do Motorista Parceiro
+                  Portal do Motorista & Entregador
                 </Link>
               </li>
               <li>
                 <Link to="/driver/register" className="hover:text-emerald-400 transition-colors">
-                  Cadastrar Veículo & CNH
+                  Cadastro de Motorista ou Entregador (Taxa Zero)
                 </Link>
               </li>
               <li>

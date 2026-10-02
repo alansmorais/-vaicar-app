@@ -8,6 +8,7 @@ import { ridesApi } from '../../api/rides.js';
 import { DriverProfile, Ride, Receipt } from '../../../../shared/src/types.js';
 import {
   Car,
+  Bike,
   Power,
   ShieldAlert,
   ShieldCheck,
@@ -22,6 +23,7 @@ import {
   User,
   History,
   FileText,
+  ArrowRight,
 } from 'lucide-react';
 
 export const DriverDashboardPage: React.FC = () => {
@@ -232,6 +234,70 @@ export const DriverDashboardPage: React.FC = () => {
   };
 
   const isApproved = driver?.status === 'APPROVED';
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-16">
+        <div className="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl text-center space-y-8">
+          <div className="space-y-3">
+            <Link to="/" className="inline-block">
+              <img src="/vaicar_logo.png" alt="VaiCar" className="h-12 mx-auto rounded object-contain" />
+            </Link>
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                Central do Motorista & Entregador
+              </span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+              Trabalhe com autonomia e <span className="text-emerald-400">taxa zero</span> em São Sebastião
+            </h1>
+            <p className="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed">
+              Você fica com 100% do valor da corrida ou entrega. Sem comissões abusivas, recebimento direto e suporte local no município.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+            <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <Car className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-white">Motorista (Carro / Van)</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Atenda passageiros, moradores e turistas do Centro à Costa Sul com conforto, segurança e tarifas justas.
+              </p>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <Bike className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-white">Entregador / Motoboy (Moto)</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Faça entregas ágeis de encomendas, delivery de restaurantes e comércios locais em São Sebastião.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <Link
+              to="/driver/register"
+              className="w-full py-4 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/60 transition-all hover:scale-[1.02]"
+            >
+              Cadastre-se como Motorista ou Entregador (Taxa Zero)
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+
+            <Link
+              to="/driver/login"
+              className="w-full py-3.5 px-6 rounded-2xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              Já sou parceiro cadastrado • Fazer Login no Painel
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">

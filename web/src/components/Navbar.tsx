@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.js';
-import { Car, User, Shield, LogOut, Menu, X, MapPin } from 'lucide-react';
+import { Car, Bike, User, Shield, LogOut, Menu, X, MapPin } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, profile, role, logout, isAdmin } = useAuth();
@@ -65,7 +65,7 @@ export const Navbar: React.FC = () => {
                   : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
               }`}
             >
-              Motorista
+              Motorista & Entregador
             </Link>
             <Link
               to="/admin"
@@ -116,16 +116,22 @@ export const Navbar: React.FC = () => {
             ) : (
               <div className="flex items-center gap-2">
                 <Link
+                  to="/driver/register"
+                  className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <Car className="w-3.5 h-3.5" /> Seja Motorista / Entregador
+                </Link>
+                <Link
                   to="/passenger/login"
-                  className="px-3.5 py-2 text-sm font-medium text-slate-200 hover:text-white hover:bg-slate-900 rounded-lg transition-colors"
+                  className="px-3 py-2 text-xs font-medium text-slate-200 hover:text-white hover:bg-slate-900 rounded-lg transition-colors"
                 >
                   Entrar
                 </Link>
                 <Link
                   to="/passenger/register"
-                  className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] flex items-center gap-1.5"
+                  className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] flex items-center gap-1.5"
                 >
-                  <Car className="w-4 h-4" /> Cadastre-se
+                  Pedir Corrida
                 </Link>
               </div>
             )}
@@ -165,7 +171,7 @@ export const Navbar: React.FC = () => {
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"
           >
-            Motorista
+            Motorista & Entregador
           </Link>
           <Link
             to="/admin"
@@ -194,20 +200,29 @@ export const Navbar: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="pt-3 border-t border-slate-800 grid grid-cols-2 gap-2">
+            <div className="pt-3 border-t border-slate-800 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  to="/passenger/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center py-2 px-3 rounded-lg bg-slate-800 text-sm font-semibold text-slate-200"
+                >
+                  Entrar
+                </Link>
+                <Link
+                  to="/passenger/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center py-2 px-3 rounded-lg bg-slate-700 text-sm font-semibold text-slate-200"
+                >
+                  Pedir Corrida
+                </Link>
+              </div>
               <Link
-                to="/passenger/login"
+                to="/driver/register"
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-center py-2 px-3 rounded-lg bg-slate-800 text-sm font-semibold text-slate-200"
+                className="block text-center py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white shadow-md shadow-emerald-950/40"
               >
-                Entrar
-              </Link>
-              <Link
-                to="/passenger/register"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-center py-2 px-3 rounded-lg bg-emerald-600 text-sm font-semibold text-white"
-              >
-                Cadastre-se
+                Cadastre-se como Motorista ou Entregador
               </Link>
             </div>
           )}

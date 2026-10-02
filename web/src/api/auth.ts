@@ -21,6 +21,7 @@ export interface RegisterDriverInput {
   professionalCategory: string;
   cnhNumber: string;
   vehicle: {
+    type?: 'car' | 'motorcycle' | 'van';
     brand: string;
     model: string;
     year: number;

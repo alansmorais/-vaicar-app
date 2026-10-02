@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Car, ShieldCheck, MapPin, ArrowRight, Zap, CheckCircle2, DollarSign, Clock, Users } from 'lucide-react';
+import { Car, Bike, ShieldCheck, MapPin, ArrowRight, Zap, CheckCircle2, DollarSign, Clock, Users } from 'lucide-react';
 import { ridesApi } from '../api/rides.js';
 import { mapsApi, KnownLocation } from '../api/maps.js';
 import { driversApi, PublicDriverMarker } from '../api/drivers.js';
@@ -76,7 +76,7 @@ export const HomePage: React.FC = () => {
                   className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 font-bold text-base transition-all hover:scale-105 flex items-center justify-center gap-2"
                 >
                   <DollarSign className="w-5 h-5 text-emerald-400" />
-                  Cadastre-se como Motorista
+                  Cadastre-se como Motorista ou Entregador
                 </Link>
               </div>
 
@@ -258,6 +258,45 @@ export const HomePage: React.FC = () => {
                 <span className="text-[11px] text-slate-400 block">{zone.desc}</span>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Driver & Courier Banner */}
+      <section className="py-16 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-950 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-slate-900/90 border border-emerald-500/30 rounded-3xl p-8 sm:p-12 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden">
+            <div className="space-y-4 max-w-2xl text-center lg:text-left">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                Oportunidade para Profissionais de São Sebastião
+              </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
+                Dirija ou Faça Entregas com <span className="text-emerald-400">0% de Taxa</span>
+              </h2>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                Cadastre seu carro (motorista) ou moto (motoboy/entregador). No VaiCar, você tem autonomia total, recebe direto no seu Pix ou dinheiro, e não divide seu suor com multinacionais.
+              </p>
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-slate-300">
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Vistoria e aprovação rápida</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Taxa zero definitiva</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Suporte humanizado local</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 w-full sm:w-auto shrink-0">
+              <Link
+                to="/driver/register"
+                className="px-8 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/60 transition-all hover:scale-105 text-center"
+              >
+                Cadastre-se Agora <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                to="/driver/login"
+                className="px-8 py-3.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors text-center"
+              >
+                Já sou parceiro • Fazer Login
+              </Link>
+            </div>
           </div>
         </div>
       </section>

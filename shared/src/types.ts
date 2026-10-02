@@ -32,6 +32,7 @@ export interface PassengerProfile {
 export type DriverApprovalStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
 
 export interface VehicleInfo {
+  type?: 'car' | 'motorcycle' | 'van';
   brand: string;
   model: string;
   year: number;

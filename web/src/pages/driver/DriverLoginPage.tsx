@@ -47,9 +47,9 @@ export const DriverLoginPage: React.FC = () => {
           <Link to="/" className="inline-block">
             <img src="/vaicar_logo.png" alt="VaiCar" className="h-10 mx-auto rounded object-contain" />
           </Link>
-          <h2 className="text-2xl font-black text-white">Login do Motorista Parceiro</h2>
+          <h2 className="text-2xl font-black text-white">Login do Motorista & Entregador</h2>
           <p className="text-xs text-slate-400">
-            Acesse seu painel para gerenciar disponibilidade e receber corridas.
+            Acesse seu painel para gerenciar disponibilidade e receber corridas e entregas.
           </p>
         </div>
 
@@ -112,7 +112,7 @@ export const DriverLoginPage: React.FC = () => {
           <div className="text-center text-xs text-slate-400">
             Ainda não é parceiro?{' '}
             <Link to="/driver/register" className="text-emerald-400 font-semibold hover:underline">
-              Cadastre seu veículo com taxa zero
+              Cadastre-se como Motorista ou Entregador (Taxa Zero)
             </Link>
           </div>
         </div>

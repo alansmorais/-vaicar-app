@@ -213,6 +213,7 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       professionalCategory,
       cnhNumber: cnhNumber.replace(/\D/g, ''),
       vehicle: {
+        type: vehicle.type || 'car',
         brand: vehicle.brand.trim(),
         model: vehicle.model.trim(),
         year: parseInt(vehicle.year, 10),

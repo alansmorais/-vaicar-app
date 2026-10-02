@@ -15,6 +15,8 @@ import {
 } from '../../../../shared/src/validation.js';
 import {
   Car,
+  Bike,
+  Package,
   User,
   Phone,
   Mail,
@@ -30,6 +32,10 @@ import {
 export const DriverRegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const { registerEmailPassword, devLogin } = useAuth();
+
+  // Activity Mode & Vehicle Type
+  const [activityMode, setActivityMode] = useState<'driver' | 'delivery'>('driver');
+  const [vehicleType, setVehicleType] = useState<'car' | 'motorcycle' | 'van'>('car');
 
   // Personal
   const [name, setName] = useState('');
@@ -65,6 +71,21 @@ export const DriverRegisterPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const handleSelectActivity = (mode: 'driver' | 'delivery') => {
+    setActivityMode(mode);
+    if (mode === 'delivery') {
+      setVehicleType('motorcycle');
+      setProfessionalCategory('Entregador / Motoboy (Delivery e Encomendas)');
+      if (!brand || brand === 'Chevrolet') setBrand('Honda');
+      if (!model || model === 'Onix') setModel('CG 160 Fan');
+    } else {
+      setVehicleType('car');
+      setProfessionalCategory('Motorista com EAR / Autônomo');
+      if (brand === 'Honda') setBrand('');
+      if (model === 'CG 160 Fan') setModel('');
+    }
+  };
 
   const toggleZone = (zone: string) => {
     setSelectedZones((prev) =>
@@ -163,6 +184,7 @@ export const DriverRegisterPage: React.FC = () => {
         professionalCategory,
         cnhNumber: cnhNumber.trim(),
         vehicle: {
+          type: vehicleType,
           brand: brand.trim(),
           model: model.trim(),
           year: parseInt(year, 10),
@@ -175,7 +197,7 @@ export const DriverRegisterPage: React.FC = () => {
       // 4. Set session
       await devLogin(fbUser.uid, email.trim(), 'driver', name.trim());
 
-      setSuccess('Cadastro enviado! Sua conta está em análise pela equipe administrativa.');
+      setSuccess('Cadastro enviado com sucesso! Seus dados estão em análise pela equipe administrativa.');
       setTimeout(() => {
         navigate('/driver');
       }, 1500);
@@ -199,10 +221,44 @@ export const DriverRegisterPage: React.FC = () => {
           <Link to="/" className="inline-block">
             <img src="/vaicar_logo.png" alt="VaiCar" className="h-10 mx-auto rounded object-contain" />
           </Link>
-          <h2 className="text-2xl font-black text-white">Cadastro de Motorista Parceiro</h2>
+          <h2 className="text-2xl font-black text-white">
+            {activityMode === 'delivery'
+              ? 'Cadastro de Entregador / Motoboy Parceiro'
+              : 'Cadastro de Motorista Parceiro'}
+          </h2>
           <p className="text-xs text-slate-400">
-            Dirija em São Sebastião com <strong className="text-emerald-400">taxa zero sobre suas corridas</strong>.
+            {activityMode === 'delivery'
+              ? 'Faça entregas e delivery em São Sebastião com taxa zero sobre seus ganhos.'
+              : 'Transporte passageiros em São Sebastião com taxa zero sobre suas corridas.'}
           </p>
+        </div>
+
+        {/* Modalidade: Motorista ou Entregador */}
+        <div className="grid grid-cols-2 gap-3 p-1.5 bg-slate-950 border border-slate-800 rounded-2xl">
+          <button
+            type="button"
+            onClick={() => handleSelectActivity('driver')}
+            className={`py-3 px-4 rounded-xl flex items-center justify-center gap-2.5 font-bold text-xs transition-all ${
+              activityMode === 'driver'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <Car className="w-4 h-4" />
+            <span>Motorista (Carro)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSelectActivity('delivery')}
+            className={`py-3 px-4 rounded-xl flex items-center justify-center gap-2.5 font-bold text-xs transition-all ${
+              activityMode === 'delivery'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/40'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <Bike className="w-4 h-4" />
+            <span>Entregador (Moto / Delivery)</span>
+          </button>
         </div>
 
         {error && (
@@ -364,6 +420,7 @@ export const DriverRegisterPage: React.FC = () => {
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
                 >
                   <option value="Motorista com EAR / Autônomo">Motorista com EAR / Autônomo</option>
+                  <option value="Entregador / Motoboy (Delivery e Encomendas)">Entregador / Motoboy (Delivery e Encomendas)</option>
                   <option value="Taxista Convencional Credenciado">Taxista Convencional Credenciado</option>
                   <option value="Motorista Particular de Turismo">Motorista Particular de Turismo</option>
                 </select>
@@ -377,6 +434,49 @@ export const DriverRegisterPage: React.FC = () => {
               4. Dados do Veículo
             </span>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Tipo de Veículo *</label>
+                <select
+                  value={vehicleType}
+                  onChange={(e) => {
+                    const newType = e.target.value as 'car' | 'motorcycle' | 'van';
+                    setVehicleType(newType);
+                    if (newType === 'motorcycle') {
+                      setActivityMode('delivery');
+                      setProfessionalCategory('Entregador / Motoboy (Delivery e Encomendas)');
+                      if (!brand || brand === 'Chevrolet') setBrand('Honda');
+                      if (!model || model === 'Onix') setModel('CG 160 Fan');
+                    } else if (newType === 'car') {
+                      setActivityMode('driver');
+                      setProfessionalCategory('Motorista com EAR / Autônomo');
+                      if (brand === 'Honda') setBrand('');
+                      if (model === 'CG 160 Fan') setModel('');
+                    } else if (newType === 'van') {
+                      setActivityMode('driver');
+                      setProfessionalCategory('Motorista Particular de Turismo');
+                    }
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
+                >
+                  <option value="car">🚗 Carro / Automóvel (Passageiros)</option>
+                  <option value="motorcycle">🛵 Moto / Motocicleta (Delivery / Motoboy)</option>
+                  <option value="van">🚐 Van / Utilitário / Turismo</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Placa (Mercosul ou Tradicional) *</label>
+                <input
+                  type="text"
+                  required
+                  value={plate}
+                  onChange={(e) => setPlate(e.target.value.toUpperCase())}
+                  placeholder="ABC1D23"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono uppercase focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Marca *</label>
@@ -385,7 +485,7 @@ export const DriverRegisterPage: React.FC = () => {
                   required
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
-                  placeholder="Ex: Chevrolet"
+                  placeholder={vehicleType === 'motorcycle' ? 'Ex: Honda, Yamaha' : 'Ex: Chevrolet, VW'}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -396,7 +496,7 @@ export const DriverRegisterPage: React.FC = () => {
                   required
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  placeholder="Ex: Onix Plus"
+                  placeholder={vehicleType === 'motorcycle' ? 'Ex: CG 160, Fazer 250' : 'Ex: Onix, HB20'}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -417,22 +517,10 @@ export const DriverRegisterPage: React.FC = () => {
                   required
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  placeholder="Ex: Prata"
+                  placeholder="Ex: Preta, Prata"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Placa (Mercosul ou Tradicional) *</label>
-              <input
-                type="text"
-                required
-                value={plate}
-                onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                placeholder="ABC1D23"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono uppercase focus:outline-none focus:border-emerald-500"
-              />
             </div>
           </div>
 
@@ -475,9 +563,9 @@ export const DriverRegisterPage: React.FC = () => {
         </form>
 
         <div className="text-center pt-2 border-t border-slate-800 text-xs text-slate-400">
-          Já é motorista cadastrado?{' '}
+          Já é motorista ou entregador cadastrado?{' '}
           <Link to="/driver/login" className="text-emerald-400 font-semibold hover:underline">
-            Acessar Painel do Motorista
+            Acessar Painel do Motorista & Entregador
           </Link>
         </div>
       </div>
