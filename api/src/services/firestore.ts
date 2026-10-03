@@ -274,6 +274,105 @@ export async function findDriverByCpf(cpf: string): Promise<DriverProfile | null
   return null;
 }
 
+export async function findDriverByEmail(email: string): Promise<DriverProfile | null> {
+  const normalized = email.trim().toLowerCase();
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    let snap = await db.collection('drivers').where('email', '==', normalized).limit(1).get();
+    if (!snap.empty) return snap.docs[0].data() as DriverProfile;
+    if (email.trim() !== normalized) {
+      snap = await db.collection('drivers').where('email', '==', email.trim()).limit(1).get();
+      if (!snap.empty) return snap.docs[0].data() as DriverProfile;
+    }
+    return null;
+  }
+  for (const driver of localStore.drivers.values()) {
+    if (driver.email?.toLowerCase() === normalized) return driver;
+  }
+  return null;
+}
+
+export async function findDriverByWhatsApp(whatsapp: string): Promise<DriverProfile | null> {
+  const cleaned = whatsapp.replace(/\D/g, '');
+  const alt = cleaned.length === 11 ? `55${cleaned}` : cleaned.startsWith('55') && cleaned.length === 13 ? cleaned.slice(2) : cleaned;
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap1 = await db.collection('drivers').where('whatsapp', '==', cleaned).limit(1).get();
+    if (!snap1.empty) return snap1.docs[0].data() as DriverProfile;
+    if (alt !== cleaned) {
+      const snap2 = await db.collection('drivers').where('whatsapp', '==', alt).limit(1).get();
+      if (!snap2.empty) return snap2.docs[0].data() as DriverProfile;
+    }
+    return null;
+  }
+  for (const d of localStore.drivers.values()) {
+    const dClean = d.whatsapp?.replace(/\D/g, '');
+    if (dClean === cleaned || dClean === alt) return d;
+  }
+  return null;
+}
+
+/**
+ * Resolves or auto-heals a driver profile for any authenticated user.
+ * Guarantees that approved drivers logging in with Firebase Auth or email can always access their profile.
+ */
+export async function resolveDriverProfile(uid: string, email?: string): Promise<DriverProfile | null> {
+  // 1. Direct lookup by UID
+  const existingByUid = await getDriverProfile(uid);
+  if (existingByUid) return existingByUid;
+
+  // 2. Lookup by email in drivers collection
+  const normalizedEmail = email?.trim().toLowerCase();
+  if (normalizedEmail) {
+    const existingByEmail = await findDriverByEmail(normalizedEmail);
+    if (existingByEmail) {
+      // Auto-heal / link: Save under logged-in UID as well so doc(uid) resolves directly
+      const linked: DriverProfile = { ...existingByEmail, uid };
+      await saveDriverProfile(linked);
+
+      // Also ensure user profile in users collection reflects driver role
+      let user = await getUserProfile(uid);
+      if (!user) user = await findUserByEmail(normalizedEmail);
+      if (user) {
+        await saveUserProfile({
+          ...user,
+          isDriver: true,
+          role: 'driver',
+          isCourier: Boolean(user.isCourier || existingByEmail.isCourier),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      return linked;
+    }
+  }
+
+  // 3. Fallback: Lookup in users collection to find original driver UID
+  let user = await getUserProfile(uid);
+  if (!user && normalizedEmail) {
+    user = await findUserByEmail(normalizedEmail);
+  }
+  if (user) {
+    if (user.uid !== uid) {
+      const driverByOtherUid = await getDriverProfile(user.uid);
+      if (driverByOtherUid) {
+        const linked: DriverProfile = { ...driverByOtherUid, uid };
+        await saveDriverProfile(linked);
+        return linked;
+      }
+    }
+    if (user.whatsapp) {
+      const driverByPhone = await findDriverByWhatsApp(user.whatsapp);
+      if (driverByPhone) {
+        const linked: DriverProfile = { ...driverByPhone, uid };
+        await saveDriverProfile(linked);
+        return linked;
+      }
+    }
+  }
+
+  return null;
+}
+
 export async function saveDriverProfile(profile: DriverProfile): Promise<void> {
   const clean = sanitizeFirestoreData(profile);
   const db = getFirebaseAdminFirestore();

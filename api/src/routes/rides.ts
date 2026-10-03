@@ -8,6 +8,7 @@ import {
   getPassengerProfile,
   resolvePassengerProfile,
   getDriverProfile,
+  resolveDriverProfile,
   saveDriverProfile,
   savePassengerProfile,
   getPlatformPricing,
@@ -217,7 +218,7 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
 ridesRouter.post('/:id/accept', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const driverId = req.user!.uid;
-    const driver = await getDriverProfile(driverId);
+    const driver = await resolveDriverProfile(driverId, req.user!.email);
     if (!driver || driver.status !== 'APPROVED') {
       throw new AppError(ErrorCode.FORBIDDEN, 'Apenas motoristas aprovados podem aceitar corridas.', 403);
     }
@@ -265,7 +266,9 @@ ridesRouter.post('/:id/arrived', async (req: Request, res: Response, next: NextF
     const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
-    if (ride.driverId !== req.user!.uid && !req.user!.isAdmin) {
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    const isOwner = (driver && ride.driverId === driver.uid) || ride.driverId === req.user!.uid || req.user!.isAdmin;
+    if (!isOwner) {
       throw new AppError(ErrorCode.FORBIDDEN, 'Apenas o motorista responsável pode atualizar este status.', 403);
     }
 
@@ -302,7 +305,9 @@ ridesRouter.post('/:id/start', async (req: Request, res: Response, next: NextFun
     const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
-    if (ride.driverId !== req.user!.uid && !req.user!.isAdmin) {
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    const isOwner = (driver && ride.driverId === driver.uid) || ride.driverId === req.user!.uid || req.user!.isAdmin;
+    if (!isOwner) {
       throw new AppError(ErrorCode.FORBIDDEN, 'Apenas o motorista responsável pode iniciar a corrida.', 403);
     }
 
@@ -339,7 +344,9 @@ ridesRouter.post('/:id/complete', async (req: Request, res: Response, next: Next
     const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
-    if (ride.driverId !== req.user!.uid && !req.user!.isAdmin) {
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    const isOwner = (driver && ride.driverId === driver.uid) || ride.driverId === req.user!.uid || req.user!.isAdmin;
+    if (!isOwner) {
       throw new AppError(ErrorCode.FORBIDDEN, 'Apenas o motorista responsável pode finalizar a corrida.', 403);
     }
 
@@ -455,7 +462,9 @@ ridesRouter.post('/:id/approve-payment', async (req: Request, res: Response, nex
     const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
-    if (ride.driverId !== req.user!.uid && !req.user!.isAdmin) {
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    const isOwner = (driver && ride.driverId === driver.uid) || ride.driverId === req.user!.uid || req.user!.isAdmin;
+    if (!isOwner) {
       throw new AppError(ErrorCode.FORBIDDEN, 'Apenas o motorista responsável pode aprovar o pagamento.', 403);
     }
 

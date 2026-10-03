@@ -21,6 +21,7 @@ import {
   saveDriverProfile,
   getUserProfile,
   getDriverProfile,
+  resolveDriverProfile,
   getPassengerProfile,
   savePendingPin,
   verifyPendingPin,
@@ -398,7 +399,7 @@ authRouter.get('/me', authenticate, async (req: Request, res: Response, next: Ne
       }
     }
     const passenger = await getPassengerProfile(effectiveUid);
-    const driver = await getDriverProfile(effectiveUid);
+    const driver = await resolveDriverProfile(effectiveUid, req.user!.email);
 
     const userWithRoles = user
       ? {

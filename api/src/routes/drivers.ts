@@ -4,6 +4,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { ErrorCode } from '../../../shared/src/errors.js';
 import {
   getDriverProfile,
+  resolveDriverProfile,
   saveDriverProfile,
   listOnlineDrivers,
   listAllRides,
@@ -52,7 +53,7 @@ driversRouter.use(authenticate, requireDriver);
 
 driversRouter.get('/me', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver = await getDriverProfile(req.user!.uid);
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
     if (!driver) {
       throw new AppError(ErrorCode.NOT_FOUND, 'Perfil de motorista não encontrado.', 404);
     }
@@ -69,7 +70,7 @@ driversRouter.get('/me', async (req: Request, res: Response, next: NextFunction)
 driversRouter.patch('/me', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const uid = req.user!.uid;
-    const driver = await getDriverProfile(uid);
+    const driver = await resolveDriverProfile(uid, req.user!.email);
     if (!driver) {
       throw new AppError(ErrorCode.NOT_FOUND, 'Perfil não encontrado.', 404);
     }
@@ -118,7 +119,7 @@ driversRouter.post('/change-plan', async (req: Request, res: Response, next: Nex
       );
     }
 
-    const driver = await getDriverProfile(uid);
+    const driver = await resolveDriverProfile(uid, req.user!.email);
     if (!driver) {
       throw new AppError(ErrorCode.NOT_FOUND, 'Perfil de motorista não encontrado.', 404);
     }
@@ -191,7 +192,7 @@ driversRouter.post('/change-plan', async (req: Request, res: Response, next: Nex
 driversRouter.post('/toggle-online', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const uid = req.user!.uid;
-    const driver = await getDriverProfile(uid);
+    const driver = await resolveDriverProfile(uid, req.user!.email);
     if (!driver) {
       throw new AppError(ErrorCode.NOT_FOUND, 'Perfil de motorista não encontrado.', 404);
     }
@@ -240,7 +241,7 @@ driversRouter.post('/location', async (req: Request, res: Response, next: NextFu
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Coordenadas lat e lng válidas são obrigatórias.', 400);
     }
 
-    const driver = await getDriverProfile(uid);
+    const driver = await resolveDriverProfile(uid, req.user!.email);
     if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
 
     const updated = {
@@ -271,7 +272,7 @@ driversRouter.post('/location', async (req: Request, res: Response, next: NextFu
  */
 driversRouter.get('/available-rides', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver = await getDriverProfile(req.user!.uid);
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
     if (!driver || driver.status !== 'APPROVED' || !driver.isOnline) {
       return res.json({ success: true, requestId: req.id, data: [] });
     }
@@ -291,7 +292,9 @@ driversRouter.get('/available-rides', async (req: Request, res: Response, next: 
 
 driversRouter.get('/active-ride', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const active = await getActiveRideForUser(req.user!.uid, 'driver');
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    const driverId = driver ? driver.uid : req.user!.uid;
+    const active = await getActiveRideForUser(driverId, 'driver');
     res.json({
       success: true,
       requestId: req.id,
@@ -304,7 +307,9 @@ driversRouter.get('/active-ride', async (req: Request, res: Response, next: Next
 
 driversRouter.get('/rides', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const rides = await listRidesForDriver(req.user!.uid);
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    const driverId = driver ? driver.uid : req.user!.uid;
+    const rides = await listRidesForDriver(driverId);
     res.json({
       success: true,
       requestId: req.id,

@@ -858,4 +858,62 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(newRideRes.body.data.passengerId).toBe(pUid);
     });
   });
+
+  describe('Driver Profile Resolution & Auto-Healing', () => {
+    const driverEmail = `heal.driver.${Date.now()}@teste.vaicar.app`;
+    const origUid = `orig-driver-${Date.now()}`;
+    const newAuthUid = `auth-driver-${Date.now()}`;
+
+    it('registers driver under origUid and approves via admin', async () => {
+      const regRes = await request(app)
+        .post('/api/v1/auth/register-driver')
+        .send({
+          uid: origUid,
+          name: 'Renato Motorista Real',
+          cpf: '12345678909',
+          birthDate: '1985-05-15',
+          whatsapp: '(12) 99876-5432',
+          email: driverEmail,
+          photoUrl: 'https://storage.googleapis.com/vaicar/users/orig-driver/photo.jpg',
+          professionalCategory: 'Motorista com EAR / Autônomo',
+          cnhNumber: '12345678901',
+          vehicle: { brand: 'Fiat', model: 'Argo', year: 2023, color: 'Branco', plate: 'BRA2E19' },
+          operatingZones: ['Centro & Porto Grande'],
+        });
+
+      expect(regRes.status).toBe(201);
+
+      // Approve via admin
+      const approveRes = await request(app)
+        .post(`/api/v1/admin/drivers/${origUid}/approve`)
+        .set('Authorization', 'Bearer test-admin-01:admin@vaicar.app');
+
+      expect(approveRes.status).toBe(200);
+      expect(approveRes.body.data.status).toBe('APPROVED');
+    });
+
+    it('resolves and auto-heals driver profile when logged in with a different UID having same email', async () => {
+      // Driver logs in on a new device or Firebase Auth issues newAuthUid
+      const meRes = await request(app)
+        .get('/api/v1/drivers/me')
+        .set('Authorization', `Bearer ${newAuthUid}:${driverEmail}`);
+
+      expect(meRes.status).toBe(200);
+      expect(meRes.body.data.name).toBe('Renato Motorista Real');
+      expect(meRes.body.data.vehicle.brand).toBe('Fiat');
+      expect(meRes.body.data.vehicle.model).toBe('Argo');
+      expect(meRes.body.data.status).toBe('APPROVED');
+    });
+
+    it('allows driver to toggle online without "Perfil não encontrado" error', async () => {
+      const toggleRes = await request(app)
+        .post('/api/v1/drivers/toggle-online')
+        .set('Authorization', `Bearer ${newAuthUid}:${driverEmail}`)
+        .send({ isOnline: true });
+
+      expect(toggleRes.status).toBe(200);
+      expect(toggleRes.body.data.isOnline).toBe(true);
+      expect(toggleRes.body.data.status).toBe('APPROVED');
+    });
+  });
 });

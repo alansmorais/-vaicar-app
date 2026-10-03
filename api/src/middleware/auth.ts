@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from './errorHandler.js';
 import { ErrorCode } from '../../../shared/src/errors.js';
 import { getFirebaseAdminAuth } from '../services/firebaseAdmin.js';
-import { getUserProfile, findUserByEmail } from '../services/firestore.js';
+import { getUserProfile, findUserByEmail, resolveDriverProfile } from '../services/firestore.js';
 
 export interface AuthenticatedUser {
   uid: string;
@@ -80,14 +80,16 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     if (!userProfile && decodedEmail) {
       userProfile = await findUserByEmail(decodedEmail);
     }
-    const role = userProfile?.role || (isAdminClaim ? 'admin' : undefined);
+    const effectiveEmail = (decodedEmail || userProfile?.email || '').trim().toLowerCase();
+    const driverProfile = await resolveDriverProfile(decodedUid, effectiveEmail);
+    const isDriver = Boolean(userProfile?.isDriver || driverProfile);
+    const role = userProfile?.role || (isAdminClaim ? 'admin' : isDriver ? 'driver' : undefined);
     const isAdmin = isAdminClaim || userProfile?.isAdmin || role === 'admin';
     const isPassenger = userProfile?.isPassenger ?? (role === 'passenger' || !role);
-    const isDriver = userProfile?.isDriver ?? (role === 'driver');
 
     req.user = {
-      uid: decodedUid,
-      email: decodedEmail,
+      uid: driverProfile?.uid || userProfile?.uid || decodedUid,
+      email: effectiveEmail,
       role,
       isAdmin,
       isPassenger,
@@ -116,11 +118,17 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 /**
  * Middleware requiring Driver role
  */
-export function requireDriver(req: Request, res: Response, next: NextFunction): void {
+export async function requireDriver(req: Request, res: Response, next: NextFunction): Promise<void> {
   if (!req.user) {
     return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Autenticação necessária.', 401));
   }
   if (!req.user.isAdmin && req.user.role !== 'driver' && !req.user.isDriver) {
+    const driver = await resolveDriverProfile(req.user.uid, req.user.email);
+    if (driver) {
+      req.user.isDriver = true;
+      req.user.role = 'driver';
+      return next();
+    }
     return next(new AppError(ErrorCode.FORBIDDEN, 'Acesso restrito a motoristas.', 403));
   }
   next();

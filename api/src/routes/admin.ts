@@ -6,12 +6,16 @@ import {
   getAdminMetrics,
   listAllDrivers,
   getDriverProfile,
+  resolveDriverProfile,
   saveDriverProfile,
   deleteDriverProfile,
   listAllPassengers,
   getPassengerProfile,
   savePassengerProfile,
   deletePassengerProfile,
+  getUserProfile,
+  saveUserProfile,
+  findUserByEmail,
   listAllRides,
   listAllReports,
   getReport,
@@ -58,7 +62,11 @@ adminRouter.get('/drivers', async (req: Request, res: Response, next: NextFuncti
 
 adminRouter.post('/drivers/:id/approve', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver = await getDriverProfile(String(req.params.id));
+    const id = String(req.params.id);
+    let driver = await getDriverProfile(id);
+    if (!driver) {
+      driver = await resolveDriverProfile(id);
+    }
     if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
 
     const updated = {
@@ -69,6 +77,21 @@ adminRouter.post('/drivers/:id/approve', async (req: Request, res: Response, nex
     delete (updated as any).rejectionReason;
 
     await saveDriverProfile(updated);
+
+    // Also sync user profile in users collection so user document has isDriver = true
+    let user = await getUserProfile(driver.uid);
+    if (!user && driver.email) {
+      user = await findUserByEmail(driver.email);
+    }
+    if (user) {
+      await saveUserProfile({
+        ...user,
+        isDriver: true,
+        role: 'driver',
+        isCourier: Boolean(user.isCourier || driver.isCourier),
+        updatedAt: new Date().toISOString(),
+      });
+    }
 
     // Send email notification asynchronously
     sendDriverStatusEmail(driver.email, driver.name, 'APPROVED').catch(console.error);
@@ -85,7 +108,11 @@ adminRouter.post('/drivers/:id/approve', async (req: Request, res: Response, nex
 
 adminRouter.post('/drivers/:id/reject', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver = await getDriverProfile(String(req.params.id));
+    const id = String(req.params.id);
+    let driver = await getDriverProfile(id);
+    if (!driver) {
+      driver = await resolveDriverProfile(id);
+    }
     if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
 
     const { reason } = req.body;

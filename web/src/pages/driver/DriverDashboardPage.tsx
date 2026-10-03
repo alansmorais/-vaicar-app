@@ -32,11 +32,11 @@ import {
 import { ReportModal } from '../../components/ReportModal.js';
 
 export const DriverDashboardPage: React.FC = () => {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, driver: authDriver, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [driver, setDriver] = useState<DriverProfile | null>(null);
-  const [isOnline, setIsOnline] = useState<boolean>(false);
+  const [driver, setDriver] = useState<DriverProfile | null>(authDriver);
+  const [isOnline, setIsOnline] = useState<boolean>(authDriver?.isOnline || false);
   const [availableRides, setAvailableRides] = useState<Ride[]>([]);
   const [activeRide, setActiveRide] = useState<Ride | null>(null);
   const [rideHistory, setRideHistory] = useState<Ride[]>([]);
@@ -66,34 +66,28 @@ export const DriverDashboardPage: React.FC = () => {
       const data = await driversApi.getMe();
       setDriver(data);
       setIsOnline(data.isOnline);
+      setError(null);
     } catch (err: any) {
       console.warn('Driver profile fetch notice:', err);
-      // Construct fallback profile from user if freshly registered
-      if (user) {
-        setDriver({
-          uid: user.uid,
-          name: profile?.displayName || 'Motorista Parceiro',
-          cpf: '123.456.789-00',
-          birthDate: '1990-01-01',
-          email: user.email || '',
-          whatsapp: '(12) 99123-4567',
-          photoUrl: profile?.photoUrl || '',
-          professionalCategory: 'EAR',
-          cnhNumber: '12345678901',
-          vehicle: { brand: 'Chevrolet', model: 'Onix', year: 2022, color: 'Prata', plate: 'BRA2E19' },
-          operatingZones: ['Centro & Porto Grande'],
-          status: 'APPROVED',
-          isOnline: false,
-          rating: 5.0,
-          completedRidesCount: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
+      if (authDriver) {
+        setDriver(authDriver);
+        setIsOnline(authDriver.isOnline);
+        setError(null);
+      } else {
+        setDriver(null);
+        setError(err.message || 'Perfil de motorista não encontrado.');
       }
     } finally {
       setLoading(false);
     }
-  }, [user, profile]);
+  }, [authDriver]);
+
+  useEffect(() => {
+    if (authDriver && !driver) {
+      setDriver(authDriver);
+      setIsOnline(authDriver.isOnline);
+    }
+  }, [authDriver, driver]);
 
   useEffect(() => {
     loadDriverProfile();
@@ -559,19 +553,19 @@ export const DriverDashboardPage: React.FC = () => {
               <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <span className="font-bold text-sm text-white block">
-                  {error.includes('Acesso restrito')
+                  {error.includes('Acesso restrito') || error.includes('não encontrado')
                     ? 'Acesso Restrito ao Painel do Motorista'
                     : 'Aviso do Sistema'}
                 </span>
                 <p className="leading-relaxed text-slate-300">
-                  {error.includes('Acesso restrito')
-                    ? 'Sua conta conectada está configurada como Passageiro ou ainda não possui cadastro aprovado de Motorista/Entregador. Para aceitar corridas e ficar online, cadastre seu veículo ou faça login com sua conta de condutor.'
+                  {error.includes('Acesso restrito') || error.includes('não encontrado')
+                    ? 'Sua conta conectada ainda não possui um cadastro ativo de Motorista/Entregador vinculado a este e-mail. Se você já cadastrou seus dados, certifique-se de estar conectado com o mesmo e-mail do cadastro ou cadastre seu veículo.'
                     : error}
                 </p>
               </div>
             </div>
 
-            {error.includes('Acesso restrito') && (
+            {(error.includes('Acesso restrito') || error.includes('não encontrado')) && (
               <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-rose-900/60">
                 <Link
                   to="/driver/register"
