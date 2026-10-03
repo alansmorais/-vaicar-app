@@ -10,6 +10,8 @@ declare global {
         email: string;
         role?: string;
         isAdmin?: boolean;
+        isPassenger?: boolean;
+        isDriver?: boolean;
       };
     }
   }

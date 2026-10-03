@@ -6,6 +6,7 @@ import {
   getRide,
   saveRide,
   getPassengerProfile,
+  resolvePassengerProfile,
   getDriverProfile,
   saveDriverProfile,
   savePassengerProfile,
@@ -56,7 +57,7 @@ ridesRouter.post('/estimate', async (req: Request, res: Response, next: NextFunc
 
     let hasDiscount = Boolean(req.body.hasCriminalRecordCheck);
     if (!hasDiscount && req.user) {
-      const passenger = await getPassengerProfile(req.user.uid);
+      const passenger = await resolvePassengerProfile(req.user.uid, req.user.email);
       if (passenger?.hasCriminalRecordCheck || passenger?.criminalRecordStatus === 'VERIFIED') {
         hasDiscount = true;
       }
@@ -90,10 +91,7 @@ ridesRouter.post('/estimate', async (req: Request, res: Response, next: NextFunc
 ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const passengerId = req.user!.uid;
-    const passenger = await getPassengerProfile(passengerId);
-    if (!passenger) {
-      throw new AppError(ErrorCode.FORBIDDEN, 'Apenas passageiros cadastrados podem solicitar corridas.', 403);
-    }
+    const passenger = await resolvePassengerProfile(passengerId, req.user?.email);
 
     // Check if passenger is blocked (e.g. for not paying the driver)
     if (passenger.isBlocked) {
@@ -111,7 +109,8 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
     }
 
     // Check if passenger already has active ride
-    const existingActive = await getActiveRideForUser(passengerId, 'passenger');
+    const existingActive = (await getActiveRideForUser(passengerId, 'passenger')) ||
+      (passenger.uid !== passengerId ? await getActiveRideForUser(passenger.uid, 'passenger') : null);
     if (existingActive) {
       throw new AppError(ErrorCode.INVALID_RIDE_STATE, 'Você já possui uma corrida em andamento.', 409, {
         activeRideId: existingActive.id,

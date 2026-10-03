@@ -112,7 +112,7 @@ export const DriverLoginPage: React.FC = () => {
           <div className="text-center text-xs text-slate-400">
             Ainda não é parceiro?{' '}
             <Link to="/driver/register" className="text-emerald-400 font-semibold hover:underline">
-              Cadastre-se como Motorista ou Entregador (Taxa Zero)
+              Cadastre-se como Motorista ou Entregador (R$ 100/mês ou 10% semanal)
             </Link>
           </div>
         </div>

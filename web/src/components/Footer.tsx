@@ -17,12 +17,12 @@ export const Footer: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              O marketplace local oficial de mobilidade urbana em São Sebastião, Litoral Norte de São Paulo.
-              Conectando passageiros e motoristas profissionais com taxa zero sobre corridas.
+              O marketplace local oficial de mobilidade urbana e entregas em São Sebastião, Litoral Norte de São Paulo.
+              Conectando passageiros e condutores parceiros com tarifas justas, taxas reduzidas e pagamento direto.
             </p>
             <div className="flex items-center gap-2 text-xs text-emerald-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>100% Legalizado & Seguro</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+              <span>Regulamentado pela Lei Federal nº 13.640/2018 (Art. 11-A)</span>
             </div>
           </div>
 
@@ -64,7 +64,17 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <Link to="/driver/register" className="hover:text-emerald-400 transition-colors">
-                  Cadastro de Motorista ou Entregador (Taxa Zero)
+                  Cadastro de Motorista ou Entregador (Planos Justos)
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="hover:text-emerald-400 transition-colors">
+                  Termos de Uso e Legislação
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="hover:text-emerald-400 transition-colors">
+                  Política de Privacidade (LGPD)
                 </Link>
               </li>
               <li>
@@ -101,9 +111,16 @@ export const Footer: React.FC = () => {
 
         {/* Bottom copyright */}
         <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-          <p className="text-slate-500">
-            © {new Date().getFullYear()} VaiCar — Tecnologia de Mobilidade Local. Todos os direitos reservados.
-          </p>
+          <div className="flex flex-wrap items-center gap-3 text-slate-500">
+            <span>© {new Date().getFullYear()} VaiCar — Tecnologia de Mobilidade Local.</span>
+            <Link to="/terms" className="hover:text-slate-300 underline">
+              Termos de Uso
+            </Link>
+            <span>•</span>
+            <Link to="/privacy" className="hover:text-slate-300 underline">
+              Privacidade (LGPD)
+            </Link>
+          </div>
           <p className="text-slate-500 flex items-center gap-1">
             Feito com <Heart className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500 inline" /> para São Sebastião - SP
           </p>

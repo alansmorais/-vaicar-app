@@ -1,6 +1,6 @@
 # VaiCar — Plataforma Web Oficial (São Sebastião & Litoral Norte SP)
 
-> **Marketplace de mobilidade urbana 100% regional** conectando passageiros e motoristas parceiros com taxa zero sobre corridas em São Sebastião, Ilhabela e Litoral Norte de São Paulo.
+> **Marketplace de mobilidade urbana e entregas 100% regional** conectando passageiros e condutores parceiros com taxas reduzidas e pagamento 100% direto em São Sebastião, Ilhabela e Litoral Norte de São Paulo.
 
 [![Status](https://img.shields.io/badge/Status-Online%20no%20Cloud%20Run-success?style=for-the-badge&logo=googlecloud)](https://vaicar-app-770203144889.southamerica-east1.run.app)
 [![Acessar](https://img.shields.io/badge/Acessar%20Plataforma-vaicar--app-blue?style=for-the-badge&logo=googlechrome)](https://vaicar-app-770203144889.southamerica-east1.run.app)

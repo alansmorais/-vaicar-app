@@ -119,6 +119,97 @@ export async function getPassengerProfile(uid: string): Promise<PassengerProfile
   return localStore.passengers.get(uid) || null;
 }
 
+export async function findPassengerByEmail(email: string): Promise<PassengerProfile | null> {
+  const normalized = email.trim().toLowerCase();
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const snap = await db.collection('passengers').where('email', '==', normalized).limit(1).get();
+    if (!snap.empty) return snap.docs[0].data() as PassengerProfile;
+    return null;
+  }
+  for (const p of localStore.passengers.values()) {
+    if (p.email?.toLowerCase() === normalized) return p;
+  }
+  return null;
+}
+
+/**
+ * Resolves or auto-heals a passenger profile for any authenticated user.
+ * Guarantees registered users are never blocked from ordering rides or viewing profile.
+ */
+export async function resolvePassengerProfile(uid: string, email?: string): Promise<PassengerProfile> {
+  // 1. Direct lookup by UID
+  const existingByUid = await getPassengerProfile(uid);
+  if (existingByUid) return existingByUid;
+
+  // 2. Lookup by email in passengers collection if provided
+  if (email) {
+    const existingByEmail = await findPassengerByEmail(email);
+    if (existingByEmail) {
+      const linked: PassengerProfile = { ...existingByEmail, uid };
+      await savePassengerProfile(linked);
+      return linked;
+    }
+  }
+
+  // 3. Fallback to UserProfile (e.g. registered as driver or via auth)
+  let user = await getUserProfile(uid);
+  if (!user && email) {
+    user = await findUserByEmail(email);
+  }
+
+  const now = new Date().toISOString();
+  if (user) {
+    const resolvedFromUser: PassengerProfile = {
+      uid,
+      name: user.displayName || (user.email ? user.email.split('@')[0] : 'Passageiro'),
+      email: user.email || email || '',
+      whatsapp: user.whatsapp || '',
+      photoUrl: user.photoUrl || '',
+      termsAccepted: true,
+      hasCriminalRecordCheck: Boolean(user.isPassenger),
+      criminalRecordStatus: 'NONE',
+      rating: 5.0,
+      totalRides: 0,
+      createdAt: user.createdAt || now,
+      updatedAt: now,
+    };
+    await savePassengerProfile(resolvedFromUser);
+    if (!user.isPassenger) {
+      await saveUserProfile({ ...user, isPassenger: true, updatedAt: now });
+    }
+    return resolvedFromUser;
+  }
+
+  // 4. Authenticated user without any prior profile - auto-provision
+  const fallbackEmail = (email || '').trim().toLowerCase();
+  const fallbackName = fallbackEmail ? fallbackEmail.split('@')[0] : 'Passageiro';
+  const autoCreated: PassengerProfile = {
+    uid,
+    name: fallbackName,
+    email: fallbackEmail,
+    whatsapp: '',
+    photoUrl: '',
+    termsAccepted: true,
+    rating: 5.0,
+    totalRides: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await savePassengerProfile(autoCreated);
+  await saveUserProfile({
+    uid,
+    email: fallbackEmail,
+    displayName: fallbackName,
+    role: 'passenger',
+    isPassenger: true,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return autoCreated;
+}
+
 export async function savePassengerProfile(profile: PassengerProfile): Promise<void> {
   const clean = sanitizeFirestoreData(profile);
   const db = getFirebaseAdminFirestore();

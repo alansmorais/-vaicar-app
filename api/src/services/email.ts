@@ -162,7 +162,7 @@ export async function sendDriverRegistrationEmail(to: string, name: string) {
         <p style="margin: 0; color: #FACC15; font-weight: bold;">Status atual: Aguardando Aprovação</p>
         <p style="margin-top: 8px; color: #F8FAFC;">Nossa equipe administrativa está conferindo seus dados e CNH. Você receberá um e-mail assim que sua conta for liberada para ficar online.</p>
       </div>
-      <p style="color: #64748B; font-size: 12px;">Equipe VaiCar — Conectando motoristas e passageiros com taxa zero.</p>
+      <p style="color: #64748B; font-size: 12px;">Equipe VaiCar — Conectando motoristas e passageiros com tarifas justas e taxas reduzidas.</p>
     </div>
   `;
   return sendTransactionalEmail({

@@ -4,6 +4,7 @@ import { AppError } from '../middleware/errorHandler.js';
 import { ErrorCode } from '../../../shared/src/errors.js';
 import {
   getPassengerProfile,
+  resolvePassengerProfile,
   savePassengerProfile,
   getUserProfile,
   saveUserProfile,
@@ -19,10 +20,7 @@ passengersRouter.use(authenticate, requirePassenger);
 
 passengersRouter.get('/me', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const profile = await getPassengerProfile(req.user!.uid);
-    if (!profile) {
-      throw new AppError(ErrorCode.NOT_FOUND, 'Perfil de passageiro não encontrado.', 404);
-    }
+    const profile = await resolvePassengerProfile(req.user!.uid, req.user?.email);
     res.json({
       success: true,
       requestId: req.id,
@@ -36,10 +34,7 @@ passengersRouter.get('/me', async (req: Request, res: Response, next: NextFuncti
 passengersRouter.patch('/me', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const uid = req.user!.uid;
-    const current = await getPassengerProfile(uid);
-    if (!current) {
-      throw new AppError(ErrorCode.NOT_FOUND, 'Perfil não encontrado.', 404);
-    }
+    const current = await resolvePassengerProfile(uid, req.user?.email);
 
     const { name, whatsapp, photoUrl } = req.body;
     if (whatsapp && !isValidWhatsApp(whatsapp)) {

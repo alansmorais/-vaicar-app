@@ -16,6 +16,9 @@ import { DriverRegisterPage } from './pages/driver/DriverRegisterPage.js';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.js';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage.js';
 
+import { TermsPage } from './pages/TermsPage.js';
+import { PrivacyPage } from './pages/PrivacyPage.js';
+
 export const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -40,6 +43,12 @@ export const App: React.FC = () => {
               {/* Admin */}
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/login" element={<AdminLoginPage />} />
+
+              {/* Legal & Compliance */}
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/termos" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/privacidade" element={<PrivacyPage />} />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />

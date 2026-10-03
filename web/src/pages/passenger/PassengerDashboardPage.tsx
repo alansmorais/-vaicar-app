@@ -612,12 +612,22 @@ export const PassengerDashboardPage: React.FC = () => {
             height="560px"
           />
 
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between text-xs text-slate-300">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-300">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Corridas cobertas por seguro e monitoramento 24h em São Sebastião</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                Serviço regulamentado pela <strong className="text-white">Lei Federal nº 13.640/2018</strong> (Art. 11-A) e diretrizes municipais. Pagamento 100% direto ao condutor.
+              </span>
             </div>
-            <span className="text-emerald-400 font-semibold">Taxa Zero VaiCar</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <Link to="/terms" className="text-emerald-400 hover:text-emerald-300 underline font-medium">
+                Termos & Responsabilidades
+              </Link>
+              <span className="text-slate-600">•</span>
+              <Link to="/privacy" className="text-emerald-400 hover:text-emerald-300 underline font-medium">
+                Privacidade
+              </Link>
+            </div>
           </div>
         </div>
       </main>

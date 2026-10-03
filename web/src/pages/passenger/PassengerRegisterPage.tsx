@@ -325,7 +325,15 @@ export const PassengerRegisterPage: React.FC = () => {
               className="mt-0.5 rounded border-slate-800 text-emerald-600 focus:ring-emerald-500 bg-slate-950"
             />
             <label htmlFor="terms" className="text-[11px] text-slate-400 cursor-pointer leading-tight">
-              Concordo com os Termos de Uso e Política de Privacidade do VaiCar São Sebastião.
+              Li e concordo com os{' '}
+              <Link to="/terms" target="_blank" className="text-emerald-400 underline hover:text-emerald-300">
+                Termos de Uso
+              </Link>{' '}
+              (Lei 13.640/2018) e com a{' '}
+              <Link to="/privacy" target="_blank" className="text-emerald-400 underline hover:text-emerald-300">
+                Política de Privacidade (LGPD)
+              </Link>{' '}
+              do VaiCar São Sebastião.
             </label>
           </div>
 

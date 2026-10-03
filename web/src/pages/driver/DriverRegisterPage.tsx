@@ -742,6 +742,18 @@ export const DriverRegisterPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Legal Compliance Notice */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
+            Ao submeter o cadastro, você declara que as informações são verídicas e concorda expressamente com os{' '}
+            <Link to="/terms" target="_blank" className="text-emerald-400 underline hover:text-emerald-300">
+              Termos de Uso
+            </Link>{' '}
+            (incluindo a ausência de vínculo empregatício e isenção de responsabilidade da plataforma nos termos da Lei 13.640/2018) e com a{' '}
+            <Link to="/privacy" target="_blank" className="text-emerald-400 underline hover:text-emerald-300">
+              Política de Privacidade (LGPD)
+            </Link>.
+          </div>
+
           {/* Submit */}
           <button
             type="submit"

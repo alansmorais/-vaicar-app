@@ -715,4 +715,42 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(res.body.data.message).toContain('Mensalidade de R$ 100/mês');
     });
   });
+
+  describe('Passenger Profile Auto-Healing and Ride Ordering Resilience', () => {
+    it('allows an authenticated user without pre-existing passenger record to request a ride directly', async () => {
+      const newPassengerUid = 'auto-pass-01';
+      const newPassengerEmail = 'auto.passenger@teste.vaicar.app';
+
+      const res = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${newPassengerUid}:${newPassengerEmail}`)
+        .send({
+          origin: { address: 'Barequeçaba, São Sebastião - SP', lat: -23.8241, lng: -45.4332 },
+          destination: { address: 'Centro Histórico, São Sebastião - SP', lat: -23.8055, lng: -45.4011 },
+          paymentMethod: 'PIX',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.id).toMatch(/^ride-/);
+      expect(res.body.data.passengerId).toBe(newPassengerUid);
+      expect(res.body.data.fareAmount).toBeGreaterThan(0);
+      expect(res.body.data.status).toBe('REQUESTED');
+    });
+
+    it('returns auto-healed profile on GET /api/v1/passengers/me for authenticated user', async () => {
+      const newPassengerUid = 'auto-pass-02';
+      const newPassengerEmail = 'auto.passenger2@teste.vaicar.app';
+
+      const res = await request(app)
+        .get('/api/v1/passengers/me')
+        .set('Authorization', `Bearer ${newPassengerUid}:${newPassengerEmail}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.uid).toBe(newPassengerUid);
+      expect(res.body.data.email).toBe(newPassengerEmail);
+      expect(res.body.data.rating).toBe(5.0);
+    });
+  });
 });

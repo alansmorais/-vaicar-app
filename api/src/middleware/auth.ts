@@ -2,13 +2,15 @@ import { Request, Response, NextFunction } from 'express';
 import { AppError } from './errorHandler.js';
 import { ErrorCode } from '../../../shared/src/errors.js';
 import { getFirebaseAdminAuth } from '../services/firebaseAdmin.js';
-import { getUserProfile } from '../services/firestore.js';
+import { getUserProfile, findUserByEmail } from '../services/firestore.js';
 
 export interface AuthenticatedUser {
   uid: string;
   email: string;
   role?: 'passenger' | 'driver' | 'admin';
   isAdmin?: boolean;
+  isPassenger?: boolean;
+  isDriver?: boolean;
 }
 
 /**
@@ -74,15 +76,22 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     }
 
     // Load authoritative role from Firestore to prevent client tampering
-    const userProfile = await getUserProfile(decodedUid);
+    let userProfile = await getUserProfile(decodedUid);
+    if (!userProfile && decodedEmail) {
+      userProfile = await findUserByEmail(decodedEmail);
+    }
     const role = userProfile?.role || (isAdminClaim ? 'admin' : undefined);
     const isAdmin = isAdminClaim || userProfile?.isAdmin || role === 'admin';
+    const isPassenger = userProfile?.isPassenger ?? (role === 'passenger' || !role);
+    const isDriver = userProfile?.isDriver ?? (role === 'driver');
 
     req.user = {
       uid: decodedUid,
       email: decodedEmail,
       role,
       isAdmin,
+      isPassenger,
+      isDriver,
     };
 
     next();
@@ -111,7 +120,7 @@ export function requireDriver(req: Request, res: Response, next: NextFunction): 
   if (!req.user) {
     return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Autenticação necessária.', 401));
   }
-  if (req.user.role !== 'driver' && !req.user.isAdmin) {
+  if (!req.user.isAdmin && req.user.role !== 'driver' && !req.user.isDriver) {
     return next(new AppError(ErrorCode.FORBIDDEN, 'Acesso restrito a motoristas.', 403));
   }
   next();
@@ -124,7 +133,7 @@ export function requirePassenger(req: Request, res: Response, next: NextFunction
   if (!req.user) {
     return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Autenticação necessária.', 401));
   }
-  if (req.user.role !== 'passenger' && !req.user.isAdmin) {
+  if (!req.user.isAdmin && req.user.role !== 'passenger' && !req.user.isPassenger) {
     return next(new AppError(ErrorCode.FORBIDDEN, 'Acesso restrito a passageiros.', 403));
   }
   next();
