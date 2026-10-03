@@ -6,9 +6,11 @@ export interface PublicDriverMarker {
   name: string;
   photoUrl: string;
   vehicle: {
+    type?: string;
     brand: string;
     model: string;
     color: string;
+    plate?: string;
   };
   currentLocation?: {
     lat: number;
@@ -18,6 +20,7 @@ export interface PublicDriverMarker {
   };
   rating: number;
   operatingZones: string[];
+  isCourier?: boolean;
 }
 
 export const driversApi = {

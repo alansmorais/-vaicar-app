@@ -51,6 +51,7 @@ export const PassengerDashboardPage: React.FC = () => {
 
   // Drivers and estimate
   const [onlineDrivers, setOnlineDrivers] = useState<PublicDriverMarker[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<EstimateRideResult | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('PIX');
 
@@ -212,6 +213,7 @@ export const PassengerDashboardPage: React.FC = () => {
         origin: { address: pickup.address, lat: pickup.lat, lng: pickup.lng },
         destination: { address: destination.address, lat: destination.lat, lng: destination.lng },
         paymentMethod,
+        requestedDriverId: selectedDriverId || undefined,
       });
       setActiveRide(ride);
     } catch (err: any) {
@@ -494,6 +496,101 @@ export const PassengerDashboardPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Driver Selection List */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Escolha o Motorista ou Entregador:
+                  </label>
+                  <span className="text-[11px] text-emerald-400 font-semibold">
+                    {onlineDrivers.length} disponíveis na cidade
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {/* Automatic (Nearest) option */}
+                  <div
+                    onClick={() => setSelectedDriverId(null)}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                      selectedDriverId === null
+                        ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/40 text-white'
+                        : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-base">
+                        ⚡
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold block">Mais Rápido (Automático)</span>
+                        <span className="text-[10px] text-slate-400">Chamar o veículo mais próximo disponível</span>
+                      </div>
+                    </div>
+                    {selectedDriverId === null && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950">
+                        Selecionado
+                      </span>
+                    )}
+                  </div>
+
+                  {/* List of individual online drivers */}
+                  {onlineDrivers.map((d) => {
+                    const isSelected = selectedDriverId === d.uid;
+                    const isBike = d.vehicle?.type === 'bicycle';
+                    const isMoto = d.vehicle?.type === 'motorcycle' || d.isCourier;
+                    return (
+                      <div
+                        key={d.uid}
+                        onClick={() => setSelectedDriverId(d.uid)}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/40 text-white'
+                            : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          {d.photoUrl ? (
+                            <img
+                              src={d.photoUrl}
+                              alt={d.name}
+                              className="w-8 h-8 rounded-lg object-cover border border-slate-700 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-sm shrink-0">
+                              {isBike ? '🚲' : isMoto ? '🛵' : '🚗'}
+                            </div>
+                          )}
+                          <div className="text-left">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-white">{d.name}</span>
+                              <span className="text-[10px] text-amber-400 font-semibold flex items-center">
+                                ⭐ {d.rating.toFixed(1)}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 block truncate max-w-[200px]">
+                              {d.vehicle.brand} {d.vehicle.model} ({d.vehicle.color})
+                              {d.vehicle.plate ? ` • ${d.vehicle.plate}` : ''}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              isSelected
+                                ? 'bg-emerald-500 text-slate-950'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            {isSelected ? 'Escolhido' : 'Escolher'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Payment Method Selector */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
@@ -573,6 +670,11 @@ export const PassengerDashboardPage: React.FC = () => {
                     </div>
                   )}
 
+                  <div className="pt-2 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
+                    <span>Transparência tarifária:</span>
+                    <span className="font-mono text-emerald-400 font-semibold">R$ 10,00 fixo + R$ 1,00/km + R$ 0,25/min</span>
+                  </div>
+
                   <div className="pt-2 border-t border-slate-800/80 text-[11px] text-amber-300/90 flex items-center gap-1.5">
                     <span>💵</span>
                     <span>Pagamento direto ao motorista (Pix ou dinheiro) no veículo.</span>
@@ -608,6 +710,8 @@ export const PassengerDashboardPage: React.FC = () => {
             onPickupChange={handlePickupMarkerChange}
             onDestinationChange={handleDestinationMarkerChange}
             drivers={onlineDrivers}
+            selectedDriverId={selectedDriverId}
+            onDriverSelect={(d) => setSelectedDriverId(d.uid)}
             driverLocation={
               activeRide?.driverId && onlineDrivers.find((d) => d.uid === activeRide.driverId)?.currentLocation
                 ? onlineDrivers.find((d) => d.uid === activeRide.driverId)!.currentLocation

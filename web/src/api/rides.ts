@@ -21,6 +21,7 @@ export interface RequestRideInput {
   origin: { address: string; lat: number; lng: number };
   destination: { address: string; lat: number; lng: number };
   paymentMethod: PaymentMethod;
+  requestedDriverId?: string;
 }
 
 export const ridesApi = {

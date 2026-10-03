@@ -15,7 +15,7 @@ import {
   getActiveRideForUser,
 } from '../services/firestore.js';
 import { sendRideReceiptEmail } from '../services/email.js';
-import { Ride, RideStatus, Receipt, PaymentMethod } from '../../../shared/src/types.js';
+import { Ride, RideStatus, Receipt, PaymentMethod, DriverProfile } from '../../../shared/src/types.js';
 
 export const ridesRouter = Router();
 
@@ -117,7 +117,7 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
       });
     }
 
-    const { origin, destination, paymentMethod } = req.body;
+    const { origin, destination, paymentMethod, requestedDriverId } = req.body;
     if (!origin?.address || !destination?.address) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Origem e destino são obrigatórios.', 400);
     }
@@ -140,12 +140,26 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
     const rideId = `ride-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const now = new Date().toISOString();
 
+    let initialStatus: RideStatus = 'REQUESTED';
+    let chosenDriver: DriverProfile | null = null;
+    if (requestedDriverId) {
+      chosenDriver = await getDriverProfile(requestedDriverId);
+      if (chosenDriver) {
+        initialStatus = 'DRIVER_ARRIVING';
+      }
+    }
+
     const ride: Ride = {
       id: rideId,
       passengerId,
       passengerName: passenger.name,
       passengerPhone: passenger.whatsapp,
       passengerPhotoUrl: passenger.photoUrl,
+      driverId: chosenDriver ? chosenDriver.uid : undefined,
+      driverName: chosenDriver ? chosenDriver.name : undefined,
+      driverPhone: chosenDriver ? chosenDriver.whatsapp : undefined,
+      driverPhotoUrl: chosenDriver ? chosenDriver.photoUrl : undefined,
+      vehicle: chosenDriver ? chosenDriver.vehicle : undefined,
       origin: {
         address: origin.address,
         lat: origin.lat,
@@ -164,8 +178,9 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
       discountApplied: hasDiscount,
       paymentMethod: method,
       paymentStatus: 'PENDING',
-      status: 'REQUESTED',
+      status: initialStatus,
       requestedAt: now,
+      acceptedAt: chosenDriver ? now : undefined,
     };
 
     await saveRide(ride);

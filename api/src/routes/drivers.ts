@@ -22,16 +22,19 @@ driversRouter.get('/online', async (req: Request, res: Response, next: NextFunct
     // Return minimal safe data (no private CPF/CNH exposed to public map)
     const publicDrivers = drivers.map(d => ({
       uid: d.uid,
-      name: d.name.split(' ')[0], // first name
+      name: d.name,
       photoUrl: d.photoUrl,
       vehicle: {
+        type: d.vehicle.type || (d.isCourier ? 'motorcycle' : 'car'),
         brand: d.vehicle.brand,
         model: d.vehicle.model,
         color: d.vehicle.color,
+        plate: d.vehicle.plate,
       },
       currentLocation: d.currentLocation,
       rating: d.rating,
       operatingZones: d.operatingZones,
+      isCourier: d.isCourier,
     }));
 
     res.json({

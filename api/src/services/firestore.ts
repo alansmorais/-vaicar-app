@@ -23,16 +23,132 @@ const localStore: Record<string, Map<string, any>> = {
   platformSettings: new Map(),
 };
 
-// Default pricing settings for São Sebastião
+// Default pricing settings for São Sebastião: R$ 10 base fixo + R$ 1,00/km + R$ 0,25/minuto (mínimo R$ 10)
 const defaultSettings: PlatformPricingSettings = {
-  baseFare: 7.00,
-  perKmRate: 3.50,
-  perMinuteRate: 0.50,
-  minimumFare: 12.00,
+  baseFare: 10.00,
+  perKmRate: 1.00,
+  perMinuteRate: 0.25,
+  minimumFare: 10.00,
   nightSurchargeMultiplier: 1.20,
   updatedAt: new Date().toISOString(),
 };
 localStore.platformSettings.set('pricing', defaultSettings);
+
+export const partnerDriversSeed: DriverProfile[] = [
+  {
+    uid: 'partner-drv-01',
+    name: 'Carlos Santos',
+    cpf: '12345678901',
+    birthDate: '1988-04-12',
+    email: 'carlos.santos@vaicar.app',
+    whatsapp: '(12) 99123-4567',
+    photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    professionalCategory: 'Motorista com EAR / Autônomo',
+    cnhNumber: '12345678901',
+    vehicle: { type: 'car', brand: 'Chevrolet', model: 'Onix', year: 2022, color: 'Prata', plate: 'BRA2E19' },
+    operatingZones: ['Centro & Porto Grande'],
+    currentLocation: { lat: -23.8042, lng: -45.4025, heading: 45, updatedAt: new Date().toISOString() },
+    status: 'APPROVED',
+    isOnline: true,
+    rating: 4.9,
+    completedRidesCount: 142,
+    subscriptionPlan: 'monthly_100',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    uid: 'partner-drv-02',
+    name: 'Marcos Silva',
+    cpf: '23456789012',
+    birthDate: '1992-09-20',
+    email: 'marcos.silva@vaicar.app',
+    whatsapp: '(12) 99188-3322',
+    photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+    professionalCategory: 'Motorista com EAR / Autônomo',
+    cnhNumber: '23456789012',
+    vehicle: { type: 'car', brand: 'Hyundai', model: 'HB20', year: 2023, color: 'Branco', plate: 'SSB4A88' },
+    operatingZones: ['Centro & Balsa Ilhabela'],
+    currentLocation: { lat: -23.8085, lng: -45.3980, heading: 120, updatedAt: new Date().toISOString() },
+    status: 'APPROVED',
+    isOnline: true,
+    rating: 5.0,
+    completedRidesCount: 98,
+    subscriptionPlan: 'monthly_100',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    uid: 'partner-drv-03',
+    name: 'Juliana Lima',
+    cpf: '34567890123',
+    birthDate: '1995-02-15',
+    email: 'juliana.lima@vaicar.app',
+    whatsapp: '(12) 99233-1144',
+    photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+    professionalCategory: 'Motorista com EAR / Autônomo',
+    cnhNumber: '34567890123',
+    vehicle: { type: 'car', brand: 'Renault', model: 'Kwid', year: 2021, color: 'Laranja', plate: 'LNT9K42' },
+    operatingZones: ['Praia do Arrastão & Pontal da Cruz'],
+    currentLocation: { lat: -23.7850, lng: -45.3850, heading: 200, updatedAt: new Date().toISOString() },
+    status: 'APPROVED',
+    isOnline: true,
+    rating: 4.8,
+    completedRidesCount: 76,
+    subscriptionPlan: 'weekly_percent_10',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    uid: 'partner-drv-04',
+    name: 'Lucas Oliveira',
+    cpf: '45678901234',
+    birthDate: '1998-11-05',
+    email: 'lucas.oliveira@vaicar.app',
+    whatsapp: '(12) 99344-5566',
+    photoUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
+    professionalCategory: 'Entregador / Motoboy (Delivery e Encomendas)',
+    cnhNumber: '45678901234',
+    isCourier: true,
+    vehicle: { type: 'motorcycle', brand: 'Honda', model: 'CG 160 Fan', year: 2023, color: 'Preto', plate: 'MAR1E23' },
+    operatingZones: ['Maresias & Paúba'],
+    currentLocation: { lat: -23.7920, lng: -45.5650, heading: 90, updatedAt: new Date().toISOString() },
+    status: 'APPROVED',
+    isOnline: true,
+    rating: 4.9,
+    completedRidesCount: 215,
+    subscriptionPlan: 'weekly_percent_10',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    uid: 'partner-drv-05',
+    name: 'Felipe Souza',
+    cpf: '56789012345',
+    birthDate: '2001-07-22',
+    email: 'felipe.souza@vaicar.app',
+    whatsapp: '(12) 99755-6677',
+    photoUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
+    professionalCategory: 'Entregador / Ciclista (Bike e Encomendas)',
+    cnhNumber: 'ISENTO_BIKE',
+    isCourier: true,
+    vehicle: { type: 'bicycle', brand: 'Caloi', model: 'Aro 29', year: 2024, color: 'Verde', plate: 'BIKE' },
+    operatingZones: ['Centro & Rua da Praia'],
+    currentLocation: { lat: -23.8058, lng: -45.4018, heading: 0, updatedAt: new Date().toISOString() },
+    status: 'APPROVED',
+    isOnline: true,
+    rating: 5.0,
+    completedRidesCount: 64,
+    subscriptionPlan: 'weekly_percent_10',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+for (const p of partnerDriversSeed) {
+  if (!localStore.drivers.has(p.uid)) {
+    localStore.drivers.set(p.uid, p);
+  }
+}
 
 // --- Users Collection ---
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
@@ -257,7 +373,10 @@ export async function getDriverProfile(uid: string): Promise<DriverProfile | nul
     const snap = await db.collection('drivers').doc(uid).get();
     return snap.exists ? (snap.data() as DriverProfile) : null;
   }
-  return localStore.drivers.get(uid) || null;
+  const fromLocal = localStore.drivers.get(uid);
+  if (fromLocal) return fromLocal;
+  const partner = partnerDriversSeed.find(p => p.uid === uid);
+  return partner || null;
 }
 
 export async function findDriverByCpf(cpf: string): Promise<DriverProfile | null> {
@@ -316,17 +435,28 @@ export async function listAllDrivers(): Promise<DriverProfile[]> {
 
 export async function listOnlineDrivers(): Promise<DriverProfile[]> {
   const db = getFirebaseAdminFirestore();
+  let online: DriverProfile[] = [];
   if (db) {
     const snap = await db
       .collection('drivers')
       .where('status', '==', 'APPROVED')
       .where('isOnline', '==', true)
       .get();
-    return snap.docs.map(d => d.data() as DriverProfile);
+    online = snap.docs.map(d => d.data() as DriverProfile);
+  } else {
+    online = Array.from(localStore.drivers.values()).filter(
+      d => d.status === 'APPROVED' && d.isOnline === true
+    );
   }
-  return Array.from(localStore.drivers.values()).filter(
-    d => d.status === 'APPROVED' && d.isOnline === true
-  );
+
+  const existingUids = new Set(online.map(d => d.uid));
+  const merged = [...online];
+  for (const p of partnerDriversSeed) {
+    if (!existingUids.has(p.uid)) {
+      merged.push(p);
+    }
+  }
+  return merged;
 }
 
 // --- Rides Collection ---
@@ -406,7 +536,13 @@ export async function getPlatformPricing(): Promise<PlatformPricingSettings> {
   const db = getFirebaseAdminFirestore();
   if (db) {
     const snap = await db.collection('platformSettings').doc('pricing').get();
-    if (snap.exists) return snap.data() as PlatformPricingSettings;
+    if (snap.exists) {
+      const data = snap.data() as PlatformPricingSettings;
+      if (data.baseFare === 7.00 || data.perKmRate === 3.50) {
+        return updatePlatformPricing(defaultSettings);
+      }
+      return data;
+    }
   }
   return localStore.platformSettings.get('pricing') || defaultSettings;
 }

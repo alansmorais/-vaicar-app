@@ -13,6 +13,8 @@ interface MapProps {
   onMapClick?: (lat: number, lng: number, address?: string) => void;
   drivers?: PublicDriverMarker[];
   driverLocation?: { lat: number; lng: number; heading?: number } | null;
+  selectedDriverId?: string | null;
+  onDriverSelect?: (driver: PublicDriverMarker) => void;
   height?: string;
   className?: string;
 }
@@ -129,6 +131,8 @@ export const MapDisplay: React.FC<MapProps> = ({
   onMapClick,
   drivers = [],
   driverLocation,
+  selectedDriverId,
+  onDriverSelect,
   height = '480px',
   className = '',
 }) => {
@@ -300,13 +304,49 @@ export const MapDisplay: React.FC<MapProps> = ({
     // Online drivers
     drivers.forEach((d) => {
       if (d.currentLocation?.lat && d.currentLocation?.lng) {
+        const isSelected = selectedDriverId === d.uid;
+        const isBicycle = d.vehicle?.type === 'bicycle';
+        const isMoto = d.vehicle?.type === 'motorcycle' || d.isCourier;
+        const iconEmoji = isBicycle ? '🚲' : isMoto ? '🛵' : '🚗';
+
         const marker = L.marker([d.currentLocation.lat, d.currentLocation.lng], {
-          icon: createCustomMarkerIcon('driver'),
+          icon: L.divIcon({
+            className: `custom-driver-marker ${isSelected ? 'selected' : ''}`,
+            html: `
+              <div style="
+                width: ${isSelected ? '38px' : '30px'};
+                height: ${isSelected ? '38px' : '30px'};
+                border-radius: 50%;
+                background: ${isSelected ? '#10b981' : isBicycle ? '#0284c7' : '#facc15'};
+                border: ${isSelected ? '3px solid #ffffff' : '2px solid #000000'};
+                box-shadow: ${isSelected ? '0 0 18px rgba(16, 185, 129, 0.95)' : '0 2px 8px rgba(0,0,0,0.5)'};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: ${isSelected ? '18px' : '14px'};
+                cursor: pointer;
+                transition: transform 0.2s;
+              ">
+                ${iconEmoji}
+              </div>
+            `,
+            iconSize: isSelected ? [38, 38] : [30, 30],
+            iconAnchor: isSelected ? [19, 19] : [15, 15],
+          }),
         });
-        marker.bindTooltip(`${d.name} (${d.vehicle.brand} ${d.vehicle.model})`, {
-          direction: 'top',
-          className: 'bg-slate-900 text-slate-100 text-[10px] rounded px-1.5 py-0.5 border border-slate-700',
+
+        marker.bindTooltip(
+          `<strong>${d.name}</strong> • ${d.vehicle.brand} ${d.vehicle.model}<br/><span style="color:#10b981">⭐ ${d.rating.toFixed(1)}</span> • Clique para escolher`,
+          {
+            direction: 'top',
+            className: 'bg-slate-900 text-slate-100 text-[11px] rounded-lg p-2 border border-slate-700 shadow-xl',
+          }
+        );
+
+        marker.on('click', () => {
+          onDriverSelect?.(d);
         });
+
         layer.addLayer(marker);
       }
     });
