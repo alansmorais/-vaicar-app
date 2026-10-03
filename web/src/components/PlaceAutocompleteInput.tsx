@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { mapsApi, PlacePrediction } from '../api/maps.js';
-import { MapPin, Navigation, Search, X, Loader2 } from 'lucide-react';
+import { MapPin, Navigation, Search, X, Loader2, Crosshair } from 'lucide-react';
 
 interface PlaceAutocompleteInputProps {
   label: string;
@@ -11,6 +11,8 @@ interface PlaceAutocompleteInputProps {
   icon?: 'pickup' | 'destination';
   helperText?: string;
   className?: string;
+  onUseCurrentLocation?: () => void;
+  isLocating?: boolean;
 }
 
 export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
@@ -22,6 +24,8 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
   icon = 'pickup',
   helperText,
   className = '',
+  onUseCurrentLocation,
+  isLocating = false,
 }) => {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -170,11 +174,25 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
           )}
           {label}
         </span>
-        {loading && (
-          <span className="text-[10px] text-slate-400 flex items-center gap-1 font-normal">
-            <Loader2 className="w-3 h-3 animate-spin text-emerald-400" /> Buscando...
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {onUseCurrentLocation && (
+            <button
+              type="button"
+              onClick={onUseCurrentLocation}
+              disabled={isLocating}
+              className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 transition-colors px-2 py-0.5 rounded-lg bg-emerald-950/70 border border-emerald-500/40 hover:border-emerald-500 shadow-sm"
+              title="Obter localização exata pelo GPS do seu dispositivo"
+            >
+              <Crosshair className={`w-3 h-3 ${isLocating ? 'animate-spin' : ''}`} />
+              {isLocating ? 'Obtendo GPS...' : 'Usar meu GPS'}
+            </button>
+          )}
+          {loading && (
+            <span className="text-[10px] text-slate-400 flex items-center gap-1 font-normal">
+              <Loader2 className="w-3 h-3 animate-spin text-emerald-400" /> Buscando...
+            </span>
+          )}
+        </div>
       </label>
 
       <div className="relative flex items-center">

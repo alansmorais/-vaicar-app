@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PublicDriverMarker } from '../api/drivers.js';
 import { mapsApi } from '../api/maps.js';
-import { Navigation, MapPin, Car, Crosshair, AlertCircle } from 'lucide-react';
+import { Navigation, MapPin, Car, Crosshair, AlertCircle, LocateFixed } from 'lucide-react';
 
 interface MapProps {
   pickup: { lat: number; lng: number; address?: string };
@@ -462,6 +462,32 @@ export const MapDisplay: React.FC<MapProps> = ({
     };
   }, [pickup, destination]);
 
+  const [locatingGps, setLocatingGps] = useState(false);
+
+  const handleLocateGps = () => {
+    if (!navigator.geolocation) return;
+    setLocatingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        setLocatingGps(false);
+        const { latitude, longitude } = pos.coords;
+        const map = mapInstanceRef.current;
+        if (map) {
+          map.setView([latitude, longitude], 16);
+        }
+        if (onPickupChange) {
+          const address = await reverseGeocode(latitude, longitude);
+          onPickupChange(latitude, longitude, address);
+        }
+      },
+      (err) => {
+        setLocatingGps(false);
+        console.warn('Map locate GPS error:', err);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+  };
+
   const handleRecenter = () => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -498,6 +524,15 @@ export const MapDisplay: React.FC<MapProps> = ({
         </div>
 
         <div className="flex items-center gap-2 pointer-events-auto">
+          <button
+            type="button"
+            onClick={handleLocateGps}
+            disabled={locatingGps}
+            className="p-2 rounded-xl bg-slate-950/90 backdrop-blur-md border border-slate-700/80 text-slate-300 hover:text-emerald-400 hover:border-emerald-500 transition-colors shadow-xl"
+            title="Localizar meu GPS exato no mapa"
+          >
+            <LocateFixed className={`w-4 h-4 ${locatingGps ? 'animate-spin text-emerald-400' : ''}`} />
+          </button>
           <button
             type="button"
             onClick={handleRecenter}

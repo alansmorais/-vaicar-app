@@ -174,14 +174,43 @@ mapsRouter.post('/geocode', async (req: Request, res: Response, next: NextFuncti
       }
     }
 
-    // Fallback: Default São Sebastião Centro with small jitter
+    // 2. OpenStreetMap Nominatim Search Fallback
+    try {
+      const query = address.toLowerCase().includes('são sebastião') || address.toLowerCase().includes('sp')
+        ? address
+        : `${address}, São Sebastião, SP`;
+      const osmUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&limit=1`;
+      const osmRes = await fetch(osmUrl, {
+        headers: { 'User-Agent': 'VaiCar-App/1.0 (contato@vaicar.app)' },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (osmRes.ok) {
+        const osmData = (await osmRes.json()) as any;
+        if (Array.isArray(osmData) && osmData.length > 0) {
+          const first = osmData[0];
+          return res.json({
+            success: true,
+            requestId: req.id,
+            data: {
+              address: first.display_name.split(',').slice(0, 3).join(',').trim(),
+              lat: parseFloat(first.lat),
+              lng: parseFloat(first.lon),
+            },
+          });
+        }
+      }
+    } catch (osmErr) {
+      console.warn('[Maps Geocode] OSM Nominatim warning:', osmErr);
+    }
+
+    // 3. Fallback: Default São Sebastião Centro (deterministic, no random jitter)
     res.json({
       success: true,
       requestId: req.id,
       data: {
         address: `${address}, São Sebastião - SP`,
-        lat: -23.8055 + (Math.random() - 0.5) * 0.02,
-        lng: -45.4011 + (Math.random() - 0.5) * 0.02,
+        lat: -23.8055,
+        lng: -45.4011,
       },
     });
   } catch (error) {
@@ -203,7 +232,7 @@ mapsRouter.post('/reverse-geocode', async (req: Request, res: Response, next: Ne
       });
     }
 
-    // If Google Maps API Key is available, call Google Geocoding API
+    // 1. If Google Maps API Key is available, call Google Geocoding API
     if (config.googleMaps.apiKey) {
       try {
         const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=pt-BR&key=${config.googleMaps.apiKey}`;
@@ -226,7 +255,56 @@ mapsRouter.post('/reverse-geocode', async (req: Request, res: Response, next: Ne
       }
     }
 
-    // Fallback: Find closest known location in São Sebastião
+    // 2. OpenStreetMap Nominatim reverse geocoding fallback (worldwide, exact real street)
+    try {
+      const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+      const osmRes = await fetch(osmUrl, {
+        headers: { 'User-Agent': 'VaiCar-App/1.0 (contato@vaicar.app)' },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (osmRes.ok) {
+        const osmData = (await osmRes.json()) as any;
+        if (osmData && osmData.address) {
+          const a = osmData.address;
+          const street = a.road || a.pedestrian || a.street || a.suburb || '';
+          const houseNumber = a.house_number ? `, ${a.house_number}` : '';
+          const neighborhood = a.suburb || a.neighbourhood || a.city_district || '';
+          const city = a.city || a.town || a.municipality || a.village || '';
+          const state = a.state ? (a['ISO3166-2-lvl4']?.split('-')[1] || a.state) : '';
+
+          let formatted = street ? `${street}${houseNumber}` : '';
+          if (neighborhood && neighborhood !== street) {
+            formatted += formatted ? `, ${neighborhood}` : neighborhood;
+          }
+          if (city) {
+            formatted += formatted ? ` - ${city}` : city;
+          }
+          if (state) {
+            formatted += ` (${state})`;
+          }
+
+          if (!formatted && osmData.display_name) {
+            formatted = osmData.display_name.split(',').slice(0, 3).join(',').trim();
+          }
+
+          if (formatted) {
+            return res.json({
+              success: true,
+              requestId: req.id,
+              data: {
+                address: formatted,
+                lat,
+                lng,
+              },
+            });
+          }
+        }
+      }
+    } catch (osmErr) {
+      console.warn('[Maps Reverse Geocode] OSM Nominatim warning:', osmErr);
+    }
+
+    // 3. Fallback: Find closest known location in São Sebastião
     let closest = KNOWN_LOCATIONS[0];
     let minDistanceSq = Number.MAX_VALUE;
     for (const loc of KNOWN_LOCATIONS) {
@@ -239,7 +317,7 @@ mapsRouter.post('/reverse-geocode', async (req: Request, res: Response, next: Ne
       }
     }
 
-    const approxAddress = Math.sqrt(minDistanceSq) < 0.015
+    const approxAddress = Math.sqrt(minDistanceSq) < 0.02
       ? closest.address
       : `Ponto próximo a ${closest.name}, São Sebastião - SP`;
 

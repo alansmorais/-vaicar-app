@@ -33,6 +33,7 @@ import {
   MessageSquare,
   Camera,
   Upload,
+  Crosshair,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
 
@@ -54,6 +55,65 @@ export const PassengerDashboardPage: React.FC = () => {
   });
   const [destinationInput, setDestinationInput] = useState('Praia de Maresias (Entrada 8)');
   const [popularPlaces, setPopularPlaces] = useState<KnownLocation[]>([]);
+
+  // Real device GPS states
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [hasUserGps, setHasUserGps] = useState(false);
+
+  // Request passenger GPS location and reverse geocode
+  const requestPassengerGps = useCallback(async () => {
+    if (!navigator.geolocation) {
+      setGpsError('Seu dispositivo ou navegador não suporta geolocalização.');
+      return;
+    }
+
+    setGpsLoading(true);
+    setGpsError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setHasUserGps(true);
+        try {
+          const res = await mapsApi.reverseGeocode(lat, lng);
+          const address = res.address || `Meu Local (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+          setPickup({ lat, lng, address });
+          setPickupInput(address);
+          setGpsError(null);
+        } catch (err) {
+          console.warn('Reverse geocode failed, using coordinates:', err);
+          const fallback = `Meu Local (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+          setPickup({ lat, lng, address: fallback });
+          setPickupInput(fallback);
+        } finally {
+          setGpsLoading(false);
+        }
+      },
+      (err) => {
+        console.warn('Passenger GPS error:', err);
+        setGpsLoading(false);
+        if (err.code === 1) {
+          setGpsError('Permissão de GPS necessária. Clique em "Permitir" para definir seu local de partida exato.');
+        } else if (err.code === 2) {
+          setGpsError('Sinal de GPS indisponível no dispositivo.');
+        } else if (err.code === 3) {
+          setGpsError('Tempo esgotado ao buscar GPS.');
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 5000,
+      }
+    );
+  }, []);
+
+  // Request passenger GPS automatically on initial mount
+  useEffect(() => {
+    requestPassengerGps();
+  }, [requestPassengerGps]);
 
   // Drivers and estimate
   const [onlineDrivers, setOnlineDrivers] = useState<PublicDriverMarker[]>([]);
@@ -639,6 +699,25 @@ export const PassengerDashboardPage: React.FC = () => {
                 </span>
               </div>
 
+              {/* GPS status / error alert if permission needed */}
+              {gpsError && (
+                <div className="p-3.5 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>{gpsError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={requestPassengerGps}
+                    disabled={gpsLoading}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-colors flex items-center gap-1.5"
+                  >
+                    <Crosshair className={`w-3.5 h-3.5 ${gpsLoading ? 'animate-spin' : ''}`} />
+                    Tentar GPS Novamente
+                  </button>
+                </div>
+              )}
+
               {/* Pickup PlaceAutocompleteInput */}
               <PlaceAutocompleteInput
                 label="Ponto de Partida (Embarque)"
@@ -646,8 +725,14 @@ export const PassengerDashboardPage: React.FC = () => {
                 value={pickupInput}
                 onChange={setPickupInput}
                 onSelectPlace={handleSelectPickup}
+                onUseCurrentLocation={requestPassengerGps}
+                isLocating={gpsLoading}
                 icon="pickup"
-                helperText="Busca inteligente Google Maps. Você também pode arrastar o pino verde no mapa."
+                helperText={
+                  hasUserGps
+                    ? '📍 Localização exata obtida via GPS do dispositivo. Arraste o pino verde para ajustar.'
+                    : "Clique em 'Usar meu GPS' acima para preenchimento automático pelo satélite."
+                }
               />
 
               {/* Destination PlaceAutocompleteInput */}

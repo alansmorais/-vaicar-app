@@ -36,6 +36,7 @@ import {
   Volume2,
   Camera,
   Check,
+  Crosshair,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
 
@@ -266,7 +267,44 @@ export const DriverDashboardPage: React.FC = () => {
     return () => clearInterval(timer);
   }, [incomingRide?.id]);
 
-  // Real device GPS geolocation while online (no mock or fake coordinates)
+  // Request Driver GPS on mount (and on-demand)
+  const requestDriverGps = useCallback(() => {
+    if (!navigator.geolocation) {
+      setGpsError('Seu dispositivo ou navegador não suporta geolocalização.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const heading = pos.coords.heading || 0;
+        setDriverGps({ lat, lng });
+        setGpsError(null);
+        if (isOnline) {
+          driversApi.updateLocation(lat, lng, heading).catch(console.error);
+        }
+      },
+      (err) => {
+        console.warn('Driver GPS prompt error:', err);
+        if (err.code === 1) {
+          setGpsError('Permissão de GPS necessária. Clique em "Ativar GPS" para permitir que o app mostre sua localização exata.');
+        } else if (err.code === 2) {
+          setGpsError('Sinal de GPS indisponível no dispositivo.');
+        } else if (err.code === 3) {
+          setGpsError('Tempo esgotado ao buscar localização GPS.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
+    );
+  }, [isOnline]);
+
+  // Request driver GPS on initial mount so browser prompts for permission right away
+  useEffect(() => {
+    requestDriverGps();
+  }, [requestDriverGps]);
+
+  // Real device GPS geolocation while online (continuous tracking)
   useEffect(() => {
     if (!isOnline) return;
 
@@ -322,6 +360,11 @@ export const DriverDashboardPage: React.FC = () => {
     if (driver.status !== 'APPROVED') {
       setError(`Sua conta está com status: ${driver.status}. Aguarde a aprovação do administrador.`);
       return;
+    }
+
+    // Prompt GPS permission if going online
+    if (!isOnline && navigator.geolocation) {
+      requestDriverGps();
     }
 
     setError(null);
@@ -699,6 +742,27 @@ export const DriverDashboardPage: React.FC = () => {
 
         {/* Header Actions */}
         <div className="flex items-center gap-2.5">
+          {/* GPS Status Indicator / Trigger */}
+          {driverGps ? (
+            <div
+              className="px-2.5 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+              title={`GPS Exato Ativo: (${driverGps.lat.toFixed(4)}, ${driverGps.lng.toFixed(4)})`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="hidden md:inline">GPS Ativo</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={requestDriverGps}
+              className="px-2.5 py-2 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-300 hover:text-white hover:bg-amber-900/60 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+              title="Clique para ativar a localização GPS do seu dispositivo"
+            >
+              <Crosshair className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span className="hidden md:inline">Ativar GPS</span>
+            </button>
+          )}
+
           {/* Profile & Documents modal trigger button (Item 6 & 7) */}
           <button
             type="button"
@@ -747,7 +811,7 @@ export const DriverDashboardPage: React.FC = () => {
       {/* Main Container */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
         {/* GPS Permission / Geolocation Warning */}
-        {gpsError && isOnline && (
+        {gpsError && (
           <div className="p-4 rounded-2xl bg-amber-950/80 border-2 border-amber-500 text-amber-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl">
             <div className="flex items-center gap-2.5">
               <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
@@ -757,20 +821,11 @@ export const DriverDashboardPage: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => {
-                navigator.geolocation?.getCurrentPosition(
-                  (pos) => {
-                    setDriverGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                    setGpsError(null);
-                    driversApi.updateLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.heading || 0);
-                  },
-                  (err) => setGpsError(err.message),
-                  { enableHighAccuracy: true }
-                );
-              }}
-              className="py-1.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-colors"
+              onClick={requestDriverGps}
+              className="py-1.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-colors flex items-center gap-1.5"
             >
-              Tentar Novamente
+              <Crosshair className="w-3.5 h-3.5" />
+              Ativar / Autorizar GPS
             </button>
           </div>
         )}
@@ -1200,6 +1255,7 @@ export const DriverDashboardPage: React.FC = () => {
             <MapDisplay
               pickup={activeRide.origin}
               destination={activeRide.destination}
+              driverLocation={driverGps ? { lat: driverGps.lat, lng: driverGps.lng } : null}
               height="280px"
             />
 
