@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Receipt } from '../../../shared/src/types.js';
 import { receiptsApi } from '../api/receipts.js';
 import { X, Printer, CheckCircle, ExternalLink } from 'lucide-react';
@@ -13,9 +14,25 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ receipt, onClose }) 
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 text-slate-100">
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 text-slate-100 my-auto animate-in zoom-in-95 duration-150 relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
           <div className="flex items-center gap-2">
@@ -118,6 +135,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ receipt, onClose }) 
           </a>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

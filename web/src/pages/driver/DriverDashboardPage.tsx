@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { WaitingTimer } from '../../components/WaitingTimer.js';
@@ -426,9 +427,49 @@ export const DriverDashboardPage: React.FC = () => {
         )}
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-600/60 text-rose-300 text-xs flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <span>{error}</span>
+          <div className="p-4 rounded-2xl bg-rose-950/70 border border-rose-500/70 text-rose-200 text-xs space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <span className="font-bold text-sm text-white block">
+                  {error.includes('Acesso restrito')
+                    ? 'Acesso Restrito ao Painel do Motorista'
+                    : 'Aviso do Sistema'}
+                </span>
+                <p className="leading-relaxed text-slate-300">
+                  {error.includes('Acesso restrito')
+                    ? 'Sua conta conectada está configurada como Passageiro ou ainda não possui cadastro aprovado de Motorista/Entregador. Para aceitar corridas e ficar online, cadastre seu veículo ou faça login com sua conta de condutor.'
+                    : error}
+                </p>
+              </div>
+            </div>
+
+            {error.includes('Acesso restrito') && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-rose-900/60">
+                <Link
+                  to="/driver/register"
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <Car className="w-4 h-4" /> Cadastrar como Motorista / Entregador
+                </Link>
+                <Link
+                  to="/passenger"
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold text-xs border border-slate-700 transition-colors"
+                >
+                  Ir para Painel do Passageiro
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await logout();
+                    navigate('/driver/login');
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-rose-900/40 hover:bg-rose-900/70 text-rose-200 font-semibold text-xs border border-rose-700/50 transition-colors"
+                >
+                  Entrar com Conta de Motorista
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -828,126 +869,135 @@ export const DriverDashboardPage: React.FC = () => {
       />
 
       {/* PLAN CHANGE MODAL */}
-      {showPlanModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-emerald-400" /> Alterar Plano de Parceria
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowPlanModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {showPlanModal &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={() => setShowPlanModal(false)}
+          >
+            <div
+              className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative my-auto animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-emerald-400" /> Alterar Plano de Parceria
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowPlanModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Você pode alternar entre a mensalidade fixa e o percentual semanal.
-              A troca é permitida após <strong>1 mês (30 dias)</strong> para planos mensais ou <strong>1 semana (7 dias)</strong> para planos de 10% semanal.
-            </p>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Você pode alternar entre a mensalidade fixa e o percentual semanal.
+                A troca é permitida após <strong>1 mês (30 dias)</strong> para planos mensais ou <strong>1 semana (7 dias)</strong> para planos de 10% semanal.
+              </p>
 
-            {/* Current plan status notice */}
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
-              <span className="text-slate-400 block text-[11px] font-medium">Plano Atual:</span>
-              <span className="font-bold text-white block text-sm">
-                {currentPlan === 'weekly_percent_10' ? '10% Semanal (Acerto Semanal)' : 'R$ 100/mês (Mensalidade Fixa)'}
-              </span>
-              <span className="text-[11px] text-slate-400 block pt-1 border-t border-slate-800/80">
-                {isSwitchEligible ? (
-                  <span className="text-emerald-400 font-semibold">
-                    ✓ Você já cumpriu o período mínimo e pode trocar de plano agora.
-                  </span>
-                ) : (
-                  <span>
-                    Próxima troca liberada em: <strong>{eligibleDate.toLocaleDateString('pt-BR')}</strong> (faltam {daysRemaining} dia(s)).
-                  </span>
-                )}
-              </span>
-            </div>
-
-            {/* Selection Options */}
-            <div className="space-y-2.5">
-              <label
-                onClick={() => setSelectedNewPlan('monthly_100')}
-                className={`p-3.5 rounded-xl border flex items-start gap-3 cursor-pointer transition-all ${
-                  selectedNewPlan === 'monthly_100'
-                    ? 'bg-emerald-950/60 border-emerald-500 text-white'
-                    : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="modalPlan"
-                  checked={selectedNewPlan === 'monthly_100'}
-                  onChange={() => setSelectedNewPlan('monthly_100')}
-                  className="mt-1 text-emerald-500 focus:ring-emerald-500"
-                />
-                <div className="flex-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-sm">Mensalidade: R$ 100,00 / mês</span>
-                    <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                      Taxa Fixa
+              {/* Current plan status notice */}
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+                <span className="text-slate-400 block text-[11px] font-medium">Plano Atual:</span>
+                <span className="font-bold text-white block text-sm">
+                  {currentPlan === 'weekly_percent_10' ? '10% Semanal (Acerto Semanal)' : 'R$ 100/mês (Mensalidade Fixa)'}
+                </span>
+                <span className="text-[11px] text-slate-400 block pt-1 border-t border-slate-800/80">
+                  {isSwitchEligible ? (
+                    <span className="text-emerald-400 font-semibold">
+                      ✓ Você já cumpriu o período mínimo e pode trocar de plano agora.
                     </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 mt-1">
-                    Corridas ilimitadas com taxa fixa. Fidelidade mínima de 1 mês antes da próxima troca.
-                  </p>
-                </div>
-              </label>
-
-              <label
-                onClick={() => setSelectedNewPlan('weekly_percent_10')}
-                className={`p-3.5 rounded-xl border flex items-start gap-3 cursor-pointer transition-all ${
-                  selectedNewPlan === 'weekly_percent_10'
-                    ? 'bg-emerald-950/60 border-emerald-500 text-white'
-                    : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="modalPlan"
-                  checked={selectedNewPlan === 'weekly_percent_10'}
-                  onChange={() => setSelectedNewPlan('weekly_percent_10')}
-                  className="mt-1 text-emerald-500 focus:ring-emerald-500"
-                />
-                <div className="flex-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-sm">10% por Corrida (Semanal)</span>
-                    <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                      Semanal
+                  ) : (
+                    <span>
+                      Próxima troca liberada em: <strong>{eligibleDate.toLocaleDateString('pt-BR')}</strong> (faltam {daysRemaining} dia(s)).
                     </span>
-                  </div>
-                  <p className="text-[11px] text-slate-300 mt-1">
-                    Pague 10% somente das corridas realizadas, acertado semanalmente. Flexibilidade mínima de 1 semana antes da próxima troca.
-                  </p>
-                </div>
-              </label>
-            </div>
+                  )}
+                </span>
+              </div>
 
-            {/* Modal Actions */}
-            <div className="pt-2 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowPlanModal(false)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleChangePlan}
-                disabled={planChangeLoading || !isSwitchEligible || selectedNewPlan === currentPlan}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-1.5"
-              >
-                {planChangeLoading ? 'Salvando...' : 'Confirmar Troca'}
-              </button>
+              {/* Selection Options */}
+              <div className="space-y-2.5">
+                <label
+                  onClick={() => setSelectedNewPlan('monthly_100')}
+                  className={`p-3.5 rounded-xl border flex items-start gap-3 cursor-pointer transition-all ${
+                    selectedNewPlan === 'monthly_100'
+                      ? 'bg-emerald-950/60 border-emerald-500 text-white'
+                      : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="modalPlan"
+                    checked={selectedNewPlan === 'monthly_100'}
+                    onChange={() => setSelectedNewPlan('monthly_100')}
+                    className="mt-1 text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <div className="flex-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white text-sm">Mensalidade: R$ 100,00 / mês</span>
+                      <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                        Taxa Fixa
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-1">
+                      Corridas ilimitadas com taxa fixa. Fidelidade mínima de 1 mês antes da próxima troca.
+                    </p>
+                  </div>
+                </label>
+
+                <label
+                  onClick={() => setSelectedNewPlan('weekly_percent_10')}
+                  className={`p-3.5 rounded-xl border flex items-start gap-3 cursor-pointer transition-all ${
+                    selectedNewPlan === 'weekly_percent_10'
+                      ? 'bg-emerald-950/60 border-emerald-500 text-white'
+                      : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="modalPlan"
+                    checked={selectedNewPlan === 'weekly_percent_10'}
+                    onChange={() => setSelectedNewPlan('weekly_percent_10')}
+                    className="mt-1 text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <div className="flex-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white text-sm">10% por Corrida (Semanal)</span>
+                      <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                        Semanal
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-1">
+                      Pague 10% somente das corridas realizadas, acertado semanalmente. Flexibilidade mínima de 1 semana antes da próxima troca.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPlanModal(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleChangePlan}
+                  disabled={planChangeLoading || !isSwitchEligible || selectedNewPlan === currentPlan}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-1.5"
+                >
+                  {planChangeLoading ? 'Salvando...' : 'Confirmar Troca'}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
