@@ -28,6 +28,7 @@ import {
   User,
   CheckCircle,
   FileText,
+  MessageSquare,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
 
@@ -231,6 +232,16 @@ export const PassengerDashboardPage: React.FC = () => {
     if (!user) {
       navigate('/passenger/login');
       return;
+    }
+
+    if (onlineDrivers.length === 0 && !selectedDriverId) {
+      const proceed = window.confirm(
+        'Atenção: Não há motoristas online no aplicativo neste momento em São Sebastião.\n\nClique em OK para registrar o pedido no sistema e aguardar um motorista conectar, ou Cancelar para acionar o grupo de motoristas no WhatsApp.'
+      );
+      if (!proceed) {
+        window.open('https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3', '_blank');
+        return;
+      }
     }
 
     setLoading(true);
@@ -595,8 +606,8 @@ export const PassengerDashboardPage: React.FC = () => {
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Car className="w-4 h-4 text-emerald-400" /> Nova Corrida em São Sebastião
                 </h3>
-                <span className="text-[11px] text-emerald-400 font-medium">
-                  {onlineDrivers.length} carros disponíveis
+                <span className={`text-[11px] font-semibold ${onlineDrivers.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {onlineDrivers.length > 0 ? `${onlineDrivers.length} veículos online` : '0 online no momento'}
                 </span>
               </div>
 
@@ -646,93 +657,114 @@ export const PassengerDashboardPage: React.FC = () => {
                   <label className="block text-xs font-semibold text-slate-300">
                     Escolha o Motorista ou Entregador:
                   </label>
-                  <span className="text-[11px] text-emerald-400 font-semibold">
-                    {onlineDrivers.length} disponíveis na cidade
+                  <span className={`text-[11px] font-semibold ${onlineDrivers.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {onlineDrivers.length > 0 ? `${onlineDrivers.length} disponíveis na cidade` : '0 online no momento'}
                   </span>
                 </div>
 
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {/* Automatic (Nearest) option */}
-                  <div
-                    onClick={() => setSelectedDriverId(null)}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                      selectedDriverId === null
-                        ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/40 text-white'
-                        : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-base">
-                        ⚡
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold block">Mais Rápido (Automático)</span>
-                        <span className="text-[10px] text-slate-400">Chamar o veículo mais próximo disponível</span>
-                      </div>
+                {onlineDrivers.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-left space-y-2.5">
+                    <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
+                      <Clock className="w-4 h-4 shrink-0" />
+                      <span>Nenhum motorista ou entregador online agora</span>
                     </div>
-                    {selectedDriverId === null && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950">
-                        Selecionado
-                      </span>
-                    )}
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Nenhum profissional está com o aplicativo aberto neste instante em São Sebastião. O mapa e a lista exibem apenas motoristas reais cadastrados e aprovados quando estão online. Você pode acionar o grupo oficial no WhatsApp:
+                    </p>
+                    <a
+                      href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-lg"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Pedir no Grupo WhatsApp dos Motoristas
+                    </a>
                   </div>
+                ) : (
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {/* Automatic (Nearest) option */}
+                    <div
+                      onClick={() => setSelectedDriverId(null)}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                        selectedDriverId === null
+                          ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/40 text-white'
+                          : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-base">
+                          ⚡
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold block">Mais Rápido (Automático)</span>
+                          <span className="text-[10px] text-slate-400">Chamar o veículo mais próximo disponível</span>
+                        </div>
+                      </div>
+                      {selectedDriverId === null && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950">
+                          Selecionado
+                        </span>
+                      )}
+                    </div>
 
-                  {/* List of individual online drivers */}
-                  {onlineDrivers.map((d) => {
-                    const isSelected = selectedDriverId === d.uid;
-                    const isBike = d.vehicle?.type === 'bicycle';
-                    const isMoto = d.vehicle?.type === 'motorcycle' || d.isCourier;
-                    return (
-                      <div
-                        key={d.uid}
-                        onClick={() => setSelectedDriverId(d.uid)}
-                        className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                          isSelected
-                            ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/40 text-white'
-                            : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          {d.photoUrl ? (
-                            <img
-                              src={d.photoUrl}
-                              alt={d.name}
-                              className="w-8 h-8 rounded-lg object-cover border border-slate-700 shrink-0"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-sm shrink-0">
-                              {isBike ? '🚲' : isMoto ? '🛵' : '🚗'}
-                            </div>
-                          )}
-                          <div className="text-left">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-bold text-white">{d.name}</span>
-                              <span className="text-[10px] text-amber-400 font-semibold flex items-center">
-                                ⭐ {d.rating.toFixed(1)}
+                    {/* List of individual online drivers */}
+                    {onlineDrivers.map((d) => {
+                      const isSelected = selectedDriverId === d.uid;
+                      const isBike = d.vehicle?.type === 'bicycle';
+                      const isMoto = d.vehicle?.type === 'motorcycle' || d.isCourier;
+                      return (
+                        <div
+                          key={d.uid}
+                          onClick={() => setSelectedDriverId(d.uid)}
+                          className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                            isSelected
+                              ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/40 text-white'
+                              : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            {d.photoUrl ? (
+                              <img
+                                src={d.photoUrl}
+                                alt={d.name}
+                                className="w-8 h-8 rounded-lg object-cover border border-slate-700 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-sm shrink-0">
+                                {isBike ? '🚲' : isMoto ? '🛵' : '🚗'}
+                              </div>
+                            )}
+                            <div className="text-left">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-white">{d.name}</span>
+                                <span className="text-[10px] text-amber-400 font-semibold flex items-center">
+                                  ⭐ {d.rating.toFixed(1)}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 block truncate max-w-[200px]">
+                                {d.vehicle.brand} {d.vehicle.model} ({d.vehicle.color})
+                                {d.vehicle.plate ? ` • ${d.vehicle.plate}` : ''}
                               </span>
                             </div>
-                            <span className="text-[10px] text-slate-400 block truncate max-w-[200px]">
-                              {d.vehicle.brand} {d.vehicle.model} ({d.vehicle.color})
-                              {d.vehicle.plate ? ` • ${d.vehicle.plate}` : ''}
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                isSelected
+                                  ? 'bg-emerald-500 text-slate-950'
+                                  : 'bg-slate-800 text-slate-400'
+                              }`}
+                            >
+                              {isSelected ? 'Escolhido' : 'Escolher'}
                             </span>
                           </div>
                         </div>
-
-                        <div className="text-right shrink-0">
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              isSelected
-                                ? 'bg-emerald-500 text-slate-950'
-                                : 'bg-slate-800 text-slate-400'
-                            }`}
-                          >
-                            {isSelected ? 'Escolhido' : 'Escolher'}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Payment Method Selector */}
