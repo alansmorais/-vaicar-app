@@ -509,7 +509,16 @@ export async function listAllRides(): Promise<Ride[]> {
 export async function getActiveRideForUser(uid: string, role: 'passenger' | 'driver'): Promise<Ride | null> {
   const activeStatuses = ['REQUESTED', 'OFFERED', 'ACCEPTED', 'DRIVER_ARRIVING', 'ARRIVED', 'IN_PROGRESS'];
   const rides = role === 'passenger' ? await listRidesForPassenger(uid) : await listRidesForDriver(uid);
-  return rides.find(r => activeStatuses.includes(r.status)) || null;
+  const active = rides.find(r => activeStatuses.includes(r.status));
+  if (active) return active;
+  if (role === 'passenger') {
+    // If passenger has completed ride awaiting driver payment approval, keep it active until driver approves
+    const pendingPaymentRide = rides.find(
+      r => r.status === 'COMPLETED' && (r.paymentStatus === 'PENDING' || r.paymentApprovedByDriver === false)
+    );
+    if (pendingPaymentRide) return pendingPaymentRide;
+  }
+  return null;
 }
 
 // --- Receipts Collection ---

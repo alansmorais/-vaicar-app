@@ -134,6 +134,8 @@ export interface Ride {
   discountApplied?: boolean;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentState;
+  paymentApprovedByDriver?: boolean;
+  paymentApprovedAt?: string;
   status: RideStatus;
   requestedAt: string;
   acceptedAt?: string;

@@ -11,6 +11,7 @@ import {
   saveDriverProfile,
   savePassengerProfile,
   getPlatformPricing,
+  getReceipt,
   saveReceipt,
   getActiveRideForUser,
 } from '../services/firestore.js';
@@ -108,10 +109,24 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
       );
     }
 
-    // Check if passenger already has active ride
+    // Check if passenger already has active ride or unapproved payment from previous trip
     const existingActive = (await getActiveRideForUser(passengerId, 'passenger')) ||
       (passenger.uid !== passengerId ? await getActiveRideForUser(passenger.uid, 'passenger') : null);
     if (existingActive) {
+      if (existingActive.status === 'COMPLETED' && (existingActive.paymentStatus === 'PENDING' || existingActive.paymentApprovedByDriver === false)) {
+        throw new AppError(
+          ErrorCode.FORBIDDEN,
+          `Você possui uma viagem/entrega anterior no valor de R$ ${existingActive.fareAmount.toFixed(2)} com pagamento pendente de confirmação. O motorista/entregador parceiro precisa aprovar o recebimento do pagamento antes que novos pedidos possam ser realizados na plataforma.`,
+          403,
+          {
+            activeRideId: existingActive.id,
+            pendingPayment: true,
+            fareAmount: existingActive.fareAmount,
+            driverName: existingActive.driverName,
+            paymentMethod: existingActive.paymentMethod,
+          }
+        );
+      }
       throw new AppError(ErrorCode.INVALID_RIDE_STATE, 'Você já possui uma corrida em andamento.', 409, {
         activeRideId: existingActive.id,
       });
@@ -332,42 +347,161 @@ ridesRouter.post('/:id/complete', async (req: Request, res: Response, next: Next
       throw new AppError(ErrorCode.INVALID_RIDE_STATE, `Transição inválida de ${ride.status} para COMPLETED.`, 400);
     }
 
+    const isPaymentApproved = req.body.paymentApproved !== false;
     const now = new Date().toISOString();
-    const receiptId = `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const receiptNumber = `VCR-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const passenger = await getPassengerProfile(ride.passengerId);
     const passengerEmail = passenger?.email || '';
 
-    const receipt: Receipt = {
-      id: receiptId,
-      rideId: ride.id,
-      receiptNumber,
-      passengerName: ride.passengerName,
-      passengerEmail,
-      passengerPhone: ride.passengerPhone,
-      driverName: ride.driverName || 'Motorista VaiCar',
-      vehicleDescription: `${ride.vehicle?.brand || ''} ${ride.vehicle?.model || ''}`,
-      vehiclePlate: ride.vehicle?.plate || '',
-      dateTime: now,
-      originAddress: ride.origin.address,
-      destinationAddress: ride.destination.address,
-      distanceKm: ride.distanceKm,
-      durationMinutes: ride.durationMinutes,
-      fareAmount: ride.fareAmount,
-      originalFareAmount: ride.originalFareAmount,
-      discountAmount: ride.discountAmount,
-      discountApplied: ride.discountApplied,
-      paymentMethod: ride.paymentMethod,
-      paymentStatus: 'PAID',
-      generatedAt: now,
+    let receiptId: string | undefined = undefined;
+    let receipt: Receipt | undefined = undefined;
+
+    if (isPaymentApproved) {
+      receiptId = `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const receiptNumber = `VCR-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+
+      receipt = {
+        id: receiptId,
+        rideId: ride.id,
+        receiptNumber,
+        passengerName: ride.passengerName,
+        passengerEmail,
+        passengerPhone: ride.passengerPhone,
+        driverName: ride.driverName || 'Motorista VaiCar',
+        vehicleDescription: `${ride.vehicle?.brand || ''} ${ride.vehicle?.model || ''}`,
+        vehiclePlate: ride.vehicle?.plate || '',
+        dateTime: now,
+        originAddress: ride.origin.address,
+        destinationAddress: ride.destination.address,
+        distanceKm: ride.distanceKm,
+        durationMinutes: ride.durationMinutes,
+        fareAmount: ride.fareAmount,
+        originalFareAmount: ride.originalFareAmount,
+        discountAmount: ride.discountAmount,
+        discountApplied: ride.discountApplied,
+        paymentMethod: ride.paymentMethod,
+        paymentStatus: 'PAID',
+        generatedAt: now,
+      };
+
+      await saveReceipt(receipt);
+
+      // Update driver completed ride count
+      if (ride.driverId) {
+        const driver = await getDriverProfile(ride.driverId);
+        if (driver) {
+          await saveDriverProfile({
+            ...driver,
+            completedRidesCount: (driver.completedRidesCount || 0) + 1,
+            updatedAt: now,
+          });
+        }
+      }
+
+      // Update passenger total rides
+      if (passenger) {
+        await savePassengerProfile({
+          ...passenger,
+          totalRides: (passenger.totalRides || 0) + 1,
+          updatedAt: now,
+        });
+      }
+    }
+
+    const updatedRide: Ride = {
+      ...ride,
+      status: 'COMPLETED',
+      paymentStatus: isPaymentApproved ? 'PAID' : 'PENDING',
+      paymentApprovedByDriver: isPaymentApproved,
+      paymentApprovedAt: isPaymentApproved ? now : undefined,
+      completedAt: now,
+      receiptId,
+      emailStatus: isPaymentApproved ? 'PENDING' : undefined,
     };
 
-    // Save receipt in Firestore
-    await saveReceipt(receipt);
+    await saveRide(updatedRide);
 
-    // Update driver completed ride count
-    if (ride.driverId) {
+    // Send receipt email asynchronously if approved
+    if (isPaymentApproved && passengerEmail && receipt) {
+      sendRideReceiptEmail(passengerEmail, receipt)
+        .then(resMail => {
+          saveRide({
+            ...updatedRide,
+            emailStatus: resMail.success ? 'SENT' : 'FAILED',
+          }).catch(console.error);
+        })
+        .catch(console.error);
+    }
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: {
+        ride: updatedRide,
+        receipt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Driver (or Admin) Approves Payment for Ride
+ * Unlocks passenger to request new rides and issues official receipt
+ */
+ridesRouter.post('/:id/approve-payment', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ride = await getRide(String(req.params.id));
+    if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
+
+    if (ride.driverId !== req.user!.uid && !req.user!.isAdmin) {
+      throw new AppError(ErrorCode.FORBIDDEN, 'Apenas o motorista responsável pode aprovar o pagamento.', 403);
+    }
+
+    const now = new Date().toISOString();
+    let receiptId = ride.receiptId;
+    let receipt: Receipt | null = receiptId ? await getReceipt(receiptId) : null;
+
+    const passenger = await getPassengerProfile(ride.passengerId);
+    const passengerEmail = passenger?.email || '';
+
+    if (!receipt) {
+      receiptId = `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const receiptNumber = `VCR-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+
+      receipt = {
+        id: receiptId,
+        rideId: ride.id,
+        receiptNumber,
+        passengerName: ride.passengerName,
+        passengerEmail,
+        passengerPhone: ride.passengerPhone,
+        driverName: ride.driverName || 'Motorista VaiCar',
+        vehicleDescription: `${ride.vehicle?.brand || ''} ${ride.vehicle?.model || ''}`,
+        vehiclePlate: ride.vehicle?.plate || '',
+        dateTime: now,
+        originAddress: ride.origin.address,
+        destinationAddress: ride.destination.address,
+        distanceKm: ride.distanceKm,
+        durationMinutes: ride.durationMinutes,
+        fareAmount: ride.fareAmount,
+        originalFareAmount: ride.originalFareAmount,
+        discountAmount: ride.discountAmount,
+        discountApplied: ride.discountApplied,
+        paymentMethod: ride.paymentMethod,
+        paymentStatus: 'PAID',
+        generatedAt: now,
+      };
+
+      await saveReceipt(receipt);
+    } else {
+      receipt.paymentStatus = 'PAID';
+      await saveReceipt(receipt);
+    }
+
+    // Update driver completed ride count if not counted
+    if (ride.driverId && !ride.paymentApprovedByDriver) {
       const driver = await getDriverProfile(ride.driverId);
       if (driver) {
         await saveDriverProfile({
@@ -378,8 +512,8 @@ ridesRouter.post('/:id/complete', async (req: Request, res: Response, next: Next
       }
     }
 
-    // Update passenger total rides
-    if (passenger) {
+    // Update passenger total rides if not counted
+    if (passenger && !ride.paymentApprovedByDriver) {
       await savePassengerProfile({
         ...passenger,
         totalRides: (passenger.totalRides || 0) + 1,
@@ -391,15 +525,16 @@ ridesRouter.post('/:id/complete', async (req: Request, res: Response, next: Next
       ...ride,
       status: 'COMPLETED',
       paymentStatus: 'PAID',
-      completedAt: now,
+      paymentApprovedByDriver: true,
+      paymentApprovedAt: now,
       receiptId,
       emailStatus: 'PENDING',
     };
 
     await saveRide(updatedRide);
 
-    // Send receipt email asynchronously
-    if (passengerEmail) {
+    // Send receipt email
+    if (passengerEmail && receipt) {
       sendRideReceiptEmail(passengerEmail, receipt)
         .then(resMail => {
           saveRide({

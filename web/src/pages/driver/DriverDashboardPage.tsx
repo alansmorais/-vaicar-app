@@ -48,6 +48,10 @@ export const DriverDashboardPage: React.FC = () => {
   const [planChangeLoading, setPlanChangeLoading] = useState<boolean>(false);
   const [planSuccessMessage, setPlanSuccessMessage] = useState<string | null>(null);
 
+  // Payment completion & approval states
+  const [showPaymentCompletionModal, setShowPaymentCompletionModal] = useState<boolean>(false);
+  const [paymentApprovalSuccessMessage, setPaymentApprovalSuccessMessage] = useState<string | null>(null);
+
   // Report modal state
   const [showReportModal, setShowReportModal] = useState<boolean>(false);
   const [reportTarget, setReportTarget] = useState<{ rideId?: string; targetName?: string; amount?: number } | null>(null);
@@ -231,18 +235,56 @@ export const DriverDashboardPage: React.FC = () => {
     }
   };
 
-  const handleCompleteRide = async () => {
+  const handleCompleteRide = async (paymentApproved: boolean = true) => {
     if (!activeRide) return;
     setActionLoading(true);
+    setError(null);
     try {
-      const res = await ridesApi.complete(activeRide.id);
+      const res = await ridesApi.complete(activeRide.id, paymentApproved);
       setActiveRide(res.ride);
-      setReceiptToShow(res.receipt);
+      if (res.receipt) {
+        setReceiptToShow(res.receipt);
+      }
+      setShowPaymentCompletionModal(false);
+      if (paymentApproved) {
+        setPaymentApprovalSuccessMessage(
+          `Pagamento de R$ ${res.ride.fareAmount.toFixed(2)} confirmado com sucesso! Recibo gerado e passageiro liberado.`
+        );
+      } else {
+        setPaymentApprovalSuccessMessage(
+          `Viagem finalizada com pagamento pendente. O passageiro permanecerá bloqueado na plataforma até que você aprove o recebimento.`
+        );
+      }
+      setTimeout(() => setPaymentApprovalSuccessMessage(null), 8000);
       // Reload history and profile
       loadDriverProfile();
       driversApi.getRides().then(setRideHistory).catch(console.error);
     } catch (err: any) {
       setError(err.message || 'Falha ao finalizar viagem.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApprovePayment = async (rideId: string) => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      const res = await ridesApi.approvePayment(rideId);
+      if (activeRide && activeRide.id === rideId) {
+        setActiveRide(res.ride);
+      }
+      if (res.receipt) {
+        setReceiptToShow(res.receipt);
+      }
+      setPaymentApprovalSuccessMessage(
+        `Pagamento de R$ ${res.ride.fareAmount.toFixed(2)} aprovado com sucesso! Recibo oficial emitido e passageiro desbloqueado.`
+      );
+      setTimeout(() => setPaymentApprovalSuccessMessage(null), 8000);
+      loadDriverProfile();
+      driversApi.getRides().then(setRideHistory).catch(console.error);
+    } catch (err: any) {
+      setError(err.message || 'Falha ao aprovar pagamento.');
     } finally {
       setActionLoading(false);
     }
@@ -423,6 +465,91 @@ export const DriverDashboardPage: React.FC = () => {
           <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-200 text-xs flex items-start gap-2.5">
             <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <span>{planSuccessMessage}</span>
+          </div>
+        )}
+
+        {paymentApprovalSuccessMessage && (
+          <div className="p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500 text-emerald-200 text-xs flex items-start gap-3 shadow-xl">
+            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <span className="font-bold text-white text-sm block">Aprovação Registrada</span>
+              <span>{paymentApprovalSuccessMessage}</span>
+            </div>
+          </div>
+        )}
+
+        {/* PENDING PAYMENTS NOTIFICATION BANNER */}
+        {rideHistory.filter((r) => r.status === 'COMPLETED' && (r.paymentStatus === 'PENDING' || r.paymentApprovedByDriver === false)).length > 0 && (
+          <div className="p-5 rounded-2xl bg-amber-950/80 border-2 border-amber-500 text-amber-200 text-xs space-y-3.5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
+                <h4 className="font-extrabold text-white text-sm">
+                  Pagamento Pendente de Confirmação ({rideHistory.filter((r) => r.status === 'COMPLETED' && (r.paymentStatus === 'PENDING' || r.paymentApprovedByDriver === false)).length})
+                </h4>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-amber-900/60 px-2.5 py-1 rounded-full border border-amber-600">
+                Ação do Motorista Requerida
+              </span>
+            </div>
+
+            <p className="text-slate-300 leading-relaxed">
+              O passageiro realizou a corrida/entrega e <strong>está bloqueado na plataforma</strong> até que você aprove o recebimento do valor acordado.
+              Assim que o Pix cair ou o dinheiro for entregue, clique em <strong>Confirmar Recebimento</strong> para liberar o passageiro.
+            </p>
+
+            <div className="space-y-2 pt-1">
+              {rideHistory
+                .filter((r) => r.status === 'COMPLETED' && (r.paymentStatus === 'PENDING' || r.paymentApprovedByDriver === false))
+                .map((pr) => (
+                  <div
+                    key={pr.id}
+                    className="bg-slate-950 p-4 rounded-xl border border-amber-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">{pr.passengerName}</span>
+                        <span className="text-xs text-slate-400">({pr.passengerPhone})</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 truncate max-w-md">
+                        {pr.origin.address} ➔ {pr.destination.address}
+                      </div>
+                      <div className="text-xs text-amber-300 font-semibold flex items-center gap-2">
+                        <span>Valor a receber: <strong className="text-emerald-400 text-sm">R$ {pr.fareAmount.toFixed(2)}</strong></span>
+                        <span>• Forma: {pr.paymentMethod}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleApprovePayment(pr.id)}
+                        disabled={actionLoading}
+                        className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950 transition-all hover:scale-[1.02]"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Confirmar Recebimento (R$ {pr.fareAmount.toFixed(2)})
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReportTarget({
+                            rideId: pr.id,
+                            targetName: pr.passengerName,
+                            amount: pr.fareAmount,
+                          });
+                          setShowReportModal(true);
+                        }}
+                        className="px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-600 text-xs font-semibold flex items-center gap-1 transition-colors"
+                        title="Relatar Calote"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                        Calote
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
           </div>
         )}
 
@@ -685,30 +812,44 @@ export const DriverDashboardPage: React.FC = () => {
               )}
 
               {activeRide.status === 'IN_PROGRESS' && (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <button
-                    onClick={handleCompleteRide}
+                    onClick={() => setShowPaymentCompletionModal(true)}
                     disabled={actionLoading}
-                    className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
+                    className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/60 transition-all hover:scale-[1.01]"
                   >
-                    Finalizar Viagem (COMPLETE) & Gerar Recibo
+                    <CheckCircle className="w-5 h-5 text-white" />
+                    Finalizar Viagem & Confirmar Pagamento (R$ {activeRide.fareAmount.toFixed(2)})
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setReportTarget({
-                        rideId: activeRide.id,
-                        targetName: activeRide.passengerName,
-                        amount: activeRide.fareAmount,
-                      });
-                      setShowReportModal(true);
-                    }}
-                    className="w-full py-2.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-600/50 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <AlertTriangle className="w-4 h-4 text-rose-400" />
-                    Passageiro Não Pagou (Reportar Calote & Bloquear)
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCompleteRide(false)}
+                      disabled={actionLoading}
+                      className="py-2.5 px-3 rounded-xl bg-amber-950/50 hover:bg-amber-900/60 border border-amber-600/50 text-amber-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      title="Finaliza a corrida mas bloqueia o passageiro até você confirmar o recebimento"
+                    >
+                      <Clock className="w-4 h-4 text-amber-400" />
+                      Finalizar c/ Pagamento Pendente
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReportTarget({
+                          rideId: activeRide.id,
+                          targetName: activeRide.passengerName,
+                          amount: activeRide.fareAmount,
+                        });
+                        setShowReportModal(true);
+                      }}
+                      className="py-2.5 px-3 rounded-xl bg-rose-950/50 hover:bg-rose-900/60 border border-rose-600/50 text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <AlertTriangle className="w-4 h-4 text-rose-400" />
+                      Não Pagou (Calote)
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -732,12 +873,54 @@ export const DriverDashboardPage: React.FC = () => {
 
               {activeRide.status === 'COMPLETED' && (
                 <div className="space-y-3">
-                  <div className="p-4 rounded-xl bg-emerald-950 border border-emerald-500 text-center text-xs text-emerald-300 font-semibold">
-                    Viagem finalizada com sucesso! Cobrança de R$ {activeRide.fareAmount.toFixed(2)} via {activeRide.paymentMethod}.
-                  </div>
+                  {!activeRide.paymentApprovedByDriver || activeRide.paymentStatus === 'PENDING' ? (
+                    <div className="p-4 rounded-xl bg-amber-950/80 border-2 border-amber-500 text-xs space-y-3 shadow-lg">
+                      <div className="flex items-center gap-2 font-bold text-amber-300 text-sm">
+                        <Clock className="w-4 h-4 text-amber-400 animate-spin" />
+                        <span>Viagem Finalizada • Aguardando Sua Aprovação de Pagamento</span>
+                      </div>
+                      <p className="text-slate-300 leading-relaxed">
+                        O passageiro <strong>{activeRide.passengerName}</strong> está com novas corridas <strong>bloqueadas</strong> até você confirmar o recebimento de <strong>R$ {activeRide.fareAmount.toFixed(2)}</strong> via {activeRide.paymentMethod}.
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                        <button
+                          onClick={() => handleApprovePayment(activeRide.id)}
+                          disabled={actionLoading}
+                          className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-950"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Confirmar Pagamento Recebido (R$ {activeRide.fareAmount.toFixed(2)})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReportTarget({
+                              rideId: activeRide.id,
+                              targetName: activeRide.passengerName,
+                              amount: activeRide.fareAmount,
+                            });
+                            setShowReportModal(true);
+                          }}
+                          className="py-3 px-4 rounded-xl bg-rose-950 hover:bg-rose-900 border border-rose-600 text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5"
+                        >
+                          <AlertTriangle className="w-4 h-4 text-rose-400" />
+                          Relatar Calote
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-emerald-950 border border-emerald-500 text-center text-xs text-emerald-300 font-semibold space-y-1">
+                      <div className="text-sm font-bold text-white flex items-center justify-center gap-1.5">
+                        <CheckCircle className="w-4 h-4 text-emerald-400" />
+                        Viagem Finalizada e Pagamento Aprovado!
+                      </div>
+                      <div>Cobrança de R$ {activeRide.fareAmount.toFixed(2)} via {activeRide.paymentMethod} confirmada com sucesso.</div>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => setActiveRide(null)}
-                    className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase"
+                    className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider transition-colors"
                   >
                     Concluir e Voltar a Ficar Disponível
                   </button>
@@ -1012,6 +1195,115 @@ export const DriverDashboardPage: React.FC = () => {
                 >
                   {planChangeLoading ? 'Salvando...' : 'Confirmar Troca'}
                 </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* PAYMENT COMPLETION & APPROVAL MODAL */}
+      {showPaymentCompletionModal &&
+        activeRide &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={() => setShowPaymentCompletionModal(false)}
+          >
+            <div
+              className="bg-slate-900 border-2 border-emerald-500/70 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative my-auto animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-emerald-400" /> Finalizar Viagem & Pagamento
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentCompletionModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Passenger & Fare Box */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] text-slate-400 block font-medium">Passageiro:</span>
+                    <span className="text-sm font-bold text-white">{activeRide.passengerName}</span>
+                    <span className="text-xs text-slate-400 block">{activeRide.passengerPhone}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] text-slate-400 block font-medium">Valor Total:</span>
+                    <span className="text-2xl font-black text-emerald-400">
+                      R$ {activeRide.fareAmount.toFixed(2)}
+                    </span>
+                    <span className="text-[11px] text-slate-400 block">Forma: {activeRide.paymentMethod}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
+                  <div>De: {activeRide.origin.address}</div>
+                  <div>Para: {activeRide.destination.address}</div>
+                </div>
+
+                {activeRide.paymentMethod === 'PIX' && (
+                  <div className="p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-[11px] leading-relaxed">
+                    💡 <strong>Atenção ao Pix:</strong> Abra o aplicativo do seu banco e confirme se a transferência de <strong>R$ {activeRide.fareAmount.toFixed(2)}</strong> foi creditada na sua conta antes de aprovar.
+                  </div>
+                )}
+              </div>
+
+              {/* Decision Options */}
+              <div className="space-y-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleCompleteRide(true)}
+                  disabled={actionLoading}
+                  className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/60 transition-all hover:scale-[1.01]"
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  {actionLoading ? 'Processando...' : `Confirmar Pagamento Recebido (R$ ${activeRide.fareAmount.toFixed(2)})`}
+                </button>
+                <p className="text-[11px] text-slate-400 text-center">
+                  ✓ Emite o recibo oficial e libera o passageiro imediatamente para novas corridas.
+                </p>
+
+                <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCompleteRide(false)}
+                    disabled={actionLoading}
+                    className="w-full py-2.5 px-3 rounded-xl bg-amber-950/60 hover:bg-amber-900/70 border border-amber-600/60 text-amber-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <Clock className="w-4 h-4 text-amber-400" />
+                    Finalizar com Pagamento Pendente
+                  </button>
+                  <p className="text-[10px] text-slate-400 text-center">
+                    ⏱️ Conclui a viagem, mas o passageiro fica <strong>bloqueado</strong> até você aprovar o recebimento.
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800/80">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPaymentCompletionModal(false);
+                      setReportTarget({
+                        rideId: activeRide.id,
+                        targetName: activeRide.passengerName,
+                        amount: activeRide.fareAmount,
+                      });
+                      setShowReportModal(true);
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-slate-950 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-600/60 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-rose-400" />
+                    Passageiro Recusou Pagamento (Relatar Calote)
+                  </button>
+                </div>
               </div>
             </div>
           </div>,

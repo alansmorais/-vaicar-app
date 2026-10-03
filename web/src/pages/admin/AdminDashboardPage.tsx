@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { adminApi, EmailLogItem } from '../../api/admin.js';
+import { ridesApi } from '../../api/rides.js';
 import {
   AdminMetrics,
   DriverProfile,
@@ -859,6 +860,8 @@ export const AdminDashboardPage: React.FC = () => {
                     <th className="p-3">Trajeto</th>
                     <th className="p-3">Valor</th>
                     <th className="p-3">Status</th>
+                    <th className="p-3">Pagamento</th>
+                    <th className="p-3">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
@@ -878,6 +881,36 @@ export const AdminDashboardPage: React.FC = () => {
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-800 text-slate-300">
                           {r.status}
                         </span>
+                      </td>
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            r.paymentStatus === 'PAID'
+                              ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                              : 'bg-amber-950 text-amber-400 border border-amber-800'
+                          }`}
+                        >
+                          {r.paymentStatus || 'PENDENTE'}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        {r.status === 'COMPLETED' && r.paymentStatus !== 'PAID' && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await ridesApi.approvePayment(r.id);
+                                setMessage({ type: 'success', text: `Pagamento da corrida #${r.id.slice(-6)} aprovado pelo administrador!` });
+                                loadData();
+                              } catch (err: any) {
+                                setMessage({ type: 'error', text: err.message || 'Falha ao aprovar pagamento.' });
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] uppercase tracking-wider transition-colors"
+                          >
+                            Aprovar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

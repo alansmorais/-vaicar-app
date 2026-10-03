@@ -753,4 +753,109 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(res.body.data.rating).toBe(5.0);
     });
   });
+
+  describe('Driver Payment Approval & Passenger Lock Flow', () => {
+    const pUid = 'pass-approval-test';
+    const pEmail = 'pass.approval@teste.vaicar.app';
+    const dUid = 'test-driv-01'; // already approved test driver
+    const dEmail = 'motorista@teste.vaicar.app';
+    let rideId: string;
+
+    it('creates and starts a ride between passenger and driver', async () => {
+      // Ensure driver is approved and online
+      await request(app)
+        .post(`/api/v1/admin/drivers/${dUid}/approve`)
+        .set('Authorization', `Bearer admin@vaicar.app:VaiCar#2026Admin`);
+
+      await request(app)
+        .post('/api/v1/drivers/toggle-online')
+        .set('Authorization', `Bearer ${dUid}:${dEmail}`)
+        .send({ isOnline: true });
+
+      // 1. Passenger requests ride
+      const reqRes = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${pUid}:${pEmail}`)
+        .send({
+          origin: { address: 'Maresias, São Sebastião', lat: -23.7915, lng: -45.5683 },
+          destination: { address: 'Boiçucanga, São Sebastião', lat: -23.7788, lng: -45.6123 },
+          paymentMethod: 'PIX',
+        });
+
+      expect(reqRes.status).toBe(201);
+      rideId = reqRes.body.data.id;
+
+      // 2. Driver accepts ride
+      const acceptRes = await request(app)
+        .post(`/api/v1/rides/${rideId}/accept`)
+        .set('Authorization', `Bearer ${dUid}:${dEmail}`);
+      expect(acceptRes.status).toBe(200);
+
+      // 3. Driver marks arrived
+      const arrivedRes = await request(app)
+        .post(`/api/v1/rides/${rideId}/arrived`)
+        .set('Authorization', `Bearer ${dUid}:${dEmail}`);
+      expect(arrivedRes.status).toBe(200);
+
+      // 4. Driver starts ride
+      const startRes = await request(app)
+        .post(`/api/v1/rides/${rideId}/start`)
+        .set('Authorization', `Bearer ${dUid}:${dEmail}`);
+      expect(startRes.status).toBe(200);
+      expect(startRes.body.data.status).toBe('IN_PROGRESS');
+    });
+
+    it('driver completes ride with paymentApproved: false', async () => {
+      const compRes = await request(app)
+        .post(`/api/v1/rides/${rideId}/complete`)
+        .set('Authorization', `Bearer ${dUid}:${dEmail}`)
+        .send({ paymentApproved: false });
+
+      expect(compRes.status).toBe(200);
+      expect(compRes.body.data.ride.status).toBe('COMPLETED');
+      expect(compRes.body.data.ride.paymentStatus).toBe('PENDING');
+      expect(compRes.body.data.ride.paymentApprovedByDriver).toBe(false);
+    });
+
+    it('passenger is blocked from requesting new ride while previous payment is unapproved', async () => {
+      const blockRes = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${pUid}:${pEmail}`)
+        .send({
+          origin: { address: 'Boiçucanga, São Sebastião', lat: -23.7788, lng: -45.6123 },
+          destination: { address: 'Cambury, São Sebastião', lat: -23.7654, lng: -45.6412 },
+          paymentMethod: 'CASH',
+        });
+
+      expect(blockRes.status).toBe(403);
+      expect(blockRes.body.error.message).toContain('pagamento pendente de confirmação');
+    });
+
+    it('driver approves payment, releasing passenger and generating receipt', async () => {
+      const appRes = await request(app)
+        .post(`/api/v1/rides/${rideId}/approve-payment`)
+        .set('Authorization', `Bearer ${dUid}:${dEmail}`);
+
+      expect(appRes.status).toBe(200);
+      expect(appRes.body.data.ride.paymentStatus).toBe('PAID');
+      expect(appRes.body.data.ride.paymentApprovedByDriver).toBe(true);
+      expect(appRes.body.data.receipt).toBeDefined();
+      expect(appRes.body.data.receipt.paymentStatus).toBe('PAID');
+    });
+
+    it('passenger can now request new rides successfully after driver approval', async () => {
+      const newRideRes = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${pUid}:${pEmail}`)
+        .send({
+          origin: { address: 'Boiçucanga, São Sebastião', lat: -23.7788, lng: -45.6123 },
+          destination: { address: 'Cambury, São Sebastião', lat: -23.7654, lng: -45.6412 },
+          paymentMethod: 'CASH',
+        });
+
+      expect(newRideRes.status).toBe(201);
+      expect(newRideRes.body.data.status).toBe('REQUESTED');
+      expect(newRideRes.body.data.passengerId).toBe(pUid);
+    });
+  });
 });

@@ -74,6 +74,7 @@ export const PassengerDashboardPage: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editWhatsapp, setEditWhatsapp] = useState('');
 
+  const [checkingPayment, setCheckingPayment] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,7 +117,7 @@ export const PassengerDashboardPage: React.FC = () => {
     refreshActiveRide();
   }, [refreshActiveRide]);
 
-  // Polling active ride when present
+  // Polling active ride when present: continues polling until payment is approved by driver
   useEffect(() => {
     if (!activeRide) return;
 
@@ -125,17 +126,20 @@ export const PassengerDashboardPage: React.FC = () => {
         const updated = await ridesApi.getById(activeRide.id);
         setActiveRide(updated);
 
-        // If completed, trigger rating & receipt
+        // Only stop polling when completed AND payment is approved by driver
         if (updated.status === 'COMPLETED') {
-          if (!updated.ratingByPassenger) {
-            setShowRatingModal(true);
+          const isApproved = updated.paymentApprovedByDriver || updated.paymentStatus === 'PAID';
+          if (isApproved) {
+            if (!updated.ratingByPassenger) {
+              setShowRatingModal(true);
+            }
+            if (updated.receiptId) {
+              import('../../api/receipts.js').then(({ receiptsApi }) => {
+                receiptsApi.getById(updated.receiptId!).then(setReceiptToShow).catch(console.error);
+              });
+            }
+            clearInterval(interval);
           }
-          if (updated.receiptId) {
-            import('../../api/receipts.js').then(({ receiptsApi }) => {
-              receiptsApi.getById(updated.receiptId!).then(setReceiptToShow).catch(console.error);
-            });
-          }
-          clearInterval(interval);
         }
       } catch (err) {
         console.error('Ride poll error:', err);
@@ -143,7 +147,30 @@ export const PassengerDashboardPage: React.FC = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [activeRide]);
+  }, [activeRide?.id, activeRide?.status, activeRide?.paymentStatus, activeRide?.paymentApprovedByDriver]);
+
+  const handleCheckPaymentStatus = async () => {
+    if (!activeRide) return;
+    setCheckingPayment(true);
+    setError(null);
+    try {
+      const updated = await ridesApi.getById(activeRide.id);
+      setActiveRide(updated);
+      if (updated.status === 'COMPLETED' && (updated.paymentApprovedByDriver || updated.paymentStatus === 'PAID')) {
+        if (!updated.ratingByPassenger) {
+          setShowRatingModal(true);
+        }
+        if (updated.receiptId) {
+          const { receiptsApi } = await import('../../api/receipts.js');
+          receiptsApi.getById(updated.receiptId).then(setReceiptToShow).catch(console.error);
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Falha ao consultar status de pagamento.');
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
 
   // Recalculate estimate whenever pickup or destination changes
   useEffect(() => {
@@ -333,118 +360,234 @@ export const PassengerDashboardPage: React.FC = () => {
 
           {/* ACTIVE RIDE CARD */}
           {activeRide ? (
-            <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-2xl p-6 shadow-2xl space-y-5 animate-pulse-border">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status da Viagem</span>
-                <span className="text-xs font-black uppercase px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700">
-                  {activeRide.status.replace(/_/g, ' ')}
-                </span>
-              </div>
+            activeRide.status === 'COMPLETED' && (!activeRide.paymentApprovedByDriver || activeRide.paymentStatus === 'PENDING') ? (
+              <div className="bg-slate-900 border-2 border-amber-500 rounded-2xl p-6 shadow-2xl space-y-5 animate-pulse-border">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-amber-400 animate-spin" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">Aguardando Motorista</span>
+                  </div>
+                  <span className="text-xs font-black uppercase px-2.5 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-700">
+                    Pagamento Pendente
+                  </span>
+                </div>
 
-              {/* Waiting timer if driver has arrived */}
-              {activeRide.status === 'ARRIVED' && activeRide.waitingTimerStartedAt && (
-                <WaitingTimer startedAt={activeRide.waitingTimerStartedAt} />
-              )}
+                <div className="p-4 rounded-xl bg-amber-950/70 border border-amber-600/60 text-xs text-amber-200 space-y-2">
+                  <div className="font-extrabold text-sm text-white flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Viagem/Entrega Concluída • Confirmação de Pagamento</span>
+                  </div>
+                  <p className="leading-relaxed text-slate-300">
+                    O motorista/entregador parceiro precisa <strong>aprovar o recebimento do pagamento</strong> no aplicativo dele para que novas corridas ou entregas possam ser solicitadas.
+                  </p>
+                </div>
 
-              {/* Driver info if assigned */}
-              {activeRide.driverName ? (
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-3">
-                  {activeRide.driverPhotoUrl ? (
-                    <img
-                      src={activeRide.driverPhotoUrl}
-                      alt={activeRide.driverName}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500 shadow-md"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400">
-                      <User className="w-7 h-7" />
+                {/* Driver Info */}
+                {activeRide.driverName && (
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {activeRide.driverPhotoUrl ? (
+                        <img
+                          src={activeRide.driverPhotoUrl}
+                          alt={activeRide.driverName}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-amber-500 shadow-md"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-amber-400">
+                          <User className="w-6 h-6" />
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-sm font-bold text-white block">{activeRide.driverName}</span>
+                        <span className="text-xs text-slate-400 block">
+                          {activeRide.vehicle?.brand} {activeRide.vehicle?.model} ({activeRide.vehicle?.plate})
+                        </span>
+                        <span className="text-xs text-emerald-400 font-mono block mt-0.5">{activeRide.driverPhone}</span>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex-1 text-xs">
-                    <span className="text-sm font-extrabold text-white block">{activeRide.driverName}</span>
-                    <span className="text-slate-300 block">
-                      {activeRide.vehicle?.brand} {activeRide.vehicle?.model} • {activeRide.vehicle?.color}
-                    </span>
-                    <span className="text-emerald-400 font-mono font-bold block mt-0.5">
-                      Placa: {activeRide.vehicle?.plate}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center text-xs text-slate-400 space-y-1">
-                  <div className="flex justify-center">
-                    <Car className="w-8 h-8 text-emerald-400 animate-bounce" />
-                  </div>
-                  <p className="font-semibold text-white">Buscando motoristas parceiros próximos...</p>
-                  <p className="text-[11px]">Sua corrida está sendo enviada aos veículos na região.</p>
-                </div>
-              )}
 
-              {/* Route Summary */}
-              <div className="space-y-2 text-xs bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span className="text-slate-300">{activeRide.origin.address}</span>
-                </div>
-                <div className="flex items-start gap-2 pt-2 border-t border-slate-800/80">
-                  <Navigation className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                  <span className="text-slate-300">{activeRide.destination.address}</span>
-                </div>
-                <div className="flex justify-between pt-2 border-t border-slate-800 text-emerald-400 font-bold">
-                  <span>Valor: R$ {activeRide.fareAmount.toFixed(2)}</span>
-                  <span>Forma: {activeRide.paymentMethod}</span>
-                </div>
-                {activeRide.discountApplied && (
-                  <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                    <span>🏷️</span>
-                    <span>5% de Desconto de Passageiro Verificado incluso</span>
+                    {activeRide.driverPhone && (
+                      <a
+                        href={`https://wa.me/55${activeRide.driverPhone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/40 text-xs font-bold transition-colors"
+                      >
+                        WhatsApp
+                      </a>
+                    )}
                   </div>
                 )}
-                <div className="text-[11px] text-amber-300/90 pt-1.5 border-t border-slate-800/80">
-                  💵 <strong>Pagamento Direto:</strong> Pague diretamente ao motorista via Pix ou dinheiro.
-                </div>
-              </div>
 
-              {/* Actions */}
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  {activeRide.status !== 'COMPLETED' && (
-                    <button
-                      onClick={handleCancelRide}
-                      className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors"
-                    >
-                      Cancelar Corrida
-                    </button>
-                  )}
-                  {activeRide.receiptId && (
-                    <button
-                      onClick={() => {
-                        if (activeRide.receiptId) {
-                          import('../../api/receipts.js').then(({ receiptsApi }) => {
-                            receiptsApi.getById(activeRide.receiptId!).then(setReceiptToShow);
-                          });
-                        }
-                      }}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5"
-                    >
-                      <FileText className="w-4 h-4" /> Ver Recibo
-                    </button>
+                {/* Amount to pay */}
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Valor a Pagar / Pago:</span>
+                    <span className="text-2xl font-black text-emerald-400">R$ {activeRide.fareAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-400 pt-1.5 border-t border-slate-800">
+                    <span>Forma de Pagamento:</span>
+                    <span className="font-bold text-white">{activeRide.paymentMethod}</span>
+                  </div>
+
+                  {activeRide.paymentMethod === 'PIX' && (
+                    <div className="pt-2 border-t border-slate-800 text-[11px] text-amber-300 leading-relaxed">
+                      💡 <strong>Pagamento via Pix:</strong> Efetue a transferência diretamente para a chave Pix informada pelo motorista e peça para ele clicar em <strong>"Confirmar Pagamento Recebido"</strong> no celular dele.
+                    </div>
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReportTarget({ rideId: activeRide.id, targetName: activeRide.driverName });
-                    setShowReportModal(true);
-                  }}
-                  className="w-full py-2 rounded-xl bg-slate-950 hover:bg-rose-950/60 hover:text-rose-300 border border-slate-800 text-slate-400 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                  Reportar Problema com o Motorista
-                </button>
+                {/* Verification in real time */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center text-[11px] text-slate-400 flex items-center justify-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
+                    <span>Verificando confirmação do motorista automaticamente em tempo real...</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleCheckPaymentStatus}
+                    disabled={checkingPayment}
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-950 transition-all hover:scale-[1.01]"
+                  >
+                    {checkingPayment ? 'Verificando...' : '🔄 Já Realizei o Pagamento • Verificar Agora'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReportTarget({ rideId: activeRide.id, targetName: activeRide.driverName });
+                      setShowReportModal(true);
+                    }}
+                    className="w-full py-2 rounded-xl bg-slate-950 hover:bg-rose-950/60 hover:text-rose-300 border border-slate-800 text-slate-400 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                    Relatar Problema / Suporte
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-2xl p-6 shadow-2xl space-y-5 animate-pulse-border">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status da Viagem</span>
+                  <span className="text-xs font-black uppercase px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700">
+                    {activeRide.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+
+                {/* Waiting timer if driver has arrived */}
+                {activeRide.status === 'ARRIVED' && activeRide.waitingTimerStartedAt && (
+                  <WaitingTimer startedAt={activeRide.waitingTimerStartedAt} />
+                )}
+
+                {/* Driver info if assigned */}
+                {activeRide.driverName ? (
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-3">
+                    {activeRide.driverPhotoUrl ? (
+                      <img
+                        src={activeRide.driverPhotoUrl}
+                        alt={activeRide.driverName}
+                        className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500 shadow-md"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400">
+                        <User className="w-7 h-7" />
+                      </div>
+                    )}
+                    <div className="flex-1 text-xs">
+                      <span className="text-sm font-extrabold text-white block">{activeRide.driverName}</span>
+                      <span className="text-slate-300 block">
+                        {activeRide.vehicle?.brand} {activeRide.vehicle?.model} • {activeRide.vehicle?.color}
+                      </span>
+                      <span className="text-emerald-400 font-mono font-bold block mt-0.5">
+                        Placa: {activeRide.vehicle?.plate}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center text-xs text-slate-400 space-y-1">
+                    <div className="flex justify-center">
+                      <Car className="w-8 h-8 text-emerald-400 animate-bounce" />
+                    </div>
+                    <p className="font-semibold text-white">Buscando motoristas parceiros próximos...</p>
+                    <p className="text-[11px]">Sua corrida está sendo enviada aos veículos na região.</p>
+                  </div>
+                )}
+
+                {/* Route Summary */}
+                <div className="space-y-2 text-xs bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span className="text-slate-300">{activeRide.origin.address}</span>
+                  </div>
+                  <div className="flex items-start gap-2 pt-2 border-t border-slate-800/80">
+                    <Navigation className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <span className="text-slate-300">{activeRide.destination.address}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-slate-800 text-emerald-400 font-bold">
+                    <span>Valor: R$ {activeRide.fareAmount.toFixed(2)}</span>
+                    <span>Forma: {activeRide.paymentMethod}</span>
+                  </div>
+                  {activeRide.discountApplied && (
+                    <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                      <span>🏷️</span>
+                      <span>5% de Desconto de Passageiro Verificado incluso</span>
+                    </div>
+                  )}
+                  <div className="text-[11px] text-amber-300/90 pt-1.5 border-t border-slate-800/80">
+                    💵 <strong>Pagamento Direto:</strong> Pague diretamente ao motorista via Pix ou dinheiro.
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    {activeRide.status !== 'COMPLETED' && (
+                      <button
+                        onClick={handleCancelRide}
+                        className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors"
+                      >
+                        Cancelar Corrida
+                      </button>
+                    )}
+                    {activeRide.status === 'COMPLETED' && (
+                      <button
+                        onClick={() => setActiveRide(null)}
+                        className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors"
+                      >
+                        Pedir Nova Corrida
+                      </button>
+                    )}
+                    {activeRide.receiptId && (
+                      <button
+                        onClick={() => {
+                          if (activeRide.receiptId) {
+                            import('../../api/receipts.js').then(({ receiptsApi }) => {
+                              receiptsApi.getById(activeRide.receiptId!).then(setReceiptToShow);
+                            });
+                          }
+                        }}
+                        className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5"
+                      >
+                        <FileText className="w-4 h-4" /> Ver Recibo
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReportTarget({ rideId: activeRide.id, targetName: activeRide.driverName });
+                      setShowReportModal(true);
+                    }}
+                    className="w-full py-2 rounded-xl bg-slate-950 hover:bg-rose-950/60 hover:text-rose-300 border border-slate-800 text-slate-400 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                    Reportar Problema com o Motorista
+                  </button>
+                </div>
+              </div>
+            )
           ) : (
             /* RIDE REQUEST FORM */
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
@@ -773,12 +916,24 @@ export const PassengerDashboardPage: React.FC = () => {
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 resize-none h-20"
             />
 
-            <button
-              onClick={handleSubmitRating}
-              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase"
-            >
-              Enviar Avaliação
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRatingModal(false);
+                  setActiveRide(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+              >
+                Pular
+              </button>
+              <button
+                onClick={handleSubmitRating}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase transition-colors"
+              >
+                Enviar Avaliação
+              </button>
+            </div>
           </div>
         </div>
       )}

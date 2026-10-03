@@ -52,8 +52,14 @@ export const ridesApi = {
       method: 'POST',
     }),
 
-  complete: (rideId: string) =>
-    apiFetch<{ ride: Ride; receipt: Receipt }>(`/rides/${rideId}/complete`, {
+  complete: (rideId: string, paymentApproved: boolean = true) =>
+    apiFetch<{ ride: Ride; receipt?: Receipt }>(`/rides/${rideId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ paymentApproved }),
+    }),
+
+  approvePayment: (rideId: string) =>
+    apiFetch<{ ride: Ride; receipt: Receipt }>(`/rides/${rideId}/approve-payment`, {
       method: 'POST',
     }),
 
