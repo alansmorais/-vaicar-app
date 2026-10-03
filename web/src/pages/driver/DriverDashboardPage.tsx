@@ -93,6 +93,8 @@ export const DriverDashboardPage: React.FC = () => {
   // Real GPS State
   const [driverGps, setDriverGps] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
+  // Active route map view mode: 'to_passenger' (navigating to pickup) or 'full_trip' (origin -> destination)
+  const [driverRouteMode, setDriverRouteMode] = useState<'to_passenger' | 'full_trip'>('to_passenger');
 
   // Incoming ride alert popup state
   const [dismissedRideIds, setDismissedRideIds] = useState<string[]>([]);
@@ -326,14 +328,24 @@ export const DriverDashboardPage: React.FC = () => {
     );
   }, [isOnline]);
 
+  // Initialize driverGps from driver.currentLocation if available
+  useEffect(() => {
+    if (driver?.currentLocation?.lat && driver?.currentLocation?.lng) {
+      setDriverGps((curr) => curr || {
+        lat: driver.currentLocation!.lat,
+        lng: driver.currentLocation!.lng,
+      });
+    }
+  }, [driver?.currentLocation]);
+
   // Request driver GPS on initial mount so browser prompts for permission right away
   useEffect(() => {
     requestDriverGps();
   }, [requestDriverGps]);
 
-  // Real device GPS geolocation while online (continuous tracking)
+  // Real device GPS geolocation while online OR during an active ride (continuous tracking)
   useEffect(() => {
-    if (!isOnline) return;
+    if (!isOnline && !activeRide) return;
 
     if (!navigator.geolocation) {
       setGpsError('Seu dispositivo ou navegador não suporta geolocalização.');
@@ -374,13 +386,13 @@ export const DriverDashboardPage: React.FC = () => {
         timeout: 8000,
         maximumAge: 10000,
       });
-    }, 12000);
+    }, 10000);
 
     return () => {
       navigator.geolocation.clearWatch(watchId);
       clearInterval(periodicSync);
     };
-  }, [isOnline]);
+  }, [isOnline, activeRide?.id]);
 
   const handleToggleOnline = async () => {
     if (!driver) return;
@@ -413,6 +425,8 @@ export const DriverDashboardPage: React.FC = () => {
       const accepted = await ridesApi.accept(rideId);
       setActiveRide(accepted);
       setAvailableRides([]);
+      setDriverRouteMode('to_passenger');
+      requestDriverGps();
     } catch (err: any) {
       setError(err.message || 'Não foi possível aceitar a corrida.');
     } finally {
@@ -1344,13 +1358,117 @@ export const DriverDashboardPage: React.FC = () => {
               );
             })()}
 
+            {/* Route View Switcher Tabs (when arriving to pick up the passenger) */}
+            {activeRide.status !== 'IN_PROGRESS' && activeRide.status !== 'COMPLETED' && (
+              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-bold gap-1 shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => setDriverRouteMode('to_passenger')}
+                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                    driverRouteMode === 'to_passenger'
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  <Car className="w-3.5 h-3.5 text-white" />
+                  <span>Rota até o Passageiro</span>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40">
+                    Ao Vivo
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDriverRouteMode('full_trip')}
+                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                    driverRouteMode === 'full_trip'
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-950'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  <Navigation className="w-3.5 h-3.5 text-white" />
+                  <span>Trajeto da Corrida (Destino)</span>
+                </button>
+              </div>
+            )}
+
             {/* Live Interactive Route Map */}
-            <MapDisplay
-              pickup={activeRide.origin}
-              destination={activeRide.destination}
-              driverLocation={driverGps ? { lat: driverGps.lat, lng: driverGps.lng } : null}
-              height="280px"
-            />
+            {(() => {
+              const effectiveDriverLocation = driverGps || (
+                driver?.currentLocation?.lat && driver?.currentLocation?.lng
+                  ? { lat: driver.currentLocation.lat, lng: driver.currentLocation.lng }
+                  : null
+              );
+
+              if (activeRide.status === 'IN_PROGRESS') {
+                return (
+                  <MapDisplay
+                    pickup={
+                      effectiveDriverLocation
+                        ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização (Em Trânsito)' }
+                        : activeRide.origin
+                    }
+                    destination={activeRide.destination}
+                    mode="driver_to_destination"
+                    pickupLabel="Você + Passageiro"
+                    destinationLabel="Destino Final"
+                    draggable={false}
+                    hudTitle="🛣️ Rota até o Destino da Viagem"
+                    height="320px"
+                  />
+                );
+              }
+
+              if (driverRouteMode === 'to_passenger') {
+                const startPoint = effectiveDriverLocation
+                  ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização Exata (Motorista)' }
+                  : activeRide.origin;
+
+                return (
+                  <div className="space-y-2">
+                    {!effectiveDriverLocation && (
+                      <div className="p-2.5 rounded-xl bg-amber-950/70 border border-amber-500/60 text-amber-200 text-xs flex items-center justify-between gap-2 shadow-lg">
+                        <div className="flex items-center gap-2">
+                          <Crosshair className="w-4 h-4 text-amber-400 animate-spin" />
+                          <span>Obtendo seu GPS preciso para traçar a rota até o passageiro...</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={requestDriverGps}
+                          className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10px] uppercase shadow"
+                        >
+                          Ativar GPS
+                        </button>
+                      </div>
+                    )}
+                    <MapDisplay
+                      pickup={startPoint}
+                      destination={activeRide.origin}
+                      mode="driver_to_pickup"
+                      pickupLabel="Você (Sua Posição Exata)"
+                      destinationLabel={`Passageiro: ${activeRide.passengerName}`}
+                      draggable={false}
+                      hudTitle="🚗 Rota até o Passageiro • GPS Ao Vivo"
+                      height="320px"
+                    />
+                  </div>
+                );
+              }
+
+              // Full trip preview
+              return (
+                <MapDisplay
+                  pickup={activeRide.origin}
+                  destination={activeRide.destination}
+                  mode="planning"
+                  pickupLabel={`Embarque: ${activeRide.passengerName}`}
+                  destinationLabel="Destino Final"
+                  draggable={false}
+                  hudTitle="🗺️ Trajeto da Corrida (Origem → Destino)"
+                  height="320px"
+                />
+              );
+            })()}
 
             {/* STAGE MACHINE ACTION BUTTONS */}
             <div className="pt-2">

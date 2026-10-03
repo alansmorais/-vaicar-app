@@ -5,7 +5,7 @@ import { PublicDriverMarker } from '../api/drivers.js';
 import { mapsApi } from '../api/maps.js';
 import { Navigation, Crosshair, LocateFixed, ExternalLink } from 'lucide-react';
 
-interface MapProps {
+export interface MapProps {
   pickup: { lat: number; lng: number; address?: string };
   destination?: { lat: number; lng: number; address?: string } | null;
   onPickupChange?: (lat: number, lng: number, address?: string) => void;
@@ -17,6 +17,11 @@ interface MapProps {
   onDriverSelect?: (driver: PublicDriverMarker) => void;
   height?: string;
   className?: string;
+  draggable?: boolean;
+  pickupLabel?: string;
+  destinationLabel?: string;
+  mode?: 'planning' | 'driver_to_pickup' | 'driver_to_destination';
+  hudTitle?: string;
 }
 
 const DEFAULT_CENTER = {
@@ -25,12 +30,72 @@ const DEFAULT_CENTER = {
 };
 
 // Custom high-visibility SVG Teardrop Pins with Floating Badges
-function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'assigned') {
+function createCustomMarkerIcon(
+  type: 'pickup' | 'destination' | 'driver' | 'assigned' | 'driver_me',
+  label?: string,
+  isDraggable: boolean = true
+) {
+  if (type === 'driver_me') {
+    const displayLabel = label || 'Você (Sua Localização)';
+    return L.divIcon({
+      className: 'custom-driver-me-marker-icon',
+      html: `
+        <div style="width:150px; height:85px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; pointer-events:auto; user-select:none;">
+          <!-- Floating Pill Badge -->
+          <div style="
+            background: #0369a1;
+            color: #f0f9ff;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            border: 2px solid #38bdf8;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+            white-space: nowrap;
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+          ">
+            <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#38bdf8; box-shadow:0 0 8px #38bdf8;"></span>
+            ${displayLabel}
+          </div>
+
+          <!-- Pulsing Radar Ring & Car Badge -->
+          <div style="position:relative; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">
+            <div style="position:absolute; inset:-4px; border-radius:50%; background:rgba(56,189,248,0.4); animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
+            <div style="
+              width:38px;
+              height:38px;
+              border-radius:50%;
+              background:#0284c7;
+              border:3px solid #ffffff;
+              box-shadow:0 4px 12px rgba(0,0,0,0.5);
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              font-size:18px;
+              z-index: 2;
+            ">
+              🚗
+            </div>
+          </div>
+
+          <!-- Ground Contact Shadow -->
+          <div style="width:16px; height:4px; border-radius:50%; background:rgba(0,0,0,0.4); filter:blur(1px); margin-top:-2px;"></div>
+        </div>
+      `,
+      iconSize: [150, 85],
+      iconAnchor: [75, 85],
+    });
+  }
+
   if (type === 'pickup') {
+    const displayLabel = label || (isDraggable ? 'Partida (Arraste)' : 'Ponto de Partida');
     return L.divIcon({
       className: 'custom-pickup-marker-icon',
       html: `
-        <div style="width:130px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:grab; pointer-events:auto; touch-action:none; user-select:none;">
+        <div style="width:140px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:${isDraggable ? 'grab' : 'default'}; pointer-events:auto; touch-action:none; user-select:none;">
           <!-- Floating Pill Badge -->
           <div style="
             background: #064e3b;
@@ -46,15 +111,14 @@ function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'ass
             display: flex;
             align-items: center;
             gap: 5px;
-            pointer-events: auto;
-            cursor: grab;
+            cursor: ${isDraggable ? 'grab' : 'default'};
           ">
             <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#34d399; box-shadow:0 0 6px #34d399;"></span>
-            Partida (Arraste)
+            ${displayLabel}
           </div>
 
           <!-- Teardrop Pin with Needle pointing to exact GPS -->
-          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); cursor:grab;">
+          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); cursor:${isDraggable ? 'grab' : 'default'};">
             <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 0C8.05887 0 0 8.05887 0 18C0 29.5 18 44 18 44C18 44 36 29.5 36 18C36 8.05887 27.9411 0 18 0Z" fill="#10b981"/>
               <path d="M18 2C9.16344 2 2 9.16344 2 18C2 28.5 18 41.5 18 41.5C18 41.5 34 28.5 34 18C34 9.16344 26.8366 2 18 2Z" fill="#059669"/>
@@ -67,16 +131,17 @@ function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'ass
           <div style="width:14px; height:4px; border-radius:50%; background:rgba(0,0,0,0.35); filter:blur(1px); margin-top:-2px;"></div>
         </div>
       `,
-      iconSize: [130, 80],
-      iconAnchor: [65, 80],
+      iconSize: [140, 80],
+      iconAnchor: [70, 80],
     });
   }
 
   if (type === 'destination') {
+    const displayLabel = label || (isDraggable ? 'Destino (Arraste)' : 'Destino Final');
     return L.divIcon({
       className: 'custom-destination-marker-icon',
       html: `
-        <div style="width:130px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:grab; pointer-events:auto; touch-action:none; user-select:none;">
+        <div style="width:140px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:${isDraggable ? 'grab' : 'default'}; pointer-events:auto; touch-action:none; user-select:none;">
           <!-- Floating Pill Badge -->
           <div style="
             background: #881337;
@@ -92,15 +157,14 @@ function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'ass
             display: flex;
             align-items: center;
             gap: 5px;
-            pointer-events: auto;
-            cursor: grab;
+            cursor: ${isDraggable ? 'grab' : 'default'};
           ">
             <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#fb7185; box-shadow:0 0 6px #fb7185;"></span>
-            Destino (Arraste)
+            ${displayLabel}
           </div>
 
           <!-- Teardrop Pin with Needle pointing to exact GPS -->
-          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); cursor:grab;">
+          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); cursor:${isDraggable ? 'grab' : 'default'};">
             <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 0C8.05887 0 0 8.05887 0 18C0 29.5 18 44 18 44C18 44 36 29.5 36 18C36 8.05887 27.9411 0 18 0Z" fill="#f43f5e"/>
               <path d="M18 2C9.16344 2 2 9.16344 2 18C2 28.5 18 41.5 18 41.5C18 41.5 34 28.5 34 18C34 9.16344 26.8366 2 18 2Z" fill="#e11d48"/>
@@ -113,8 +177,8 @@ function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'ass
           <div style="width:14px; height:4px; border-radius:50%; background:rgba(0,0,0,0.35); filter:blur(1px); margin-top:-2px;"></div>
         </div>
       `,
-      iconSize: [130, 80],
-      iconAnchor: [65, 80],
+      iconSize: [140, 80],
+      iconAnchor: [70, 80],
     });
   }
 
@@ -179,6 +243,11 @@ export const MapDisplay: React.FC<MapProps> = ({
   onDriverSelect,
   height = '480px',
   className = '',
+  draggable = true,
+  pickupLabel,
+  destinationLabel,
+  mode = 'planning',
+  hudTitle,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -240,49 +309,51 @@ export const MapDisplay: React.FC<MapProps> = ({
     // Create LayerGroup for drivers
     driversLayerRef.current = L.layerGroup().addTo(map);
 
-    // Interactive Map Click Handler: Opens quick selector popup
+    // Interactive Map Click Handler: Opens quick selector popup only when inputs are editable
     map.on('click', async (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
       const address = await reverseGeocode(lat, lng);
 
-      const popupContainer = document.createElement('div');
-      popupContainer.style.fontFamily = 'inherit';
-      popupContainer.style.textAlign = 'center';
-      popupContainer.style.padding = '4px 2px';
+      if (onPickupChangeRef.current || onDestinationChangeRef.current) {
+        const popupContainer = document.createElement('div');
+        popupContainer.style.fontFamily = 'inherit';
+        popupContainer.style.textAlign = 'center';
+        popupContainer.style.padding = '4px 2px';
 
-      popupContainer.innerHTML = `
-        <div style="font-weight:700; font-size:11px; color:#0f172a; margin-bottom:8px; line-height:1.3; max-width:200px;">
-          📍 ${address}
-        </div>
-        <div style="display:flex; gap:6px; justify-content:center;">
-          <button id="btn-click-pickup" style="background:#059669; color:#fff; font-size:10px; font-weight:800; border:none; border-radius:6px; padding:6px 9px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
-            🟢 Definir Partida
-          </button>
-          <button id="btn-click-dest" style="background:#e11d48; color:#fff; font-size:10px; font-weight:800; border:none; border-radius:6px; padding:6px 9px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
-            🔴 Definir Destino
-          </button>
-        </div>
-      `;
+        popupContainer.innerHTML = `
+          <div style="font-weight:700; font-size:11px; color:#0f172a; margin-bottom:8px; line-height:1.3; max-width:200px;">
+            📍 ${address}
+          </div>
+          <div style="display:flex; gap:6px; justify-content:center;">
+            <button id="btn-click-pickup" style="background:#059669; color:#fff; font-size:10px; font-weight:800; border:none; border-radius:6px; padding:6px 9px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+              🟢 Definir Partida
+            </button>
+            <button id="btn-click-dest" style="background:#e11d48; color:#fff; font-size:10px; font-weight:800; border:none; border-radius:6px; padding:6px 9px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+              🔴 Definir Destino
+            </button>
+          </div>
+        `;
 
-      const popup = L.popup({
-        closeButton: true,
-        className: 'custom-click-selector-popup',
-        offset: [0, -10],
-      })
-        .setLatLng([lat, lng])
-        .setContent(popupContainer)
-        .openOn(map);
+        const popup = L.popup({
+          closeButton: true,
+          className: 'custom-click-selector-popup',
+          offset: [0, -10],
+        })
+          .setLatLng([lat, lng])
+          .setContent(popupContainer)
+          .openOn(map);
 
-      setTimeout(() => {
-        popupContainer.querySelector('#btn-click-pickup')?.addEventListener('click', () => {
-          map.closePopup();
-          onPickupChangeRef.current?.(lat, lng, address);
-        });
-        popupContainer.querySelector('#btn-click-dest')?.addEventListener('click', () => {
-          map.closePopup();
-          onDestinationChangeRef.current?.(lat, lng, address);
-        });
-      }, 50);
+        setTimeout(() => {
+          popupContainer.querySelector('#btn-click-pickup')?.addEventListener('click', () => {
+            map.closePopup();
+            onPickupChangeRef.current?.(lat, lng, address);
+          });
+          popupContainer.querySelector('#btn-click-dest')?.addEventListener('click', () => {
+            map.closePopup();
+            onDestinationChangeRef.current?.(lat, lng, address);
+          });
+        }, 50);
+      }
 
       onMapClickRef.current?.(lat, lng, address);
     });
@@ -324,42 +395,49 @@ export const MapDisplay: React.FC<MapProps> = ({
     }
 
     const pos = L.latLng(pickup.lat, pickup.lng);
+    const isDraggable = draggable && (mode === 'planning' || !mode);
+    const markerType = (mode === 'driver_to_pickup' || mode === 'driver_to_destination') ? 'driver_me' : 'pickup';
+    const markerTitle = pickupLabel || (markerType === 'driver_me' ? 'Sua Posição Exata' : 'Ponto de Partida');
+    const icon = createCustomMarkerIcon(markerType, pickupLabel, isDraggable);
 
     if (!pickupMarkerRef.current) {
       const marker = L.marker(pos, {
-        icon: createCustomMarkerIcon('pickup'),
-        draggable: true,
-        title: 'Ponto de Partida (Arraste para ajustar)',
+        icon,
+        draggable: isDraggable,
+        title: markerTitle,
         zIndexOffset: 1000,
       }).addTo(map);
 
-      marker.bindTooltip(pickup.address || 'Ponto de Partida (Arraste)', {
+      marker.bindTooltip(pickup.address || markerTitle, {
         permanent: false,
         direction: 'top',
         interactive: false,
         className: 'bg-slate-900 text-emerald-300 text-xs font-bold border border-emerald-500 rounded-lg px-2.5 py-1 shadow-xl',
       });
 
-      marker.on('dragstart', () => {
-        marker.closeTooltip();
-      });
+      if (isDraggable) {
+        marker.on('dragstart', () => {
+          marker.closeTooltip();
+        });
 
-      marker.on('dragend', async () => {
-        const newPos = marker.getLatLng();
-        const address = await reverseGeocode(newPos.lat, newPos.lng);
-        marker.setTooltipContent(address);
-        marker.openTooltip();
-        onPickupChangeRef.current?.(newPos.lat, newPos.lng, address);
-      });
+        marker.on('dragend', async () => {
+          const newPos = marker.getLatLng();
+          const address = await reverseGeocode(newPos.lat, newPos.lng);
+          marker.setTooltipContent(address);
+          marker.openTooltip();
+          onPickupChangeRef.current?.(newPos.lat, newPos.lng, address);
+        });
+      }
 
       pickupMarkerRef.current = marker;
     } else {
       pickupMarkerRef.current.setLatLng(pos);
+      pickupMarkerRef.current.setIcon(icon);
       if (pickup.address) {
         pickupMarkerRef.current.setTooltipContent(pickup.address);
       }
     }
-  }, [pickup?.lat, pickup?.lng, pickup?.address, reverseGeocode]);
+  }, [pickup?.lat, pickup?.lng, pickup?.address, pickupLabel, draggable, mode, reverseGeocode]);
 
   // 3. Update Destination Marker
   useEffect(() => {
@@ -375,42 +453,49 @@ export const MapDisplay: React.FC<MapProps> = ({
     }
 
     const pos = L.latLng(destination.lat, destination.lng);
+    const isDraggable = draggable && (mode === 'planning' || !mode);
+    const markerType = mode === 'driver_to_pickup' ? 'pickup' : 'destination';
+    const markerTitle = destinationLabel || (mode === 'driver_to_pickup' ? 'Embarque do Passageiro' : 'Destino Final');
+    const icon = createCustomMarkerIcon(markerType, destinationLabel, isDraggable);
 
     if (!destinationMarkerRef.current) {
       const marker = L.marker(pos, {
-        icon: createCustomMarkerIcon('destination'),
-        draggable: true,
-        title: 'Destino (Arraste para ajustar)',
+        icon,
+        draggable: isDraggable,
+        title: markerTitle,
         zIndexOffset: 1000,
       }).addTo(map);
 
-      marker.bindTooltip(destination.address || 'Destino (Arraste)', {
+      marker.bindTooltip(destination.address || markerTitle, {
         permanent: false,
         direction: 'top',
         interactive: false,
         className: 'bg-slate-900 text-rose-300 text-xs font-bold border border-rose-500 rounded-lg px-2.5 py-1 shadow-xl',
       });
 
-      marker.on('dragstart', () => {
-        marker.closeTooltip();
-      });
+      if (isDraggable) {
+        marker.on('dragstart', () => {
+          marker.closeTooltip();
+        });
 
-      marker.on('dragend', async () => {
-        const newPos = marker.getLatLng();
-        const address = await reverseGeocode(newPos.lat, newPos.lng);
-        marker.setTooltipContent(address);
-        marker.openTooltip();
-        onDestinationChangeRef.current?.(newPos.lat, newPos.lng, address);
-      });
+        marker.on('dragend', async () => {
+          const newPos = marker.getLatLng();
+          const address = await reverseGeocode(newPos.lat, newPos.lng);
+          marker.setTooltipContent(address);
+          marker.openTooltip();
+          onDestinationChangeRef.current?.(newPos.lat, newPos.lng, address);
+        });
+      }
 
       destinationMarkerRef.current = marker;
     } else {
       destinationMarkerRef.current.setLatLng(pos);
+      destinationMarkerRef.current.setIcon(icon);
       if (destination.address) {
         destinationMarkerRef.current.setTooltipContent(destination.address);
       }
     }
-  }, [destination?.lat, destination?.lng, destination?.address, reverseGeocode]);
+  }, [destination?.lat, destination?.lng, destination?.address, destinationLabel, draggable, mode, reverseGeocode]);
 
   // 4. Update Online Drivers Layer
   useEffect(() => {
@@ -647,10 +732,10 @@ export const MapDisplay: React.FC<MapProps> = ({
         <div className="bg-slate-950/90 backdrop-blur-md border border-slate-700/80 rounded-xl px-3 py-1.5 shadow-xl text-xs flex items-center gap-2 pointer-events-auto">
           <Navigation className="w-4 h-4 text-emerald-400 animate-pulse" />
           <span className="font-bold text-white text-[11px] sm:text-xs">
-            São Sebastião • Litoral Norte SP
+            {hudTitle || (mode === 'driver_to_pickup' ? '🚗 Rota até o Passageiro • GPS Ao Vivo' : mode === 'driver_to_destination' ? '🛣️ Rota até o Destino da Viagem' : 'São Sebastião • Litoral Norte SP')}
           </span>
           {routeInfo && (
-            <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-bold text-[10px]">
+            <span className="inline-block px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-bold text-[10px]">
               🛣️ {routeInfo.distanceKm} km (~{routeInfo.durationMinutes} min)
             </span>
           )}
@@ -703,24 +788,59 @@ export const MapDisplay: React.FC<MapProps> = ({
         </div>
       </div>
 
-      {/* Bottom HUD: Draggable markers guidance */}
+      {/* Bottom HUD: Dynamic Guidance */}
       <div className="absolute bottom-3 left-3 right-3 z-[400] pointer-events-none flex justify-center">
-        <div className="bg-slate-950/95 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pointer-events-auto">
-          <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
-            Ponto de Partida (Arraste o pino verde)
-          </span>
-          <span className="text-slate-600 hidden sm:inline">|</span>
-          <span className="flex items-center gap-1.5 font-bold text-rose-400">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm animate-pulse" />
-            Destino (Arraste o pino vermelho ou clique no mapa)
-          </span>
-          {loadingRoute && (
-            <span className="text-emerald-300 text-[10px] animate-pulse">
-              Calculando melhor trajeto...
+        {mode === 'driver_to_pickup' ? (
+          <div className="bg-slate-950/95 backdrop-blur-md border border-emerald-500/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
+            <span className="flex items-center gap-1.5 font-bold text-emerald-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
+              Navegando até o Embarque:
             </span>
-          )}
-        </div>
+            <span className="text-white font-medium truncate max-w-[200px] sm:max-w-xs">
+              {destination?.address || destinationLabel || 'Passageiro'}
+            </span>
+            {routeInfo && (
+              <span className="px-2 py-0.5 rounded bg-emerald-900/80 text-emerald-300 font-extrabold text-[10px]">
+                {routeInfo.distanceKm} km • ~{routeInfo.durationMinutes} min até o local
+              </span>
+            )}
+            {loadingRoute && (
+              <span className="text-emerald-300 text-[10px] animate-pulse">Atualizando rota ao vivo...</span>
+            )}
+          </div>
+        ) : mode === 'driver_to_destination' ? (
+          <div className="bg-slate-950/95 backdrop-blur-md border border-cyan-500/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
+            <span className="flex items-center gap-1.5 font-bold text-cyan-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-sm animate-pulse" />
+              Em Trânsito para o Destino:
+            </span>
+            <span className="text-white font-medium truncate max-w-[200px] sm:max-w-xs">
+              {destination?.address || destinationLabel || 'Destino'}
+            </span>
+            {routeInfo && (
+              <span className="px-2 py-0.5 rounded bg-cyan-900/80 text-cyan-300 font-extrabold text-[10px]">
+                {routeInfo.distanceKm} km • ~{routeInfo.durationMinutes} min restantes
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="bg-slate-950/95 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pointer-events-auto">
+            <span className="flex items-center gap-1.5 font-bold text-emerald-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
+              {pickupLabel || 'Ponto de Partida'} {draggable && '(Arraste o pino verde)'}
+            </span>
+            <span className="text-slate-600 hidden sm:inline">|</span>
+            <span className="flex items-center gap-1.5 font-bold text-rose-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm animate-pulse" />
+              {destinationLabel || 'Destino'} {draggable && '(Arraste o pino vermelho ou clique no mapa)'}
+            </span>
+            {loadingRoute && (
+              <span className="text-emerald-300 text-[10px] animate-pulse">
+                Calculando melhor trajeto...
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
