@@ -33,6 +33,38 @@ import {
   X,
 } from 'lucide-react';
 
+const DocumentPreviewCard: React.FC<{ url: string; label: string }> = ({ url, label }) => {
+  const isPdf = url.toLowerCase().includes('.pdf') || url.startsWith('data:application/pdf');
+
+  return (
+    <div className="space-y-2 pt-1">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+      >
+        <ExternalLink className="w-3.5 h-3.5" /> Abrir {label} ({isPdf ? 'PDF' : 'Completo'}) ↗
+      </a>
+      {isPdf ? (
+        <div className="w-full h-44 rounded-lg border border-slate-800 bg-slate-900 overflow-hidden relative">
+          <iframe
+            src={url}
+            title={label}
+            className="w-full h-full border-0"
+          />
+        </div>
+      ) : (
+        <img
+          src={url}
+          alt={label}
+          className="w-full max-h-40 object-contain bg-black/60 rounded-lg border border-slate-800"
+        />
+      )}
+    </div>
+  );
+};
+
 export const AdminDashboardPage: React.FC = () => {
   const { user, isAdmin, role } = useAuth();
   const navigate = useNavigate();
@@ -1191,23 +1223,7 @@ export const AdminDashboardPage: React.FC = () => {
                       </div>
                       <p className="text-[11px] text-slate-400">Foto da CNH física aberta ou documento do CDT com EAR.</p>
                       {selectedDocDriver.cnhUrl ? (
-                        <div className="space-y-2 pt-1">
-                          <a
-                            href={selectedDocDriver.cnhUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" /> Abrir CNH Completa ↗
-                          </a>
-                          {selectedDocDriver.cnhUrl.startsWith('data:image') && (
-                            <img
-                              src={selectedDocDriver.cnhUrl}
-                              alt="CNH"
-                              className="w-full h-32 object-contain bg-black/60 rounded-lg border border-slate-800"
-                            />
-                          )}
-                        </div>
+                        <DocumentPreviewCard url={selectedDocDriver.cnhUrl} label="CNH" />
                       ) : (
                         <div className="p-2 rounded bg-slate-900 text-slate-500 text-center text-[11px]">
                           Nenhum anexo de CNH disponível.
@@ -1237,23 +1253,7 @@ export const AdminDashboardPage: React.FC = () => {
                       </div>
                       <p className="text-[11px] text-slate-400">CRLV digital do ano vigente emitido pelo Detran.</p>
                       {selectedDocDriver.crlvUrl ? (
-                        <div className="space-y-2 pt-1">
-                          <a
-                            href={selectedDocDriver.crlvUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" /> Abrir CRLV Completo ↗
-                          </a>
-                          {selectedDocDriver.crlvUrl.startsWith('data:image') && (
-                            <img
-                              src={selectedDocDriver.crlvUrl}
-                              alt="CRLV"
-                              className="w-full h-32 object-contain bg-black/60 rounded-lg border border-slate-800"
-                            />
-                          )}
-                        </div>
+                        <DocumentPreviewCard url={selectedDocDriver.crlvUrl} label="CRLV" />
                       ) : (
                         <div className="p-2 rounded bg-slate-900 text-slate-500 text-center text-[11px]">
                           {selectedDocDriver.vehicle.type === 'bicycle'
@@ -1279,23 +1279,7 @@ export const AdminDashboardPage: React.FC = () => {
                       </div>
                       <p className="text-[11px] text-slate-400">Certidão estadual ou federal expedida recentemente.</p>
                       {selectedDocDriver.criminalRecordUrl ? (
-                        <div className="space-y-2 pt-1">
-                          <a
-                            href={selectedDocDriver.criminalRecordUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" /> Abrir Certidão ↗
-                          </a>
-                          {selectedDocDriver.criminalRecordUrl.startsWith('data:image') && (
-                            <img
-                              src={selectedDocDriver.criminalRecordUrl}
-                              alt="Antecedentes"
-                              className="w-full h-32 object-contain bg-black/60 rounded-lg border border-slate-800"
-                            />
-                          )}
-                        </div>
+                        <DocumentPreviewCard url={selectedDocDriver.criminalRecordUrl} label="Antecedentes" />
                       ) : (
                         <div className="p-2 rounded bg-slate-900 text-slate-500 text-center text-[11px]">
                           Nenhum anexo de antecedentes criminais.
@@ -1319,23 +1303,7 @@ export const AdminDashboardPage: React.FC = () => {
                       </div>
                       <p className="text-[11px] text-slate-400">Comprovante recente no Litoral Norte de SP.</p>
                       {selectedDocDriver.proofOfAddressUrl ? (
-                        <div className="space-y-2 pt-1">
-                          <a
-                            href={selectedDocDriver.proofOfAddressUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" /> Abrir Comprovante ↗
-                          </a>
-                          {selectedDocDriver.proofOfAddressUrl.startsWith('data:image') && (
-                            <img
-                              src={selectedDocDriver.proofOfAddressUrl}
-                              alt="Residência"
-                              className="w-full h-32 object-contain bg-black/60 rounded-lg border border-slate-800"
-                            />
-                          )}
-                        </div>
+                        <DocumentPreviewCard url={selectedDocDriver.proofOfAddressUrl} label="Comprovante de Residência" />
                       ) : (
                         <div className="p-2 rounded bg-slate-900 text-slate-500 text-center text-[11px]">
                           Comprovante de residência não enviado.
@@ -1519,23 +1487,7 @@ export const AdminDashboardPage: React.FC = () => {
                       </div>
                       <p className="text-[11px] text-slate-400">Verificação oficial de identidade do passageiro.</p>
                       {selectedDocPassenger.idDocumentUrl ? (
-                        <div className="space-y-2 pt-1">
-                          <a
-                            href={selectedDocPassenger.idDocumentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" /> Abrir Documento ↗
-                          </a>
-                          {selectedDocPassenger.idDocumentUrl.startsWith('data:image') && (
-                            <img
-                              src={selectedDocPassenger.idDocumentUrl}
-                              alt="Documento de Identidade"
-                              className="w-full h-32 object-contain bg-black/60 rounded-lg border border-slate-800"
-                            />
-                          )}
-                        </div>
+                        <DocumentPreviewCard url={selectedDocPassenger.idDocumentUrl} label="Documento de Identidade" />
                       ) : (
                         <div className="p-2 rounded bg-slate-900 text-slate-500 text-center text-[11px]">
                           Documento não enviado pelo passageiro.
@@ -1559,23 +1511,7 @@ export const AdminDashboardPage: React.FC = () => {
                       </div>
                       <p className="text-[11px] text-slate-400">Certidão da Polícia Civil para benefício VIP 5% OFF.</p>
                       {selectedDocPassenger.criminalRecordUrl ? (
-                        <div className="space-y-2 pt-1">
-                          <a
-                            href={selectedDocPassenger.criminalRecordUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" /> Abrir Certidão ↗
-                          </a>
-                          {selectedDocPassenger.criminalRecordUrl.startsWith('data:image') && (
-                            <img
-                              src={selectedDocPassenger.criminalRecordUrl}
-                              alt="Antecedentes"
-                              className="w-full h-32 object-contain bg-black/60 rounded-lg border border-slate-800"
-                            />
-                          )}
-                        </div>
+                        <DocumentPreviewCard url={selectedDocPassenger.criminalRecordUrl} label="Antecedentes Criminais" />
                       ) : (
                         <div className="p-2 rounded bg-slate-900 text-slate-500 text-center text-[11px]">
                           Passageiro optou por não enviar certidão de antecedentes.

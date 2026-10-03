@@ -7,6 +7,9 @@ import {
   resolveDriverProfile,
   saveDriverProfile,
   listOnlineDrivers,
+  listAllDrivers,
+  getUserProfile,
+  saveUserProfile,
   listAllRides,
   listRidesForDriver,
   getActiveRideForUser,
@@ -75,9 +78,28 @@ driversRouter.patch('/me', async (req: Request, res: Response, next: NextFunctio
       throw new AppError(ErrorCode.NOT_FOUND, 'Perfil não encontrado.', 404);
     }
 
-    const { vehicle, operatingZones, photoUrl, cnhUrl, crlvUrl, proofOfAddressUrl, criminalRecordUrl } = req.body;
+    const {
+      name,
+      whatsapp,
+      cnhNumber,
+      vehicle,
+      operatingZones,
+      photoUrl,
+      cnhUrl,
+      crlvUrl,
+      proofOfAddressUrl,
+      criminalRecordUrl,
+      clearDocumentsRequested,
+    } = req.body;
+
+    const now = new Date().toISOString();
+    const hasNewDocs = cnhUrl || crlvUrl || proofOfAddressUrl || criminalRecordUrl;
+
     const updated = {
       ...driver,
+      ...(name ? { name: String(name).trim() } : {}),
+      ...(whatsapp ? { whatsapp: String(whatsapp).trim() } : {}),
+      ...(cnhNumber ? { cnhNumber: String(cnhNumber).trim() } : {}),
       ...(vehicle ? { vehicle: { ...driver.vehicle, ...vehicle } } : {}),
       ...(operatingZones ? { operatingZones } : {}),
       ...(photoUrl ? { photoUrl } : {}),
@@ -85,10 +107,39 @@ driversRouter.patch('/me', async (req: Request, res: Response, next: NextFunctio
       ...(crlvUrl ? { crlvUrl } : {}),
       ...(proofOfAddressUrl ? { proofOfAddressUrl } : {}),
       ...(criminalRecordUrl ? { criminalRecordUrl, criminalRecordStatus: 'PENDING' as const } : {}),
-      updatedAt: new Date().toISOString(),
+      ...(clearDocumentsRequested || hasNewDocs ? { documentsRequested: undefined, documentsResubmittedAt: now } : {}),
+      updatedAt: now,
     };
 
     await saveDriverProfile(updated);
+
+    // Sync all matching driver documents across all UIDs with same email or CPF
+    if (driver.email || driver.cpf) {
+      const allDrivers = await listAllDrivers();
+      for (const d of allDrivers) {
+        const matchesEmail = driver.email && d.email?.toLowerCase() === driver.email.toLowerCase();
+        const matchesCpf = driver.cpf && d.cpf === driver.cpf;
+        if ((matchesEmail || matchesCpf) && d.uid !== driver.uid) {
+          await saveDriverProfile({
+            ...d,
+            ...updated,
+            uid: d.uid,
+          });
+        }
+      }
+    }
+
+    // Sync base user profile
+    const user = await getUserProfile(uid);
+    if (user) {
+      await saveUserProfile({
+        ...user,
+        ...(name ? { displayName: String(name).trim() } : {}),
+        ...(whatsapp ? { whatsapp: String(whatsapp).trim() } : {}),
+        ...(photoUrl ? { photoUrl } : {}),
+        updatedAt: now,
+      });
+    }
 
     res.json({
       success: true,

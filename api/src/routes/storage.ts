@@ -35,13 +35,20 @@ storageRouter.post('/upload', async (req: Request, res: Response, next: NextFunc
     }
 
     if (!validation.valid || !validation.mimeType) {
-      throw new AppError(ErrorCode.VALIDATION_ERROR, validation.error || 'Arquivo de imagem inválido.', 400);
+      throw new AppError(ErrorCode.VALIDATION_ERROR, validation.error || 'Arquivo inválido. Envie imagem (JPG, PNG, WebP) ou documento PDF.', 400);
     }
 
-    const ext = validation.mimeType === 'image/jpeg' ? 'jpg' : validation.mimeType === 'image/png' ? 'png' : 'webp';
+    const ext = validation.mimeType === 'application/pdf'
+      ? 'pdf'
+      : validation.mimeType === 'image/jpeg'
+      ? 'jpg'
+      : validation.mimeType === 'image/png'
+      ? 'png'
+      : 'webp';
+
     const folder = pathPrefix ? pathPrefix.replace(/^\/|\/$/g, '') : 'users';
     const userPart = uid || `anon-${Date.now()}`;
-    const storagePath = `${folder}/${userPart}/photo.${ext}`;
+    const storagePath = `${folder}/${userPart}/file.${ext}`;
 
     const uploadResult = await storeImage(storagePath, buffer, validation.mimeType);
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
@@ -7,6 +7,9 @@ import { ReceiptModal } from '../../components/ReceiptModal.js';
 import { MapDisplay } from '../../components/MapDisplay.js';
 import { driversApi } from '../../api/drivers.js';
 import { ridesApi } from '../../api/rides.js';
+import { storageApi } from '../../api/storage.js';
+import { processDocumentOrImageFile } from '../../utils/imageUtils.js';
+import { zones } from '../../../../shared/src/tokens.js';
 import { DriverProfile, Ride, Receipt } from '../../../../shared/src/types.js';
 import {
   Car,
@@ -28,8 +31,47 @@ import {
   ArrowRight,
   AlertTriangle,
   X,
+  ExternalLink,
+  Upload,
+  Volume2,
+  Camera,
+  Check,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
+
+// Synthesizes an audible incoming ride chime without external audio file dependencies
+function playIncomingRideChime() {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(587.33, now); // D5
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.3);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(880, now + 0.15); // A5
+    gain2.gain.setValueAtTime(0.35, now + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.15);
+    osc2.stop(now + 0.6);
+  } catch {
+    // AudioContext blocked
+  }
+}
 
 export const DriverDashboardPage: React.FC = () => {
   const { user, profile, driver: authDriver, logout } = useAuth();
@@ -41,6 +83,47 @@ export const DriverDashboardPage: React.FC = () => {
   const [activeRide, setActiveRide] = useState<Ride | null>(null);
   const [rideHistory, setRideHistory] = useState<Ride[]>([]);
   const [receiptToShow, setReceiptToShow] = useState<Receipt | null>(null);
+
+  // Real GPS State
+  const [driverGps, setDriverGps] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+
+  // Incoming ride alert popup state
+  const [dismissedRideIds, setDismissedRideIds] = useState<string[]>([]);
+  const [incomingCountdown, setIncomingCountdown] = useState<number>(30);
+  const playedChimesRef = useRef<Set<string>>(new Set());
+
+  // Passenger rating modal state (driver rating passenger)
+  const [showPassengerRatingModal, setShowPassengerRatingModal] = useState<boolean>(false);
+  const [completedRideToRate, setCompletedRideToRate] = useState<Ride | null>(null);
+  const [passengerStars, setPassengerStars] = useState<number>(5);
+  const [passengerFeedback, setPassengerFeedback] = useState<string>('');
+  const [passengerFeedbackTags, setPassengerFeedbackTags] = useState<string[]>([]);
+  const [ratingSubmitting, setRatingSubmitting] = useState<boolean>(false);
+
+  // Profile and Documents Editor modal state
+  const [showProfileModal, setShowProfileModal] = useState<boolean>(false);
+  const [profileSaving, setProfileSaving] = useState<boolean>(false);
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
+
+  // Profile form state
+  const [editName, setEditName] = useState<string>('');
+  const [editWhatsapp, setEditWhatsapp] = useState<string>('');
+  const [editCnhNumber, setEditCnhNumber] = useState<string>('');
+  const [editBrand, setEditBrand] = useState<string>('');
+  const [editModel, setEditModel] = useState<string>('');
+  const [editYear, setEditYear] = useState<string>('');
+  const [editColor, setEditColor] = useState<string>('');
+  const [editPlate, setEditPlate] = useState<string>('');
+  const [editVehicleType, setEditVehicleType] = useState<'car' | 'motorcycle' | 'van' | 'bicycle'>('car');
+  const [editZones, setEditZones] = useState<string[]>([]);
+
+  // Document files being uploaded/updated
+  const [docCnhUrl, setDocCnhUrl] = useState<string>('');
+  const [docCrlvUrl, setDocCrlvUrl] = useState<string>('');
+  const [docProofAddressUrl, setDocProofAddressUrl] = useState<string>('');
+  const [docCriminalUrl, setDocCriminalUrl] = useState<string>('');
+  const [docUploading, setDocUploading] = useState<string | null>(null);
 
   // Plan change modal state
   const [showPlanModal, setShowPlanModal] = useState<boolean>(false);
@@ -151,23 +234,87 @@ export const DriverDashboardPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [isOnline, activeRide]);
 
-  // Simulate or watch real driver GPS coordinates while online
+  // Find current incoming ride alert (first available ride not dismissed)
+  const incomingRide = useMemo(() => {
+    if (!isOnline || activeRide) return null;
+    return availableRides.find((r) => !dismissedRideIds.includes(r.id)) || null;
+  }, [isOnline, activeRide, availableRides, dismissedRideIds]);
+
+  // Audio chime & 30s countdown for incoming ride alert pop-up
+  useEffect(() => {
+    if (!incomingRide) {
+      setIncomingCountdown(30);
+      return;
+    }
+
+    if (!playedChimesRef.current.has(incomingRide.id)) {
+      playedChimesRef.current.add(incomingRide.id);
+      playIncomingRideChime();
+    }
+
+    setIncomingCountdown(30);
+    const timer = setInterval(() => {
+      setIncomingCountdown((prev) => {
+        if (prev <= 1) {
+          setDismissedRideIds((curr) => [...curr, incomingRide.id]);
+          return 30;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [incomingRide?.id]);
+
+  // Real device GPS geolocation while online (no mock or fake coordinates)
   useEffect(() => {
     if (!isOnline) return;
 
-    // Report location to backend every 10s
-    let lat = -23.8055 + (Math.random() - 0.5) * 0.01;
-    let lng = -45.4011 + (Math.random() - 0.5) * 0.01;
+    if (!navigator.geolocation) {
+      setGpsError('Seu dispositivo ou navegador não suporta geolocalização.');
+      return;
+    }
 
-    driversApi.updateLocation(lat, lng, 45).catch(console.error);
+    const reportLocation = (pos: GeolocationPosition) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const heading = pos.coords.heading || 0;
+      setDriverGps({ lat, lng });
+      setGpsError(null);
+      driversApi.updateLocation(lat, lng, heading).catch(console.error);
+    };
 
-    const interval = setInterval(() => {
-      lat += (Math.random() - 0.5) * 0.002;
-      lng += (Math.random() - 0.5) * 0.002;
-      driversApi.updateLocation(lat, lng, Math.floor(Math.random() * 360)).catch(console.error);
-    }, 10000);
+    const handleGpsError = (err: GeolocationPositionError) => {
+      console.warn('Geolocation notice:', err.message);
+      if (err.code === 1) {
+        setGpsError('Permissão de GPS negada. Ative a localização para que os passageiros vejam sua posição exata no mapa.');
+      }
+    };
 
-    return () => clearInterval(interval);
+    navigator.geolocation.getCurrentPosition(reportLocation, handleGpsError, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 5000,
+    });
+
+    const watchId = navigator.geolocation.watchPosition(reportLocation, handleGpsError, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 5000,
+    });
+
+    const periodicSync = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(reportLocation, () => {}, {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 10000,
+      });
+    }, 12000);
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      clearInterval(periodicSync);
+    };
   }, [isOnline]);
 
   const handleToggleOnline = async () => {
@@ -240,6 +387,10 @@ export const DriverDashboardPage: React.FC = () => {
         setReceiptToShow(res.receipt);
       }
       setShowPaymentCompletionModal(false);
+      // Trigger passenger rating modal for driver to rate passenger (Item 3)
+      setCompletedRideToRate(res.ride);
+      setShowPassengerRatingModal(true);
+
       if (paymentApproved) {
         setPaymentApprovalSuccessMessage(
           `Pagamento de R$ ${res.ride.fareAmount.toFixed(2)} confirmado com sucesso! Recibo gerado e passageiro liberado.`
@@ -281,6 +432,118 @@ export const DriverDashboardPage: React.FC = () => {
       setError(err.message || 'Falha ao aprovar pagamento.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSubmitPassengerRating = async () => {
+    if (!completedRideToRate) return;
+    setRatingSubmitting(true);
+    try {
+      const tagsStr = passengerFeedbackTags.length > 0 ? `[${passengerFeedbackTags.join(', ')}] ` : '';
+      const finalFeedback = (tagsStr + passengerFeedback).trim();
+      await ridesApi.ratePassenger(completedRideToRate.id, passengerStars, finalFeedback || undefined);
+      setShowPassengerRatingModal(false);
+      setCompletedRideToRate(null);
+      setPassengerStars(5);
+      setPassengerFeedback('');
+      setPassengerFeedbackTags([]);
+    } catch (err: any) {
+      console.error('Rate passenger error:', err);
+    } finally {
+      setRatingSubmitting(false);
+    }
+  };
+
+  const handleOpenProfileModal = () => {
+    if (driver) {
+      setEditName(driver.name || '');
+      setEditWhatsapp(driver.whatsapp || '');
+      setEditCnhNumber(driver.cnhNumber || '');
+      setEditBrand(driver.vehicle?.brand || '');
+      setEditModel(driver.vehicle?.model || '');
+      setEditYear(driver.vehicle?.year ? String(driver.vehicle.year) : '');
+      setEditColor(driver.vehicle?.color || '');
+      setEditPlate(driver.vehicle?.plate || '');
+      setEditVehicleType(driver.vehicle?.type || 'car');
+      setEditZones(driver.operatingZones || ['Centro']);
+      setDocCnhUrl(driver.cnhUrl || '');
+      setDocCrlvUrl(driver.crlvUrl || '');
+      setDocProofAddressUrl(driver.proofOfAddressUrl || '');
+      setDocCriminalUrl(driver.criminalRecordUrl || '');
+    }
+    setShowProfileModal(true);
+  };
+
+  const handleUploadDoc = async (
+    file: File,
+    docType: 'cnh' | 'crlv' | 'residencia' | 'antecedentes' | 'photo'
+  ) => {
+    if (!driver) return;
+    setDocUploading(docType);
+    setError(null);
+    try {
+      const base64Data = await processDocumentOrImageFile(file);
+      const suffix = docType === 'photo' ? '_foto' : `_${docType}`;
+      const uploadRes = await storageApi.uploadImage(base64Data, 'drivers', `${driver.uid}${suffix}`);
+      const uploadedUrl = uploadRes.url;
+
+      if (docType === 'photo') {
+        const updated = await driversApi.updateMe({ photoUrl: uploadedUrl });
+        setDriver(updated);
+      } else if (docType === 'cnh') {
+        setDocCnhUrl(uploadedUrl);
+      } else if (docType === 'crlv') {
+        setDocCrlvUrl(uploadedUrl);
+      } else if (docType === 'residencia') {
+        setDocProofAddressUrl(uploadedUrl);
+      } else if (docType === 'antecedentes') {
+        setDocCriminalUrl(uploadedUrl);
+      }
+      setProfileSuccessMsg('Arquivo anexado e salvo com sucesso!');
+      setTimeout(() => setProfileSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao processar e salvar arquivo.');
+    } finally {
+      setDocUploading(null);
+    }
+  };
+
+  const handleSaveProfileAndDocs = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!driver) return;
+    setProfileSaving(true);
+    setError(null);
+    try {
+      const payload: Partial<DriverProfile> = {
+        name: editName.trim(),
+        whatsapp: editWhatsapp.replace(/\D/g, ''),
+        cnhNumber: editCnhNumber.trim(),
+        cnhUrl: docCnhUrl || undefined,
+        crlvUrl: docCrlvUrl || undefined,
+        proofOfAddressUrl: docProofAddressUrl || undefined,
+        criminalRecordUrl: docCriminalUrl || undefined,
+        operatingZones: editZones.length > 0 ? editZones : ['Centro'],
+        vehicle: {
+          brand: editBrand.trim(),
+          model: editModel.trim(),
+          year: parseInt(editYear) || 2020,
+          color: editColor.trim(),
+          plate: editPlate.trim().toUpperCase(),
+          type: editVehicleType,
+        },
+      };
+
+      const updated = await driversApi.updateMe(payload);
+      setDriver(updated);
+      setProfileSuccessMsg('Perfil e documentação atualizados com sucesso!');
+      setTimeout(() => {
+        setProfileSuccessMsg(null);
+        setShowProfileModal(false);
+      }, 2000);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao atualizar perfil e documentos.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -434,8 +697,30 @@ export const DriverDashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Online / Offline status toggle */}
-        <div className="flex items-center gap-3">
+        {/* Header Actions */}
+        <div className="flex items-center gap-2.5">
+          {/* Profile & Documents modal trigger button (Item 6 & 7) */}
+          <button
+            type="button"
+            onClick={handleOpenProfileModal}
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-2 transition-colors relative"
+            title="Atualizar dados cadastrais, veículo e anexar documentos (CNH, CRLV, PDF)"
+          >
+            {driver?.photoUrl ? (
+              <img
+                src={driver.photoUrl}
+                alt={driver.name}
+                className="w-5 h-5 rounded-full object-cover border border-emerald-500"
+              />
+            ) : (
+              <User className="w-4 h-4 text-emerald-400" />
+            )}
+            <span className="hidden sm:inline">Meu Perfil & Docs</span>
+            {driver?.documentsRequested && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full animate-ping" />
+            )}
+          </button>
+
           <button
             onClick={handleToggleOnline}
             disabled={actionLoading || !isApproved}
@@ -461,6 +746,34 @@ export const DriverDashboardPage: React.FC = () => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* GPS Permission / Geolocation Warning */}
+        {gpsError && isOnline && (
+          <div className="p-4 rounded-2xl bg-amber-950/80 border-2 border-amber-500 text-amber-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <span className="font-bold text-white block">Aviso de Localização GPS</span>
+                <span>{gpsError}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                navigator.geolocation?.getCurrentPosition(
+                  (pos) => {
+                    setDriverGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                    setGpsError(null);
+                    driversApi.updateLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.heading || 0);
+                  },
+                  (err) => setGpsError(err.message),
+                  { enableHighAccuracy: true }
+                );
+              }}
+              className="py-1.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-colors"
+            >
+              Tentar Novamente
+            </button>
+          </div>
+        )}
         {planSuccessMessage && (
           <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-200 text-xs flex items-start gap-2.5">
             <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -789,6 +1102,99 @@ export const DriverDashboardPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* GPS 1-CLICK NAVIGATION TO GOOGLE MAPS & WAZE (ITEM 1) */}
+            {(() => {
+              const isHeadingToPickup = activeRide.status === 'ACCEPTED' || activeRide.status === 'DRIVER_ARRIVING';
+              const targetLoc = isHeadingToPickup ? activeRide.origin : activeRide.destination;
+              const targetLabel = isHeadingToPickup ? 'Embarque (Passageiro)' : 'Destino Final';
+              const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${targetLoc.lat},${targetLoc.lng}&travelmode=driving`;
+              const wazeUrl = `https://waze.com/ul?ll=${targetLoc.lat},${targetLoc.lng}&navigate=yes`;
+
+              const gmapsPickupUrl = `https://www.google.com/maps/dir/?api=1&destination=${activeRide.origin.lat},${activeRide.origin.lng}&travelmode=driving`;
+              const wazePickupUrl = `https://waze.com/ul?ll=${activeRide.origin.lat},${activeRide.origin.lng}&navigate=yes`;
+              const gmapsDestUrl = `https://www.google.com/maps/dir/?api=1&destination=${activeRide.destination.lat},${activeRide.destination.lng}&travelmode=driving`;
+              const wazeDestUrl = `https://waze.com/ul?ll=${activeRide.destination.lat},${activeRide.destination.lng}&navigate=yes`;
+
+              return (
+                <div className="bg-slate-950 p-4 rounded-xl border-2 border-emerald-500/60 space-y-3 shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Navigation className="w-4 h-4 text-emerald-400 animate-pulse" />
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        Navegação GPS em Tempo Real
+                      </span>
+                    </div>
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-extrabold uppercase">
+                      Rota Atual: {targetLabel}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <a
+                      href={gmapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-blue-950 transition-all hover:scale-[1.02]"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Abrir no Google Maps ↗
+                    </a>
+
+                    <a
+                      href={wazeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-3.5 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-cyan-950 transition-all hover:scale-[1.02]"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Abrir no Waze ↗
+                    </a>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold text-slate-300">Atalhos diretos:</span>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <a
+                        href={gmapsPickupUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:underline flex items-center gap-1 font-medium"
+                      >
+                        <MapPin className="w-3 h-3 text-emerald-400" /> Maps Embarque
+                      </a>
+                      <span>•</span>
+                      <a
+                        href={wazePickupUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyan-400 hover:underline flex items-center gap-1 font-medium"
+                      >
+                        Waze Embarque
+                      </a>
+                      <span>•</span>
+                      <a
+                        href={gmapsDestUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-rose-400 hover:underline flex items-center gap-1 font-medium"
+                      >
+                        <Navigation className="w-3 h-3 text-rose-400" /> Maps Destino
+                      </a>
+                      <span>•</span>
+                      <a
+                        href={wazeDestUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyan-400 hover:underline flex items-center gap-1 font-medium"
+                      >
+                        Waze Destino
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Live Interactive Route Map */}
             <MapDisplay
@@ -1313,6 +1719,725 @@ export const DriverDashboardPage: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* INCOMING RIDE POP-UP ALERT MODAL (ITEM 4) */}
+      {incomingRide &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[10000] overflow-y-auto bg-black/85 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200">
+            <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative my-auto animate-in zoom-in-95 duration-200 ring-4 ring-emerald-500/20">
+              {/* Header with audio pulse & countdown badge */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-emerald-400 animate-pulse">
+                    <Volume2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white tracking-tight">
+                      {incomingRide.serviceType === 'delivery' ? 'NOVA ENTREGA DISPONÍVEL' : 'NOVA CORRIDA DISPONÍVEL'}
+                    </h3>
+                    <span className="text-xs text-emerald-400 font-semibold">
+                      Toque para aceitar antes que o tempo expire!
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center w-12 h-12 rounded-2xl bg-slate-950 border-2 border-emerald-500 text-emerald-400">
+                  <span className="text-lg font-black leading-none">{incomingCountdown}</span>
+                  <span className="text-[9px] uppercase font-bold text-slate-400">seg</span>
+                </div>
+              </div>
+
+              {/* Progress bar countdown */}
+              <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="bg-emerald-500 h-full transition-all duration-1000 ease-linear rounded-full"
+                  style={{ width: `${(incomingCountdown / 30) * 100}%` }}
+                />
+              </div>
+
+              {/* Passenger & Fare Details */}
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {incomingRide.passengerPhotoUrl ? (
+                    <img
+                      src={incomingRide.passengerPhotoUrl}
+                      alt={incomingRide.passengerName}
+                      className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center text-emerald-400 text-2xl font-bold">
+                      <User className="w-7 h-7" />
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-base font-extrabold text-white block">
+                      {incomingRide.passengerName}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      ⭐ Passageiro(a) Verificado(a)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-xs text-slate-400 block font-medium">Valor Estimado:</span>
+                  <span className="text-2xl sm:text-3xl font-black text-emerald-400 block">
+                    R$ {incomingRide.fareAmount.toFixed(2)}
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-semibold">
+                    {incomingRide.paymentMethod} • Direto
+                  </span>
+                </div>
+              </div>
+
+              {/* Route Origin & Destination */}
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-extrabold text-emerald-400 block uppercase tracking-wider text-[10px]">
+                      Embarque / Retirada:
+                    </span>
+                    <p className="text-slate-100 font-medium text-xs leading-relaxed">
+                      {incomingRide.origin.address}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 pt-2 border-t border-slate-800/80">
+                  <Navigation className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-extrabold text-rose-400 block uppercase tracking-wider text-[10px]">
+                      Destino / Entrega:
+                    </span>
+                    <p className="text-slate-100 font-medium text-xs leading-relaxed">
+                      {incomingRide.destination.address}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons: Green Accept, Red Reject */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setDismissedRideIds((curr) => [...curr, incomingRide.id])}
+                  disabled={actionLoading}
+                  className="w-full py-4 px-4 rounded-2xl bg-slate-950 hover:bg-rose-950/70 border-2 border-rose-600/50 hover:border-rose-500 text-rose-300 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                  Recusar Corrida
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleAcceptRide(incomingRide.id)}
+                  disabled={actionLoading}
+                  className="w-full py-4 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 transition-all hover:scale-[1.02] animate-pulse"
+                >
+                  <Check className="w-5 h-5" />
+                  {actionLoading ? 'Aceitando...' : `Aceitar (${incomingCountdown}s)`}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* PASSENGER RATING MODAL (DRIVER RATINGS PASSENGER - ITEM 3) */}
+      {showPassengerRatingModal &&
+        completedRideToRate &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[10000] overflow-y-auto bg-black/80 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200">
+            <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl relative my-auto animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <Star className="w-5 h-5 text-amber-400 fill-amber-400" /> Como foi sua viagem com o passageiro?
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPassengerRatingModal(false);
+                    setCompletedRideToRate(null);
+                  }}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="text-center space-y-2">
+                <div className="w-16 h-16 mx-auto rounded-full bg-slate-950 border-2 border-emerald-500 flex items-center justify-center text-emerald-400 overflow-hidden">
+                  {completedRideToRate.passengerPhotoUrl ? (
+                    <img
+                      src={completedRideToRate.passengerPhotoUrl}
+                      alt={completedRideToRate.passengerName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-8 h-8" />
+                  )}
+                </div>
+                <h4 className="text-base font-bold text-white">{completedRideToRate.passengerName}</h4>
+                <p className="text-xs text-slate-400">
+                  Sua avaliação ajuda a manter a comunidade VaiCar segura e respeitosa.
+                </p>
+              </div>
+
+              {/* Star Rating Selector */}
+              <div className="flex items-center justify-center gap-2 py-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setPassengerStars(star)}
+                    className="p-1.5 transition-transform hover:scale-125 focus:outline-none"
+                  >
+                    <Star
+                      className={`w-9 h-9 transition-colors ${
+                        star <= passengerStars
+                          ? 'text-amber-400 fill-amber-400'
+                          : 'text-slate-700 hover:text-slate-500'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              {/* Quick Feedback Tags */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-300 block">Elogios & Observações:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Pontual no embarque',
+                    'Educado(a) e gentil',
+                    'Pagamento rápido',
+                    'Excelente passageiro',
+                    'Demorou para descer',
+                    'Ambiente agradável',
+                  ].map((tag) => {
+                    const isSelected = passengerFeedbackTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          setPassengerFeedbackTags((curr) =>
+                            isSelected ? curr.filter((t) => t !== tag) : [...curr, tag]
+                          );
+                        }}
+                        className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-all ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white font-bold'
+                            : 'bg-slate-950 border border-slate-800 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Optional Comment */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  Comentário Adicional (Opcional):
+                </label>
+                <textarea
+                  value={passengerFeedback}
+                  onChange={(e) => setPassengerFeedback(e.target.value)}
+                  placeholder="Escreva como foi o comportamento do passageiro..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 h-20 resize-none"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPassengerRatingModal(false);
+                    setCompletedRideToRate(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+                >
+                  Pular
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitPassengerRating}
+                  disabled={ratingSubmitting}
+                  className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950 transition-all hover:scale-[1.02]"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  {ratingSubmitting ? 'Enviando...' : 'Enviar Avaliação'}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* DRIVER PROFILE & DOCUMENTS MODAL (ITEM 6 & ITEM 7) */}
+      {showProfileModal &&
+        driver &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[10000] overflow-y-auto bg-black/85 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200">
+            <div className="bg-slate-900 border-2 border-emerald-500/80 rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative my-auto animate-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <User className="w-6 h-6 text-emerald-400" />
+                  <div>
+                    <h3 className="text-lg font-black text-white">Meu Perfil & Documentação</h3>
+                    <span className="text-xs text-slate-400">Atualize seus dados, veículo e anexe documentos (PDF ou Imagem)</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {profileSuccessMsg && (
+                <div className="p-3.5 rounded-xl bg-emerald-950/90 border border-emerald-500 text-emerald-200 text-xs flex items-center gap-2 shadow-lg">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{profileSuccessMsg}</span>
+                </div>
+              )}
+
+              {/* ADMIN DOCUMENTS REQUEST BANNER */}
+              {driver.documentsRequested && (
+                <div className="p-4 rounded-xl bg-amber-950/80 border-2 border-amber-500 text-amber-200 text-xs space-y-2 shadow-lg">
+                  <div className="flex items-center gap-2 font-bold text-sm text-amber-300">
+                    <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                    <span>Atenção: A Administração Solicitou Novos Documentos</span>
+                  </div>
+                  <p className="bg-slate-950/70 p-2.5 rounded-lg border border-amber-500/30 text-amber-100 font-mono text-[11px]">
+                    {driver.documentsRequested}
+                  </p>
+                  <span className="text-[10px] text-amber-300/80 block">
+                    Por favor, faça o upload dos arquivos solicitados abaixo para regularização.
+                  </span>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveProfileAndDocs} className="space-y-6 max-h-[70vh] overflow-y-auto pr-1">
+                {/* 1. FOTO DE PERFIL */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-emerald-500 flex items-center justify-center text-emerald-400 overflow-hidden shrink-0 relative group">
+                      {driver.photoUrl ? (
+                        <img src={driver.photoUrl} alt={driver.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-8 h-8" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-white block">Foto de Perfil</span>
+                      <span className="text-[11px] text-slate-400 block">
+                        Foto visível para passageiros durante corridas
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="profile-photo-upload"
+                      className="py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer border border-slate-700 transition-colors"
+                    >
+                      <Camera className="w-4 h-4 text-emerald-400" />
+                      {docUploading === 'photo' ? 'Salvando...' : 'Trocar Foto'}
+                    </label>
+                    <input
+                      id="profile-photo-upload"
+                      type="file"
+                      accept="image/*"
+                      disabled={docUploading === 'photo'}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadDoc(file, 'photo');
+                      }}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. DADOS PESSOAIS */}
+                <div className="space-y-3">
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block pb-1 border-b border-slate-800">
+                    1. Dados Pessoais
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Nome Completo *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">WhatsApp / Telefone *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editWhatsapp}
+                        onChange={(e) => setEditWhatsapp(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Número da CNH / Documento</label>
+                      <input
+                        type="text"
+                        value={editCnhNumber}
+                        onChange={(e) => setEditCnhNumber(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. DADOS DO VEÍCULO */}
+                <div className="space-y-3">
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block pb-1 border-b border-slate-800">
+                    2. Dados do Veículo
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Marca</label>
+                      <input
+                        type="text"
+                        value={editBrand}
+                        onChange={(e) => setEditBrand(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Modelo</label>
+                      <input
+                        type="text"
+                        value={editModel}
+                        onChange={(e) => setEditModel(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Ano</label>
+                      <input
+                        type="text"
+                        value={editYear}
+                        onChange={(e) => setEditYear(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Cor</label>
+                      <input
+                        type="text"
+                        value={editColor}
+                        onChange={(e) => setEditColor(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Placa</label>
+                      <input
+                        type="text"
+                        value={editPlate}
+                        onChange={(e) => setEditPlate(e.target.value.toUpperCase())}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white uppercase focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-300 mb-1">Tipo de Veículo</label>
+                      <select
+                        value={editVehicleType}
+                        onChange={(e) => setEditVehicleType(e.target.value as any)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="car">Carro</option>
+                        <option value="motorcycle">Moto</option>
+                        <option value="van">Van</option>
+                        <option value="bicycle">Bicicleta</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. ZONAS DE ATUAÇÃO */}
+                <div className="space-y-3">
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block pb-1 border-b border-slate-800">
+                    3. Regiões de Atuação em São Sebastião
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {zones.map((zone) => {
+                      const isChecked = editZones.includes(zone);
+                      return (
+                        <label
+                          key={zone}
+                          className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 cursor-pointer transition-colors ${
+                            isChecked
+                              ? 'bg-emerald-950/50 border-emerald-500/60 text-white font-semibold'
+                              : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditZones((curr) => [...curr, zone]);
+                              } else {
+                                setEditZones((curr) => curr.filter((z) => z !== zone));
+                              }
+                            }}
+                            className="rounded text-emerald-500 focus:ring-emerald-500"
+                          />
+                          <span>{zone}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 5. ANEXOS DE DOCUMENTOS (SUPORTA PDF E IMAGEM) */}
+                <div className="space-y-3">
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block pb-1 border-b border-slate-800">
+                    4. Documentos Oficiais (Aceita PDF ou Imagem)
+                  </span>
+
+                  <div className="space-y-3">
+                    {/* CNH Card */}
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-emerald-400" />
+                          <span className="text-xs font-bold text-white">Carteira Nacional de Habilitação (CNH)</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            docCnhUrl ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-rose-950 text-rose-300 border border-rose-700'
+                          }`}>
+                            {docCnhUrl ? '✓ Anexado' : 'Pendente'}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-400 block mt-0.5">
+                          Envie foto nítida ou arquivo PDF da sua CNH física ou digital (CDT).
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {docCnhUrl && (
+                          <a
+                            href={docCnhUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1 border border-slate-700"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Abrir ↗
+                          </a>
+                        )}
+                        <label
+                          htmlFor="doc-cnh-file"
+                          className="py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          {docUploading === 'cnh' ? 'Enviando...' : docCnhUrl ? 'Substituir' : 'Anexar (PDF/Foto)'}
+                        </label>
+                        <input
+                          id="doc-cnh-file"
+                          type="file"
+                          accept="image/*,application/pdf"
+                          disabled={docUploading === 'cnh'}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadDoc(file, 'cnh');
+                          }}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+
+                    {/* CRLV Card */}
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-emerald-400" />
+                          <span className="text-xs font-bold text-white">Licenciamento do Veículo (CRLV)</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            docCrlvUrl ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-rose-950 text-rose-300 border border-rose-700'
+                          }`}>
+                            {docCrlvUrl ? '✓ Anexado' : 'Pendente'}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-400 block mt-0.5">
+                          CRLV digital do ano vigente emitido pelo Detran (PDF ou Foto).
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {docCrlvUrl && (
+                          <a
+                            href={docCrlvUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1 border border-slate-700"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Abrir ↗
+                          </a>
+                        )}
+                        <label
+                          htmlFor="doc-crlv-file"
+                          className="py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          {docUploading === 'crlv' ? 'Enviando...' : docCrlvUrl ? 'Substituir' : 'Anexar (PDF/Foto)'}
+                        </label>
+                        <input
+                          id="doc-crlv-file"
+                          type="file"
+                          accept="image/*,application/pdf"
+                          disabled={docUploading === 'crlv'}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadDoc(file, 'crlv');
+                          }}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Comprovante de Residência */}
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-emerald-400" />
+                          <span className="text-xs font-bold text-white">Comprovante de Residência</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            docProofAddressUrl ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          }`}>
+                            {docProofAddressUrl ? '✓ Anexado' : 'Opcional'}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-400 block mt-0.5">
+                          Conta de luz, água ou fatura recente no Litoral Norte (PDF ou Foto).
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {docProofAddressUrl && (
+                          <a
+                            href={docProofAddressUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1 border border-slate-700"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Abrir ↗
+                          </a>
+                        )}
+                        <label
+                          htmlFor="doc-residencia-file"
+                          className="py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          {docUploading === 'residencia' ? 'Enviando...' : docProofAddressUrl ? 'Substituir' : 'Anexar (PDF/Foto)'}
+                        </label>
+                        <input
+                          id="doc-residencia-file"
+                          type="file"
+                          accept="image/*,application/pdf"
+                          disabled={docUploading === 'residencia'}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadDoc(file, 'residencia');
+                          }}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Antecedentes Criminais */}
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          <span className="text-xs font-bold text-white">Certidão de Antecedentes Criminais</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            docCriminalUrl ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-rose-950 text-rose-300 border border-rose-700'
+                          }`}>
+                            {docCriminalUrl ? '✓ Anexado' : 'Pendente'}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-400 block mt-0.5">
+                          Emitida online pela Polícia Civil de SP (PDF ou Foto).
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {docCriminalUrl && (
+                          <a
+                            href={docCriminalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1 border border-slate-700"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Abrir ↗
+                          </a>
+                        )}
+                        <label
+                          htmlFor="doc-antecedentes-file"
+                          className="py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          {docUploading === 'antecedentes' ? 'Enviando...' : docCriminalUrl ? 'Substituir' : 'Anexar (PDF/Foto)'}
+                        </label>
+                        <input
+                          id="doc-antecedentes-file"
+                          type="file"
+                          accept="image/*,application/pdf"
+                          disabled={docUploading === 'antecedentes'}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadDoc(file, 'antecedentes');
+                          }}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* MODAL ACTIONS */}
+                <div className="flex gap-3 pt-3 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileModal(false)}
+                    className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={profileSaving}
+                    className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950 transition-all hover:scale-[1.01]"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    {profileSaving ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>,
           document.body

@@ -77,4 +77,10 @@ export const ridesApi = {
       method: 'POST',
       body: JSON.stringify({ rating, feedback }),
     }),
+
+  ratePassenger: (rideId: string, rating: number, feedback?: string) =>
+    apiFetch<Ride>(`/rides/${rideId}/rate-passenger`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, feedback }),
+    }),
 };

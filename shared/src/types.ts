@@ -148,6 +148,8 @@ export interface Ride {
   cancelReason?: string;
   ratingByPassenger?: number;
   feedbackByPassenger?: string;
+  ratingByDriver?: number;
+  feedbackByDriver?: string;
   receiptId?: string;
   emailStatus?: 'PENDING' | 'SENT' | 'FAILED';
 }

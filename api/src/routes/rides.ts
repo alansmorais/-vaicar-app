@@ -685,3 +685,54 @@ ridesRouter.post('/:id/rate', async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 });
+
+/**
+ * Driver Rates Passenger
+ */
+ridesRouter.post('/:id/rate-passenger', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ride = await getRide(String(req.params.id));
+    if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
+
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    if (!driver || (ride.driverId && ride.driverId !== driver.uid && ride.driverId !== req.user!.uid)) {
+      throw new AppError(ErrorCode.FORBIDDEN, 'Apenas o motorista parceiro pode avaliar o passageiro desta corrida.', 403);
+    }
+
+    const { rating, feedback } = req.body;
+    const numericRating = Number(rating);
+    if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Nota deve ser entre 1 e 5 estrelas.', 400);
+    }
+
+    const updatedRide: Ride = {
+      ...ride,
+      ratingByDriver: numericRating,
+      feedbackByDriver: feedback || '',
+    };
+    await saveRide(updatedRide);
+
+    // Update passenger rating average
+    if (ride.passengerId) {
+      const passenger = await getPassengerProfile(ride.passengerId);
+      if (passenger) {
+        const count = passenger.totalRides || 1;
+        const currentAvg = passenger.rating || 5.0;
+        const newAvg = Math.round(((currentAvg * (count - 1) + numericRating) / count) * 10) / 10;
+        await savePassengerProfile({
+          ...passenger,
+          rating: newAvg,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: updatedRide,
+    });
+  } catch (error) {
+    next(error);
+  }
+});

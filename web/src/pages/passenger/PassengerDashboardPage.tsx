@@ -10,6 +10,8 @@ import { ridesApi, EstimateRideResult } from '../../api/rides.js';
 import { mapsApi, KnownLocation } from '../../api/maps.js';
 import { driversApi, PublicDriverMarker } from '../../api/drivers.js';
 import { passengersApi } from '../../api/passengers.js';
+import { storageApi } from '../../api/storage.js';
+import { processImageFile } from '../../utils/imageUtils.js';
 import { Ride, PaymentMethod, Receipt } from '../../../../shared/src/types.js';
 import {
   MapPin,
@@ -29,6 +31,8 @@ import {
   CheckCircle,
   FileText,
   MessageSquare,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
 
@@ -74,6 +78,8 @@ export const PassengerDashboardPage: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [editName, setEditName] = useState('');
   const [editWhatsapp, setEditWhatsapp] = useState('');
+  const [editPhotoUrl, setEditPhotoUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -97,9 +103,11 @@ export const PassengerDashboardPage: React.FC = () => {
     if (passenger) {
       setEditName(passenger.name);
       setEditWhatsapp(passenger.whatsapp);
+      setEditPhotoUrl(passenger.photoUrl || '');
     } else if (profile) {
       setEditName(profile.displayName);
       setEditWhatsapp(profile.whatsapp || '');
+      setEditPhotoUrl(profile.photoUrl || '');
     }
   }, [passenger, profile]);
 
@@ -288,11 +296,31 @@ export const PassengerDashboardPage: React.FC = () => {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await passengersApi.updateMe({ name: editName, whatsapp: editWhatsapp });
+      await passengersApi.updateMe({
+        name: editName,
+        whatsapp: editWhatsapp,
+        photoUrl: editPhotoUrl || undefined,
+      });
       setShowProfileModal(false);
       alert('Perfil atualizado com sucesso!');
     } catch (err: any) {
       setError(err.message || 'Falha ao atualizar perfil.');
+    }
+  };
+
+  const handleUploadPassengerPhoto = async (file: File) => {
+    if (!user) return;
+    setPhotoUploading(true);
+    setError(null);
+    try {
+      const base64Data = await processImageFile(file);
+      const res = await storageApi.uploadImage(base64Data, 'passengers', `${user.uid}_foto`);
+      setEditPhotoUrl(res.url);
+      await passengersApi.updateMe({ photoUrl: res.url });
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao enviar foto de perfil.');
+    } finally {
+      setPhotoUploading(false);
     }
   };
 
@@ -997,6 +1025,44 @@ export const PassengerDashboardPage: React.FC = () => {
               </div>
 
               <form onSubmit={handleSaveProfile} className="space-y-4">
+                {/* Photo Upload Section */}
+                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-slate-800 border-2 border-emerald-500 flex items-center justify-center text-emerald-400 overflow-hidden shrink-0">
+                      {editPhotoUrl ? (
+                        <img src={editPhotoUrl} alt={editName} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-6 h-6" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-white block">Foto de Perfil</span>
+                      <span className="text-[10px] text-slate-400">Visível para motoristas</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="passenger-photo-upload"
+                      className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-[11px] flex items-center gap-1.5 cursor-pointer border border-slate-700 transition-colors"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                      {photoUploading ? 'Salvando...' : 'Alterar Foto'}
+                    </label>
+                    <input
+                      id="passenger-photo-upload"
+                      type="file"
+                      accept="image/*"
+                      disabled={photoUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadPassengerPhoto(file);
+                      }}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">Nome Completo</label>
                   <input

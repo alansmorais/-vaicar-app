@@ -4,6 +4,38 @@
  * to ensure high-resolution photos taken on smartphones (iPhone/Android)
  * convert to clean, standard, compressed JPEG buffers without failing upload size limits.
  */
+export async function processDocumentOrImageFile(
+  file: File,
+  maxWidth = 1024,
+  maxHeight = 1024,
+  quality = 0.85
+): Promise<string> {
+  if (!file) {
+    throw new Error('Nenhum arquivo fornecido.');
+  }
+
+  const lowerName = file.name.toLowerCase();
+  const isPdf = file.type === 'application/pdf' || lowerName.endsWith('.pdf');
+
+  if (isPdf) {
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error('O arquivo PDF não pode ser maior que 10MB.');
+    }
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Erro ao ler arquivo PDF.'));
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        if (!result) return reject(new Error('Falha ao processar PDF.'));
+        resolve(result);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  return processImageFile(file, maxWidth, maxHeight, quality);
+}
+
 export async function processImageFile(
   file: File,
   maxWidth = 1024,
@@ -11,16 +43,21 @@ export async function processImageFile(
   quality = 0.85
 ): Promise<string> {
   if (!file) {
-    throw new Error('Nenhum arquivo de imagem fornecido.');
+    throw new Error('Nenhum arquivo fornecido.');
+  }
+
+  const lowerName = file.name.toLowerCase();
+  const isPdf = file.type === 'application/pdf' || lowerName.endsWith('.pdf');
+  if (isPdf) {
+    return processDocumentOrImageFile(file, maxWidth, maxHeight, quality);
   }
 
   // Validate format
-  const lowerName = file.name.toLowerCase();
   const isImageMime = file.type.startsWith('image/');
   const hasImageExt = /\.(jpg|jpeg|png|webp|heic|heif|avif)$/i.test(lowerName);
 
   if (!isImageMime && !hasImageExt) {
-    throw new Error('Formato inválido. Selecione um arquivo de imagem (JPG, PNG ou WebP).');
+    throw new Error('Formato inválido. Selecione um arquivo de imagem (JPG, PNG, WebP) ou PDF.');
   }
 
   if (file.type === 'image/svg+xml' || lowerName.endsWith('.svg')) {
