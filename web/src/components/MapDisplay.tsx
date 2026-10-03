@@ -22,6 +22,7 @@ export interface MapProps {
   destinationLabel?: string;
   mode?: 'planning' | 'driver_to_pickup' | 'driver_to_destination';
   hudTitle?: string;
+  showHud?: boolean;
 }
 
 const DEFAULT_CENTER = {
@@ -248,6 +249,7 @@ export const MapDisplay: React.FC<MapProps> = ({
   destinationLabel,
   mode = 'planning',
   hudTitle,
+  showHud = true,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -727,23 +729,25 @@ export const MapDisplay: React.FC<MapProps> = ({
       {/* Map DOM Container */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Top HUD: Status & Active Drivers */}
+      {/* Top HUD & Controls */}
       <div className="absolute top-3 left-3 right-3 z-[400] pointer-events-none flex items-center justify-between gap-2">
-        <div className="bg-slate-950/90 backdrop-blur-md border border-slate-700/80 rounded-xl px-3 py-1.5 shadow-xl text-xs flex items-center gap-2 pointer-events-auto">
-          <Navigation className="w-4 h-4 text-emerald-400 animate-pulse" />
-          <span className="font-bold text-white text-[11px] sm:text-xs">
-            {hudTitle || (mode === 'driver_to_pickup' ? '🚗 Rota até o Passageiro • GPS Ao Vivo' : mode === 'driver_to_destination' ? '🛣️ Rota até o Destino da Viagem' : 'São Sebastião • Litoral Norte SP')}
-          </span>
-          {routeInfo && (
-            <span className="inline-block px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-bold text-[10px]">
-              🛣️ {routeInfo.distanceKm} km (~{routeInfo.durationMinutes} min)
+        {showHud ? (
+          <div className="bg-slate-950/90 backdrop-blur-md border border-slate-700/80 rounded-xl px-3 py-1.5 shadow-xl text-xs flex items-center gap-2 pointer-events-auto">
+            <Navigation className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <span className="font-bold text-white text-[11px] sm:text-xs">
+              {hudTitle || (mode === 'driver_to_pickup' ? '🚗 Rota até o Passageiro • GPS Ao Vivo' : mode === 'driver_to_destination' ? '🛣️ Rota até o Destino da Viagem' : 'São Sebastião • Litoral Norte SP')}
             </span>
-          )}
-        </div>
+            {routeInfo && (
+              <span className="inline-block px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-bold text-[10px]">
+                🛣️ {routeInfo.distanceKm} km (~{routeInfo.durationMinutes} min)
+              </span>
+            )}
+          </div>
+        ) : <div />}
 
         <div className="flex items-center gap-2 pointer-events-auto">
-          {/* Real-time GPS Navigation Launchers directly on Map */}
-          {(destination?.lat || pickup?.lat) && (
+          {/* Real-time GPS Navigation Launchers directly on Map (when showHud is true) */}
+          {showHud && (destination?.lat || pickup?.lat) && (
             <div className="flex items-center gap-1.5">
               <a
                 href={`https://www.google.com/maps/dir/?api=1&destination=${destination?.lat || pickup?.lat},${destination?.lng || pickup?.lng}&travelmode=driving`}
@@ -788,60 +792,62 @@ export const MapDisplay: React.FC<MapProps> = ({
         </div>
       </div>
 
-      {/* Bottom HUD: Dynamic Guidance */}
-      <div className="absolute bottom-3 left-3 right-3 z-[400] pointer-events-none flex justify-center">
-        {mode === 'driver_to_pickup' ? (
-          <div className="bg-slate-950/95 backdrop-blur-md border border-emerald-500/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
-            <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
-              Navegando até o Embarque:
-            </span>
-            <span className="text-white font-medium truncate max-w-[200px] sm:max-w-xs">
-              {destination?.address || destinationLabel || 'Passageiro'}
-            </span>
-            {routeInfo && (
-              <span className="px-2 py-0.5 rounded bg-emerald-900/80 text-emerald-300 font-extrabold text-[10px]">
-                {routeInfo.distanceKm} km • ~{routeInfo.durationMinutes} min até o local
+      {/* Bottom HUD: Dynamic Guidance (shown only when showHud is true) */}
+      {showHud && (
+        <div className="absolute bottom-3 left-3 right-3 z-[400] pointer-events-none flex justify-center">
+          {mode === 'driver_to_pickup' ? (
+            <div className="bg-slate-950/95 backdrop-blur-md border border-emerald-500/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
+              <span className="flex items-center gap-1.5 font-bold text-emerald-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
+                Navegando até o Embarque:
               </span>
-            )}
-            {loadingRoute && (
-              <span className="text-emerald-300 text-[10px] animate-pulse">Atualizando rota ao vivo...</span>
-            )}
-          </div>
-        ) : mode === 'driver_to_destination' ? (
-          <div className="bg-slate-950/95 backdrop-blur-md border border-cyan-500/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
-            <span className="flex items-center gap-1.5 font-bold text-cyan-400">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-sm animate-pulse" />
-              Em Trânsito para o Destino:
-            </span>
-            <span className="text-white font-medium truncate max-w-[200px] sm:max-w-xs">
-              {destination?.address || destinationLabel || 'Destino'}
-            </span>
-            {routeInfo && (
-              <span className="px-2 py-0.5 rounded bg-cyan-900/80 text-cyan-300 font-extrabold text-[10px]">
-                {routeInfo.distanceKm} km • ~{routeInfo.durationMinutes} min restantes
+              <span className="text-white font-medium truncate max-w-[200px] sm:max-w-xs">
+                {destination?.address || destinationLabel || 'Passageiro'}
               </span>
-            )}
-          </div>
-        ) : (
-          <div className="bg-slate-950/95 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pointer-events-auto">
-            <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
-              {pickupLabel || 'Ponto de Partida'} {draggable && '(Arraste o pino verde)'}
-            </span>
-            <span className="text-slate-600 hidden sm:inline">|</span>
-            <span className="flex items-center gap-1.5 font-bold text-rose-400">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm animate-pulse" />
-              {destinationLabel || 'Destino'} {draggable && '(Arraste o pino vermelho ou clique no mapa)'}
-            </span>
-            {loadingRoute && (
-              <span className="text-emerald-300 text-[10px] animate-pulse">
-                Calculando melhor trajeto...
+              {routeInfo && (
+                <span className="px-2 py-0.5 rounded bg-emerald-900/80 text-emerald-300 font-extrabold text-[10px]">
+                  {routeInfo.distanceKm} km • ~{routeInfo.durationMinutes} min até o local
+                </span>
+              )}
+              {loadingRoute && (
+                <span className="text-emerald-300 text-[10px] animate-pulse">Atualizando rota ao vivo...</span>
+              )}
+            </div>
+          ) : mode === 'driver_to_destination' ? (
+            <div className="bg-slate-950/95 backdrop-blur-md border border-cyan-500/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
+              <span className="flex items-center gap-1.5 font-bold text-cyan-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-sm animate-pulse" />
+                Em Trânsito para o Destino:
               </span>
-            )}
-          </div>
-        )}
-      </div>
+              <span className="text-white font-medium truncate max-w-[200px] sm:max-w-xs">
+                {destination?.address || destinationLabel || 'Destino'}
+              </span>
+              {routeInfo && (
+                <span className="px-2 py-0.5 rounded bg-cyan-900/80 text-cyan-300 font-extrabold text-[10px]">
+                  {routeInfo.distanceKm} km • ~{routeInfo.durationMinutes} min restantes
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="bg-slate-950/95 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pointer-events-auto">
+              <span className="flex items-center gap-1.5 font-bold text-emerald-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
+                {pickupLabel || 'Ponto de Partida'} {draggable && '(Arraste o pino verde)'}
+              </span>
+              <span className="text-slate-600 hidden sm:inline">|</span>
+              <span className="flex items-center gap-2.5 font-bold text-rose-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm animate-pulse" />
+                {destinationLabel || 'Destino'} {draggable && '(Arraste o pino vermelho ou clique no mapa)'}
+              </span>
+              {loadingRoute && (
+                <span className="text-emerald-300 text-[10px] animate-pulse">
+                  Calculando melhor trajeto...
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

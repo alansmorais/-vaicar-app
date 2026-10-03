@@ -39,8 +39,63 @@ import {
   Camera,
   Check,
   Crosshair,
+  Menu,
+  ChevronRight,
+  ArrowLeft,
+  Settings,
+  Wallet,
+  Sparkles,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
+
+// Calculates haversine distance in km
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(1));
+}
+
+// Estimates urban driving time in minutes (~28 km/h on coastal avenues)
+function estimateDrivingMinutes(distanceKm: number): number {
+  if (distanceKm <= 0.2) return 1;
+  return Math.max(2, Math.round((distanceKm / 28) * 60));
+}
+
+// Formats short neighborhood / landmark / city name
+function formatShortAddress(address?: string): string {
+  if (!address) return 'Local';
+  const knownZones = [
+    'Centro', 'Maresias', 'Boiçucanga', 'Camburi', 'Juquehy',
+    'São Francisco', 'Topolândia', 'Barequeçaba', 'Guaecá',
+    'Toque-Toque Grande', 'Toque-Toque Pequeno', 'Barra do Sahy',
+    'Barra do Una', 'Boraceia', 'Enseada', 'Cigarras', 'Portal da Olaria',
+    'Itatinga', 'Varadouro', 'Pontal da Cruz', 'Praia Grande'
+  ];
+  for (const zone of knownZones) {
+    if (address.toLowerCase().includes(zone.toLowerCase())) {
+      return zone;
+    }
+  }
+  const parts = address.split(/[-–,]/).map((p) => p.trim());
+  if (parts.length > 1 && parts[1].length > 2 && parts[1].length < 25) {
+    return parts[1];
+  }
+  return parts[0].slice(0, 24);
+}
+
+function formatRouteSummary(origin?: string, destination?: string): string {
+  const o = formatShortAddress(origin);
+  const d = formatShortAddress(destination);
+  return `${o} → ${d}`;
+}
 
 // Synthesizes an audible incoming ride chime without external audio file dependencies
 function playIncomingRideChime() {
@@ -96,7 +151,14 @@ export const DriverDashboardPage: React.FC = () => {
   // Active route map view mode: 'to_passenger' (navigating to pickup) or 'full_trip' (origin -> destination)
   const [driverRouteMode, setDriverRouteMode] = useState<'to_passenger' | 'full_trip'>('to_passenger');
 
-  // Incoming ride alert popup state
+  // Cockpit Drawer State (Secondary Menu ☰)
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [drawerTab, setDrawerTab] = useState<'menu' | 'ratings' | 'earnings' | 'history' | 'settings'>('menu');
+
+  // Arrived 4-Minute Tolerance Countdown State
+  const [arrivedSecondsRemaining, setArrivedSecondsRemaining] = useState<number>(240);
+
+  // Incoming ride alert state
   const [dismissedRideIds, setDismissedRideIds] = useState<string[]>([]);
   const [incomingCountdown, setIncomingCountdown] = useState<number>(30);
   const playedChimesRef = useRef<Set<string>>(new Set());
@@ -393,6 +455,55 @@ export const DriverDashboardPage: React.FC = () => {
       clearInterval(periodicSync);
     };
   }, [isOnline, activeRide?.id]);
+
+  // 4-Minute Arrival Tolerance Countdown Effect
+  useEffect(() => {
+    if (activeRide?.status !== 'ARRIVED') {
+      setArrivedSecondsRemaining(240);
+      return;
+    }
+
+    const startIso = activeRide.waitingTimerStartedAt || activeRide.arrivedAt || new Date().toISOString();
+    const startMs = new Date(startIso).getTime();
+
+    const updateRemaining = () => {
+      const elapsed = Math.floor((Date.now() - startMs) / 1000);
+      setArrivedSecondsRemaining(Math.max(0, 240 - elapsed));
+    };
+
+    updateRemaining();
+    const interval = setInterval(updateRemaining, 1000);
+    return () => clearInterval(interval);
+  }, [activeRide?.status, activeRide?.waitingTimerStartedAt, activeRide?.arrivedAt]);
+
+  const arrivedMinutes = Math.floor(arrivedSecondsRemaining / 60);
+  const arrivedSecs = arrivedSecondsRemaining % 60;
+  const formattedArrivedTime = `${String(arrivedMinutes).padStart(2, '0')}:${String(arrivedSecs).padStart(2, '0')}`;
+
+  const effectiveDriverLocation = useMemo(() => {
+    return driverGps || (
+      driver?.currentLocation?.lat && driver?.currentLocation?.lng
+        ? { lat: driver.currentLocation.lat, lng: driver.currentLocation.lng }
+        : null
+    );
+  }, [driverGps, driver?.currentLocation]);
+
+  const distToPickupKm = useMemo(() => {
+    const target = incomingRide?.origin || (activeRide?.status === 'DRIVER_ARRIVING' ? activeRide.origin : null);
+    if (!target || !effectiveDriverLocation) return null;
+    return calculateDistanceKm(effectiveDriverLocation.lat, effectiveDriverLocation.lng, target.lat, target.lng);
+  }, [incomingRide?.origin, activeRide?.status, activeRide?.origin, effectiveDriverLocation]);
+
+  const etaToPickupMin = useMemo(() => {
+    if (distToPickupKm === null) return 5;
+    return estimateDrivingMinutes(distToPickupKm);
+  }, [distToPickupKm]);
+
+  const pendingPayments = useMemo(() => {
+    return rideHistory.filter(
+      (r) => r.status === 'COMPLETED' && (r.paymentStatus === 'PENDING' || r.paymentApprovedByDriver === false)
+    );
+  }, [rideHistory]);
 
   const handleToggleOnline = async () => {
     if (!driver) return;
@@ -817,761 +928,501 @@ export const DriverDashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Driver Header */}
-      <header className="bg-slate-900 border-b border-slate-800 py-3.5 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/">
-            <img src="/vaicar_logo.png" alt="VaiCar" className="h-8 w-auto rounded object-contain" />
-          </Link>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold text-white flex items-center gap-2">
-              Painel do Motorista • <span className="text-emerald-400">São Sebastião</span>
+    <div className="relative w-screen h-[100dvh] overflow-hidden bg-slate-950 text-slate-100 flex flex-col select-none">
+      {/* 1. FULLSCREEN / 80-90% MAP CANVAS (COCKPIT MAIN VIEW) */}
+      <div className="absolute inset-0 z-0 w-full h-full">
+        {incomingRide ? (
+          <MapDisplay
+            pickup={incomingRide.origin}
+            destination={incomingRide.destination}
+            driverLocation={effectiveDriverLocation}
+            mode="planning"
+            pickupLabel={`Embarque: ${incomingRide.passengerName}`}
+            destinationLabel="Destino da Corrida"
+            draggable={false}
+            showHud={false}
+            height="100%"
+            className="h-full w-full rounded-none border-0"
+          />
+        ) : activeRide?.status === 'IN_PROGRESS' ? (
+          <MapDisplay
+            pickup={effectiveDriverLocation ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização' } : activeRide.origin}
+            destination={activeRide.destination}
+            mode="driver_to_destination"
+            pickupLabel="Você + Passageiro"
+            destinationLabel="Destino Final"
+            draggable={false}
+            showHud={false}
+            height="100%"
+            className="h-full w-full rounded-none border-0"
+          />
+        ) : activeRide ? (
+          driverRouteMode === 'full_trip' ? (
+            <MapDisplay
+              pickup={activeRide.origin}
+              destination={activeRide.destination}
+              mode="planning"
+              pickupLabel={`Embarque: ${activeRide.passengerName}`}
+              destinationLabel="Destino Final"
+              draggable={false}
+              showHud={false}
+              height="100%"
+              className="h-full w-full rounded-none border-0"
+            />
+          ) : (
+            <MapDisplay
+              pickup={effectiveDriverLocation ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização' } : activeRide.origin}
+              destination={activeRide.origin}
+              mode="driver_to_pickup"
+              pickupLabel="Você (Sua Localização)"
+              destinationLabel={`Passageiro: ${activeRide.passengerName}`}
+              draggable={false}
+              showHud={false}
+              height="100%"
+              className="h-full w-full rounded-none border-0"
+            />
+          )
+        ) : (
+          <MapDisplay
+            pickup={effectiveDriverLocation ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização' } : { lat: -23.8055, lng: -45.4011, address: 'Centro de São Sebastião' }}
+            driverLocation={effectiveDriverLocation}
+            mode="planning"
+            pickupLabel="Você (Sua Localização)"
+            draggable={false}
+            showHud={false}
+            height="100%"
+            className="h-full w-full rounded-none border-0"
+          />
+        )}
+      </div>
+
+      {/* 2. FLOATING COCKPIT HEADER (TOP BAR) */}
+      <header className="absolute top-3 left-3 right-3 z-30 pointer-events-none flex items-center justify-between">
+        {/* Left: Online / Offline Toggle Pill */}
+        <div className="pointer-events-auto">
+          <button
+            type="button"
+            onClick={handleToggleOnline}
+            disabled={actionLoading || !isApproved}
+            className={`py-2 px-3.5 sm:px-4 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-2xl backdrop-blur-md transition-all ${
+              !isApproved
+                ? 'bg-slate-900/90 text-amber-400 border border-amber-500/40 cursor-not-allowed'
+                : isOnline
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/80 border border-emerald-400 hover:scale-105'
+                : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:scale-105'
+            }`}
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-white animate-pulse' : 'bg-rose-500'}`} />
+            <span>
+              {!isApproved
+                ? driver?.status === 'PENDING_APPROVAL' ? 'Em Análise' : 'Não Aprovado'
+                : isOnline ? 'ONLINE' : 'OFFLINE'}
             </span>
-            {driver && (
-              <span className="text-[11px] text-slate-400">
-                {driver.vehicle.brand} {driver.vehicle.model} ({driver.vehicle.plate})
-              </span>
-            )}
-          </div>
+          </button>
         </div>
 
-        {/* Header Actions */}
-        <div className="flex items-center gap-2.5">
-          {/* GPS Status Indicator / Trigger */}
+        {/* Right: GPS Status, Audio Test & Menu Hamburger ☰ */}
+        <div className="pointer-events-auto flex items-center gap-2">
           {driverGps ? (
             <div
-              className="px-2.5 py-2 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-              title={`GPS Exato Ativo: (${driverGps.lat.toFixed(4)}, ${driverGps.lng.toFixed(4)})`}
+              className="p-2 sm:px-3 sm:py-2 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 text-emerald-400 text-xs font-bold flex items-center gap-1.5 shadow-xl"
+              title="GPS Ativo em Alta Precisão"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="hidden md:inline">GPS Ativo</span>
+              <Crosshair className="w-4 h-4 text-emerald-400" />
+              <span className="hidden sm:inline">GPS</span>
             </div>
           ) : (
             <button
               type="button"
               onClick={requestDriverGps}
-              className="px-2.5 py-2 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-300 hover:text-white hover:bg-amber-900/60 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-              title="Clique para ativar a localização GPS do seu dispositivo"
+              className="p-2 sm:px-3 sm:py-2 rounded-2xl bg-amber-950/90 backdrop-blur-md border border-amber-500 text-amber-300 text-xs font-bold flex items-center gap-1.5 shadow-xl hover:bg-amber-900 transition-colors"
+              title="Clique para ativar o GPS do seu dispositivo"
             >
-              <Crosshair className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span className="hidden md:inline">Ativar GPS</span>
+              <Crosshair className="w-4 h-4 text-amber-400 animate-spin" />
+              <span className="hidden sm:inline">Ativar GPS</span>
             </button>
           )}
 
-          {/* Custom Pricing Trigger Button */}
           <button
             type="button"
-            onClick={() => setShowPricingModal(true)}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-            title="Configurar valor mínimo, valor por km e preços fixos por rota"
+            onClick={playIncomingRideChime}
+            className="p-2 sm:p-2.5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 text-slate-300 hover:text-white transition-colors shadow-xl"
+            title="Testar som de nova corrida"
           >
-            <DollarSign className="w-4 h-4 text-emerald-400" />
-            <span className="hidden sm:inline">Minhas Tarifas</span>
+            <Volume2 className="w-4 h-4" />
           </button>
 
-          {/* Profile & Documents modal trigger button (Item 6 & 7) */}
+          {/* Hamburger Menu ☰ */}
           <button
             type="button"
-            onClick={handleOpenProfileModal}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-2 transition-colors relative"
-            title="Atualizar dados cadastrais, veículo e anexar documentos (CNH, CRLV, PDF)"
+            onClick={() => {
+              setDrawerTab('menu');
+              setIsDrawerOpen(true);
+            }}
+            className="relative p-2 sm:p-2.5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-slate-700/80 hover:border-emerald-500 text-white transition-all shadow-xl hover:scale-105"
+            title="Abrir Menu do Motorista (☰)"
           >
-            {driver?.photoUrl ? (
-              <img
-                src={driver.photoUrl}
-                alt={driver.name}
-                className="w-5 h-5 rounded-full object-cover border border-emerald-500"
-              />
-            ) : (
-              <User className="w-4 h-4 text-emerald-400" />
-            )}
-            <span className="hidden sm:inline">Meu Perfil & Docs</span>
-            {driver?.documentsRequested && (
+            <Menu className="w-5 h-5" />
+            {(driver?.documentsRequested || pendingPayments.length > 0) && (
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full animate-ping" />
             )}
-          </button>
-
-          <button
-            onClick={handleToggleOnline}
-            disabled={actionLoading || !isApproved}
-            className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all ${
-              !isApproved
-                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                : isOnline
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/50'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-            }`}
-          >
-            <Power className={`w-4 h-4 ${isOnline ? 'text-white' : 'text-slate-400'}`} />
-            {!isApproved
-              ? driver?.status === 'PENDING_APPROVAL'
-                ? 'Aguardando Aprovação'
-                : 'Conta Não Aprovada'
-              : isOnline
-              ? 'Online (Disponível)'
-              : 'Ficar Online'}
+            {(driver?.documentsRequested || pendingPayments.length > 0) && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-slate-900" />
+            )}
           </button>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* GPS Permission / Geolocation Warning */}
+      {/* Floating System / Notification Banners (Non-intrusive) */}
+      <div className="absolute top-16 left-3 right-3 z-30 pointer-events-none flex flex-col items-center gap-2">
         {gpsError && (
-          <div className="p-4 rounded-2xl bg-amber-950/80 border-2 border-amber-500 text-amber-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl">
-            <div className="flex items-center gap-2.5">
-              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
-              <div>
-                <span className="font-bold text-white block">Aviso de Localização GPS</span>
-                <span>{gpsError}</span>
-              </div>
-            </div>
+          <div className="pointer-events-auto bg-amber-950/90 backdrop-blur-md border border-amber-500 text-amber-200 text-xs px-3.5 py-2 rounded-2xl shadow-xl flex items-center gap-2 max-w-md">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="truncate">{gpsError}</span>
             <button
               onClick={requestDriverGps}
-              className="py-1.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 transition-colors flex items-center gap-1.5"
+              className="ml-auto underline font-bold shrink-0 text-amber-300 hover:text-white"
             >
-              <Crosshair className="w-3.5 h-3.5" />
-              Ativar / Autorizar GPS
+              Ativar
             </button>
           </div>
         )}
-        {planSuccessMessage && (
-          <div className="p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-200 text-xs flex items-start gap-2.5">
-            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <span>{planSuccessMessage}</span>
-          </div>
-        )}
 
-        {paymentApprovalSuccessMessage && (
-          <div className="p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500 text-emerald-200 text-xs flex items-start gap-3 shadow-xl">
-            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
-              <span className="font-bold text-white text-sm block">Aprovação Registrada</span>
-              <span>{paymentApprovalSuccessMessage}</span>
-            </div>
-          </div>
-        )}
-
-        {/* PENDING PAYMENTS NOTIFICATION BANNER */}
-        {rideHistory.filter((r) => r.status === 'COMPLETED' && (r.paymentStatus === 'PENDING' || r.paymentApprovedByDriver === false)).length > 0 && (
-          <div className="p-5 rounded-2xl bg-amber-950/80 border-2 border-amber-500 text-amber-200 text-xs space-y-3.5 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
-                <h4 className="font-extrabold text-white text-sm">
-                  Pagamento Pendente de Confirmação ({rideHistory.filter((r) => r.status === 'COMPLETED' && (r.paymentStatus === 'PENDING' || r.paymentApprovedByDriver === false)).length})
-                </h4>
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-amber-900/60 px-2.5 py-1 rounded-full border border-amber-600">
-                Ação do Motorista Requerida
-              </span>
-            </div>
-
-            <p className="text-slate-300 leading-relaxed">
-              O passageiro realizou a corrida/entrega e <strong>está bloqueado na plataforma</strong> até que você aprove o recebimento do valor acordado.
-              Assim que o Pix cair ou o dinheiro for entregue, clique em <strong>Confirmar Recebimento</strong> para liberar o passageiro.
-            </p>
-
-            <div className="space-y-2 pt-1">
-              {rideHistory
-                .filter((r) => r.status === 'COMPLETED' && (r.paymentStatus === 'PENDING' || r.paymentApprovedByDriver === false))
-                .map((pr) => (
-                  <div
-                    key={pr.id}
-                    className="bg-slate-950 p-4 rounded-xl border border-amber-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-sm">{pr.passengerName}</span>
-                        <span className="text-xs text-slate-400">({pr.passengerPhone})</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 truncate max-w-md">
-                        {pr.origin.address} ➔ {pr.destination.address}
-                      </div>
-                      <div className="text-xs text-amber-300 font-semibold flex items-center gap-2">
-                        <span>Valor a receber: <strong className="text-emerald-400 text-sm">R$ {pr.fareAmount.toFixed(2)}</strong></span>
-                        <span>• Forma: {pr.paymentMethod}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => handleApprovePayment(pr.id)}
-                        disabled={actionLoading}
-                        className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-950 transition-all hover:scale-[1.02]"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Confirmar Recebimento (R$ {pr.fareAmount.toFixed(2)})
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReportTarget({
-                            rideId: pr.id,
-                            targetName: pr.passengerName,
-                            amount: pr.fareAmount,
-                          });
-                          setShowReportModal(true);
-                        }}
-                        className="px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-600 text-xs font-semibold flex items-center gap-1 transition-colors"
-                        title="Relatar Calote"
-                      >
-                        <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                        Calote
-                      </button>
-                    </div>
-                  </div>
-                ))}
-            </div>
+        {driver?.documentsRequested && (
+          <div
+            onClick={handleOpenProfileModal}
+            className="pointer-events-auto cursor-pointer bg-amber-950/90 backdrop-blur-md border border-amber-500 text-amber-200 text-xs px-3.5 py-2 rounded-2xl shadow-xl flex items-center gap-2 max-w-md hover:bg-amber-900 transition-colors"
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+            <span className="truncate font-semibold">Docs solicitados pela administração. Toque para enviar.</span>
           </div>
         )}
 
         {error && (
-          <div className="p-4 rounded-2xl bg-rose-950/70 border border-rose-500/70 text-rose-200 text-xs space-y-3">
-            <div className="flex items-start gap-2.5">
-              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <span className="font-bold text-sm text-white block">
-                  {error.includes('Acesso restrito') || error.includes('não encontrado')
-                    ? 'Acesso Restrito ao Painel do Motorista'
-                    : 'Aviso do Sistema'}
-                </span>
-                <p className="leading-relaxed text-slate-300">
-                  {error.includes('Acesso restrito') || error.includes('não encontrado')
-                    ? 'Sua conta conectada ainda não possui um cadastro ativo de Motorista/Entregador vinculado a este e-mail. Se você já cadastrou seus dados, certifique-se de estar conectado com o mesmo e-mail do cadastro ou cadastre seu veículo.'
-                    : error}
-                </p>
-              </div>
+          <div className="pointer-events-auto bg-rose-950/90 backdrop-blur-md border border-rose-500 text-rose-200 text-xs px-3.5 py-2 rounded-2xl shadow-xl flex items-center justify-between gap-2 max-w-md">
+            <div className="flex items-center gap-2 truncate">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span className="truncate">{error}</span>
             </div>
-
-            {(error.includes('Acesso restrito') || error.includes('não encontrado')) && (
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-rose-900/60">
-                <Link
-                  to="/driver/register"
-                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
-                >
-                  <Car className="w-4 h-4" /> Cadastrar como Motorista / Entregador
-                </Link>
-                <Link
-                  to="/passenger"
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold text-xs border border-slate-700 transition-colors"
-                >
-                  Ir para Painel do Passageiro
-                </Link>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await logout();
-                    navigate('/driver/login');
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-rose-900/40 hover:bg-rose-900/70 text-rose-200 font-semibold text-xs border border-rose-700/50 transition-colors"
-                >
-                  Entrar com Conta de Motorista
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* PENDING DOCUMENTS REQUEST CARD */}
-        {driver && driver.documentsRequested && (
-          <div className="p-5 rounded-2xl border bg-amber-950/60 border-amber-500 text-amber-200 text-xs space-y-3 shadow-lg">
-            <div className="flex items-center gap-2 font-bold text-sm text-amber-300">
-              <AlertTriangle className="w-5 h-5 text-amber-400" />
-              <span>Documentação Solicitada pela Administração</span>
-            </div>
-            <div className="p-3 bg-amber-900/30 rounded-xl border border-amber-600/40 text-amber-100 text-xs space-y-1">
-              <span className="font-semibold block">O administrador do VaiCar solicitou os seguintes documentos:</span>
-              <p className="whitespace-pre-wrap font-mono text-[11px] bg-slate-950/60 p-2.5 rounded-lg border border-amber-500/30 text-amber-200">
-                {driver.documentsRequested}
-              </p>
-            </div>
-            <p className="text-[11px] text-amber-300/80">
-              Você também recebeu um e-mail com estas orientações. Por favor, regularize os documentos solicitados para liberação da sua conta.
-            </p>
-          </div>
-        )}
-
-        {/* APPROVAL STATUS NOTIFICATION CARD */}
-        {driver && !isApproved && (
-          <div
-            className={`p-5 rounded-2xl border text-xs space-y-2 ${
-              driver.status === 'PENDING_APPROVAL'
-                ? 'bg-amber-950/40 border-amber-500/50 text-amber-200'
-                : 'bg-rose-950/40 border-rose-500/50 text-rose-200'
-            }`}
-          >
-            <div className="flex items-center gap-2 font-bold text-sm">
-              <ShieldAlert className="w-5 h-5" />
-              <span>
-                {driver.status === 'PENDING_APPROVAL'
-                  ? 'Cadastro em Análise Administrativa'
-                  : `Cadastro ${driver.status}`}
-              </span>
-            </div>
-            <p className="leading-relaxed text-slate-300">
-              {driver.status === 'PENDING_APPROVAL'
-                ? 'Seus documentos e veículo estão sendo analisados pela equipe do VaiCar. Assim que sua conta for aprovada no painel administrativo, você receberá um e-mail e o botão ONLINE será habilitado.'
-                : driver.rejectionReason || 'Sua solicitação de motorista foi recusada ou suspensa pela administração.'}
-            </p>
-          </div>
-        )}
-
-        {/* TOP STATS CARDS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
-            <span className="text-[11px] text-slate-400 block font-medium">Status da Conta</span>
-            <span
-              className={`text-sm font-extrabold block mt-0.5 ${
-                isApproved ? 'text-emerald-400' : 'text-amber-400'
-              }`}
-            >
-              {driver?.status === 'APPROVED'
-                ? 'Aprovado'
-                : driver?.status === 'PENDING_APPROVAL'
-                ? 'Em Análise'
-                : driver?.status === 'REJECTED'
-                ? 'Recusado'
-                : driver?.status === 'SUSPENDED'
-                ? 'Suspenso'
-                : driver?.status || 'Carregando...'}
-            </span>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
-            <span className="text-[11px] text-slate-400 block font-medium">Avaliação Média</span>
-            <span className="text-sm font-extrabold text-white flex items-center gap-1 mt-0.5">
-              <Star className="w-4 h-4 text-amber-400 fill-amber-400" /> {driver?.rating?.toFixed(1) || '5.0'}
-            </span>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
-            <span className="text-[11px] text-slate-400 block font-medium">Corridas Realizadas</span>
-            <span className="text-sm font-extrabold text-white mt-0.5 block">
-              {driver?.completedRidesCount || rideHistory.length || 0}
-            </span>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-slate-400 block font-medium">Plano de Parceria</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 font-bold">
-                  {driver?.subscriptionPlan === 'weekly_percent_10' ? 'Semanal' : 'Mensal'}
-                </span>
-              </div>
-              <span className="text-sm font-extrabold text-emerald-400 mt-0.5 block">
-                {driver?.subscriptionPlan === 'weekly_percent_10'
-                  ? '10% (Acerto Semanal)'
-                  : 'R$ 100/mês (Mensalidade)'}
-              </span>
-              <p className="text-[10px] text-slate-400 mt-1">
-                {isSwitchEligible ? (
-                  <span className="text-emerald-400 font-medium">✓ Troca de plano liberada</span>
-                ) : (
-                  <span>
-                    Troca permitida após {isWeekly ? '1 semana' : '1 mês'} ({daysRemaining}d restantes)
-                  </span>
-                )}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedNewPlan(currentPlan === 'weekly_percent_10' ? 'monthly_100' : 'weekly_percent_10');
-                setShowPlanModal(true);
-              }}
-              className="mt-2.5 w-full py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-white transition-colors border border-slate-700 flex items-center justify-center gap-1"
-            >
-              Trocar de Plano
+            <button onClick={() => setError(null)} className="text-slate-400 hover:text-white">
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
+        )}
 
-        {/* ACTIVE RIDE FLOW (WHEN ON A TRIP) */}
-        {activeRide && (
-          <div className="bg-slate-900 border-2 border-emerald-500 rounded-2xl p-6 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Car className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">Corrida em Andamento</h3>
+        {paymentApprovalSuccessMessage && (
+          <div className="pointer-events-auto bg-emerald-950/90 backdrop-blur-md border border-emerald-500 text-emerald-200 text-xs px-3.5 py-2 rounded-2xl shadow-xl flex items-center gap-2 max-w-md">
+            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{paymentApprovalSuccessMessage}</span>
+          </div>
+        )}
+      </div>
+
+      {/* 3. FLOATING COCKPIT BOTTOM SHEET (DECISION & ACTION CARDS) */}
+      <div className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-5 sm:bottom-5 sm:w-[410px] z-30 pointer-events-auto">
+        <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3.5">
+          {/* A. INCOMING RIDE REQUEST (Offer Decision Card) */}
+          {incomingRide ? (
+            <div className="space-y-3.5 animate-in slide-in-from-bottom-4 duration-200">
+              {/* Progress bar countdown */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-emerald-400 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+                  <Volume2 className="w-4 h-4 animate-pulse" />
+                  {incomingRide.serviceType === 'delivery' ? 'Nova Entrega' : 'Nova Corrida'}
+                </span>
+                <span className="font-mono font-black text-white bg-slate-950 px-2 py-0.5 rounded-lg border border-emerald-500/40">
+                  {incomingCountdown}s
+                </span>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-950 text-emerald-300 border border-emerald-700">
-                {activeRide.status.replace(/_/g, ' ')}
-              </span>
-            </div>
+              <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="bg-emerald-500 h-full transition-all duration-1000 ease-linear rounded-full"
+                  style={{ width: `${(incomingCountdown / 30) * 100}%` }}
+                />
+              </div>
 
-            {/* Stage Timer if ARRIVED */}
-            {activeRide.status === 'ARRIVED' && activeRide.waitingTimerStartedAt && (
-              <WaitingTimer startedAt={activeRide.waitingTimerStartedAt} />
-            )}
-
-            {/* Passenger details */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {activeRide.passengerPhotoUrl ? (
-                  <img
-                    src={activeRide.passengerPhotoUrl}
-                    alt={activeRide.passengerName}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400">
-                    <User className="w-6 h-6" />
-                  </div>
-                )}
+              {/* Big Fare Display */}
+              <div className="flex items-baseline justify-between pt-0.5">
                 <div>
-                  <span className="text-sm font-bold text-white block">{activeRide.passengerName}</span>
-                  <span className="text-xs text-slate-400">{activeRide.passengerPhone}</span>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <span className="text-xs text-slate-400 block">Receber do Passageiro:</span>
-                <div className="flex items-center justify-end gap-1.5">
-                  {activeRide.discountApplied && activeRide.originalFareAmount && (
-                    <span className="text-xs line-through text-slate-400">
-                      R$ {activeRide.originalFareAmount.toFixed(2)}
-                    </span>
-                  )}
-                  <span className="text-2xl font-black text-emerald-400">R$ {activeRide.fareAmount.toFixed(2)}</span>
-                </div>
-                {activeRide.discountApplied && (
-                  <span className="inline-block px-1.5 py-0.5 text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40 rounded mt-0.5">
-                    5% OFF (Passageiro Verificado)
+                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Valor da Corrida</span>
+                  <span className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight">
+                    R$ {incomingRide.fareAmount.toFixed(2)}
                   </span>
-                )}
-                <span className="text-[11px] text-slate-400 block mt-1">💵 Pagamento direto: {activeRide.paymentMethod}</span>
-              </div>
-            </div>
-
-            {/* Addresses */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-emerald-400 block">Buscar em:</span>
-                  <p className="text-slate-200">{activeRide.origin.address}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-bold text-white block">{incomingRide.paymentMethod}</span>
+                  <span className="text-[10px] text-slate-400">Pagamento direto</span>
                 </div>
               </div>
-              <div className="flex items-start gap-2 pt-2 border-t border-slate-800">
-                <Navigation className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-rose-400 block">Levar até:</span>
-                  <p className="text-slate-200">{activeRide.destination.address}</p>
+
+              {/* Distance to passenger & Route summary */}
+              <div className="bg-slate-950/90 rounded-2xl p-3 border border-slate-800/80 space-y-2 text-xs">
+                <div className="flex items-center gap-2 font-bold text-white">
+                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>
+                    {distToPickupKm !== null ? `${distToPickupKm} km • ~${etaToPickupMin} min` : 'Poucos minutos'} até o passageiro
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300 pt-1.5 border-t border-slate-800/80 font-medium">
+                  <Navigation className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span className="truncate">
+                    {formatRouteSummary(incomingRide.origin.address, incomingRide.destination.address)}
+                  </span>
                 </div>
               </div>
+
+              {/* Big Action Buttons: [RECUSAR] e [ACEITAR] */}
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleDeclineRide(incomingRide.id)}
+                  disabled={actionLoading}
+                  className="py-3.5 px-3 rounded-2xl bg-slate-950 hover:bg-rose-950/70 border border-slate-800 hover:border-rose-600/60 text-slate-400 hover:text-rose-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Recusar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAcceptRide(incomingRide.id)}
+                  disabled={actionLoading}
+                  className="py-3.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 transition-all hover:scale-[1.02] animate-pulse"
+                >
+                  <Check className="w-5 h-5" />
+                  {actionLoading ? 'Aceitando...' : 'Aceitar'}
+                </button>
+              </div>
             </div>
-
-            {/* GPS 1-CLICK NAVIGATION TO GOOGLE MAPS & WAZE (ITEM 1) */}
-            {(() => {
-              const isHeadingToPickup = activeRide.status === 'ACCEPTED' || activeRide.status === 'DRIVER_ARRIVING';
-              const targetLoc = isHeadingToPickup ? activeRide.origin : activeRide.destination;
-              const targetLabel = isHeadingToPickup ? 'Embarque (Passageiro)' : 'Destino Final';
-              const gmapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${targetLoc.lat},${targetLoc.lng}&travelmode=driving`;
-              const wazeUrl = `https://waze.com/ul?ll=${targetLoc.lat},${targetLoc.lng}&navigate=yes`;
-
-              const gmapsPickupUrl = `https://www.google.com/maps/dir/?api=1&destination=${activeRide.origin.lat},${activeRide.origin.lng}&travelmode=driving`;
-              const wazePickupUrl = `https://waze.com/ul?ll=${activeRide.origin.lat},${activeRide.origin.lng}&navigate=yes`;
-              const gmapsDestUrl = `https://www.google.com/maps/dir/?api=1&destination=${activeRide.destination.lat},${activeRide.destination.lng}&travelmode=driving`;
-              const wazeDestUrl = `https://waze.com/ul?ll=${activeRide.destination.lat},${activeRide.destination.lng}&navigate=yes`;
-
-              return (
-                <div className="bg-slate-950 p-4 rounded-xl border-2 border-emerald-500/60 space-y-3 shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Navigation className="w-4 h-4 text-emerald-400 animate-pulse" />
-                      <span className="text-xs font-bold text-white uppercase tracking-wider">
-                        Navegação GPS em Tempo Real
-                      </span>
+          ) : activeRide?.status === 'DRIVER_ARRIVING' ? (
+            /* B. AFTER ACCEPTING (DRIVER_ARRIVING) */
+            <div className="space-y-3 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {activeRide.passengerPhotoUrl ? (
+                    <img
+                      src={activeRide.passengerPhotoUrl}
+                      alt={activeRide.passengerName}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-md"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400 font-black text-lg border border-slate-700">
+                      {activeRide.passengerName.charAt(0)}
                     </div>
-                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-extrabold uppercase">
-                      Rota Atual: {targetLabel}
+                  )}
+                  <div>
+                    <span className="text-base font-extrabold text-white block">{activeRide.passengerName}</span>
+                    <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {distToPickupKm !== null ? `${distToPickupKm} km • ~${etaToPickupMin} min` : 'A caminho do embarque'}
                     </span>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <a
-                      href={gmapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-blue-950 transition-all hover:scale-[1.02]"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Abrir no Google Maps ↗
-                    </a>
-
-                    <a
-                      href={wazeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="py-3.5 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-cyan-950 transition-all hover:scale-[1.02]"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Abrir no Waze ↗
-                    </a>
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-semibold text-slate-300">Atalhos diretos:</span>
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <a
-                        href={gmapsPickupUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline flex items-center gap-1 font-medium"
-                      >
-                        <MapPin className="w-3 h-3 text-emerald-400" /> Maps Embarque
-                      </a>
-                      <span>•</span>
-                      <a
-                        href={wazePickupUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyan-400 hover:underline flex items-center gap-1 font-medium"
-                      >
-                        Waze Embarque
-                      </a>
-                      <span>•</span>
-                      <a
-                        href={gmapsDestUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-rose-400 hover:underline flex items-center gap-1 font-medium"
-                      >
-                        <Navigation className="w-3 h-3 text-rose-400" /> Maps Destino
-                      </a>
-                      <span>•</span>
-                      <a
-                        href={wazeDestUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyan-400 hover:underline flex items-center gap-1 font-medium"
-                      >
-                        Waze Destino
-                      </a>
-                    </div>
-                  </div>
                 </div>
-              );
-            })()}
 
-            {/* Route View Switcher Tabs (when arriving to pick up the passenger) */}
-            {activeRide.status !== 'IN_PROGRESS' && activeRide.status !== 'COMPLETED' && (
-              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-bold gap-1 shadow-inner">
+                {/* Quick External Navigation */}
+                <div className="flex items-center gap-1.5">
+                  <a
+                    href={`https://waze.com/ul?ll=${activeRide.origin.lat},${activeRide.origin.lng}&navigate=yes`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 rounded-xl bg-cyan-600/90 hover:bg-cyan-500 text-white transition-colors shadow"
+                    title="Navegar no Waze até o passageiro"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${activeRide.origin.lat},${activeRide.origin.lng}&travelmode=driving`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-white transition-colors shadow"
+                    title="Navegar no Google Maps até o passageiro"
+                  >
+                    <Navigation className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Route Mode Switcher (To passenger vs Full trip preview) */}
+              <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-[11px] font-bold gap-1 shadow-inner">
                 <button
                   type="button"
                   onClick={() => setDriverRouteMode('to_passenger')}
-                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 transition-all ${
                     driverRouteMode === 'to_passenger'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <Car className="w-3.5 h-3.5 text-white" />
-                  <span>Rota até o Passageiro</span>
-                  <span className="text-[10px] bg-emerald-950 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40">
-                    Ao Vivo
-                  </span>
+                  <Car className="w-3 h-3" /> Rota até Passageiro
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setDriverRouteMode('full_trip')}
-                  className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                  className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 transition-all ${
                     driverRouteMode === 'full_trip'
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-950'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <Navigation className="w-3.5 h-3.5 text-white" />
-                  <span>Trajeto da Corrida (Destino)</span>
+                  <Navigation className="w-3 h-3" /> Trajeto da Viagem
                 </button>
               </div>
-            )}
 
-            {/* Live Interactive Route Map */}
-            {(() => {
-              const effectiveDriverLocation = driverGps || (
-                driver?.currentLocation?.lat && driver?.currentLocation?.lng
-                  ? { lat: driver.currentLocation.lat, lng: driver.currentLocation.lng }
-                  : null
-              );
+              {/* Primary Button: [ CHEGUEI ] */}
+              <button
+                type="button"
+                onClick={handleMarkArrived}
+                disabled={actionLoading}
+                className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-amber-950 transition-all hover:scale-[1.01]"
+              >
+                <Car className="w-5 h-5 text-slate-950" />
+                Cheguei no Embarque
+              </button>
 
-              if (activeRide.status === 'IN_PROGRESS') {
-                return (
-                  <MapDisplay
-                    pickup={
-                      effectiveDriverLocation
-                        ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização (Em Trânsito)' }
-                        : activeRide.origin
-                    }
-                    destination={activeRide.destination}
-                    mode="driver_to_destination"
-                    pickupLabel="Você + Passageiro"
-                    destinationLabel="Destino Final"
-                    draggable={false}
-                    hudTitle="🛣️ Rota até o Destino da Viagem"
-                    height="320px"
-                  />
-                );
-              }
-
-              if (driverRouteMode === 'to_passenger') {
-                const startPoint = effectiveDriverLocation
-                  ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização Exata (Motorista)' }
-                  : activeRide.origin;
-
-                return (
-                  <div className="space-y-2">
-                    {!effectiveDriverLocation && (
-                      <div className="p-2.5 rounded-xl bg-amber-950/70 border border-amber-500/60 text-amber-200 text-xs flex items-center justify-between gap-2 shadow-lg">
-                        <div className="flex items-center gap-2">
-                          <Crosshair className="w-4 h-4 text-amber-400 animate-spin" />
-                          <span>Obtendo seu GPS preciso para traçar a rota até o passageiro...</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={requestDriverGps}
-                          className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[10px] uppercase shadow"
-                        >
-                          Ativar GPS
-                        </button>
-                      </div>
-                    )}
-                    <MapDisplay
-                      pickup={startPoint}
-                      destination={activeRide.origin}
-                      mode="driver_to_pickup"
-                      pickupLabel="Você (Sua Posição Exata)"
-                      destinationLabel={`Passageiro: ${activeRide.passengerName}`}
-                      draggable={false}
-                      hudTitle="🚗 Rota até o Passageiro • GPS Ao Vivo"
-                      height="320px"
+              <button
+                type="button"
+                onClick={handleDriverCancelPreRide}
+                disabled={actionLoading}
+                className="w-full py-1 text-center text-[11px] text-slate-500 hover:text-rose-400 transition-colors"
+              >
+                Cancelar Corrida
+              </button>
+            </div>
+          ) : activeRide?.status === 'ARRIVED' ? (
+            /* C. AFTER ARRIVING (ARRIVED - 4 Min Tolerance) */
+            <div className="space-y-3 text-center animate-in fade-in duration-150">
+              <div className="flex items-center justify-between text-left pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  {activeRide.passengerPhotoUrl ? (
+                    <img
+                      src={activeRide.passengerPhotoUrl}
+                      alt={activeRide.passengerName}
+                      className="w-9 h-9 rounded-full object-cover border border-emerald-500"
                     />
-                  </div>
-                );
-              }
-
-              // Full trip preview
-              return (
-                <MapDisplay
-                  pickup={activeRide.origin}
-                  destination={activeRide.destination}
-                  mode="planning"
-                  pickupLabel={`Embarque: ${activeRide.passengerName}`}
-                  destinationLabel="Destino Final"
-                  draggable={false}
-                  hudTitle="🗺️ Trajeto da Corrida (Origem → Destino)"
-                  height="320px"
-                />
-              );
-            })()}
-
-            {/* STAGE MACHINE ACTION BUTTONS */}
-            <div className="pt-2">
-              {activeRide.status === 'DRIVER_ARRIVING' && (
-                <div className="space-y-2">
-                  <button
-                    onClick={handleMarkArrived}
-                    disabled={actionLoading}
-                    className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
-                  >
-                    Cheguei no Embarque (ARRIVED) — Iniciar Tolerância 4min
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDriverCancelPreRide}
-                    disabled={actionLoading}
-                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-rose-950/70 text-slate-400 hover:text-rose-300 border border-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <X className="w-4 h-4 text-rose-400" />
-                    Cancelar Corrida (Antes do Embarque)
-                  </button>
-                </div>
-              )}
-
-              {activeRide.status === 'ARRIVED' && (
-                <div className="space-y-2">
-                  <button
-                    onClick={handleStartRide}
-                    disabled={actionLoading}
-                    className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
-                  >
-                    Passageiro Embarcou — Iniciar Viagem (START)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDriverCancelPreRide}
-                    disabled={actionLoading}
-                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-rose-950/70 text-slate-400 hover:text-rose-300 border border-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <X className="w-4 h-4 text-rose-400" />
-                    Cancelar Corrida (Passageiro Não Compareceu)
-                  </button>
-                </div>
-              )}
-
-              {activeRide.status === 'IN_PROGRESS' && (
-                <div className="space-y-2.5">
-                  <button
-                    onClick={() => setShowPaymentCompletionModal(true)}
-                    disabled={actionLoading}
-                    className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/60 transition-all hover:scale-[1.01]"
-                  >
-                    <CheckCircle className="w-5 h-5 text-white" />
-                    Finalizar Viagem & Confirmar Pagamento (R$ {activeRide.fareAmount.toFixed(2)})
-                  </button>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleCompleteRide(false)}
-                      disabled={actionLoading}
-                      className="py-2.5 px-3 rounded-xl bg-amber-950/50 hover:bg-amber-900/60 border border-amber-600/50 text-amber-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                      title="Finaliza a corrida mas bloqueia o passageiro até você confirmar o recebimento"
-                    >
-                      <Clock className="w-4 h-4 text-amber-400" />
-                      Finalizar c/ Pagamento Pendente
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReportTarget({
-                          rideId: activeRide.id,
-                          targetName: activeRide.passengerName,
-                          amount: activeRide.fareAmount,
-                        });
-                        setShowReportModal(true);
-                      }}
-                      className="py-2.5 px-3 rounded-xl bg-rose-950/50 hover:bg-rose-900/60 border border-rose-600/50 text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <AlertTriangle className="w-4 h-4 text-rose-400" />
-                      Não Pagou (Calote)
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowDriverEmergencyModal(true)}
-                    disabled={actionLoading}
-                    className="w-full py-2.5 rounded-xl bg-rose-950/70 hover:bg-rose-900 border border-rose-600/70 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-lg"
-                  >
-                    <ShieldAlert className="w-4 h-4 text-rose-400" />
-                    ⚠️ Cancelar Viagem por Emergência (Pane / Acidente / Saúde)
-                  </button>
-
-                  <div className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Viagem em andamento. Cancelamentos comuns estão bloqueados pelo sistema por segurança, exceto em emergências.</span>
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                      {activeRide.passengerName.charAt(0)}
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-xs font-bold text-white block">{activeRide.passengerName}</span>
+                    <span className="text-[10px] text-emerald-400 font-semibold">No ponto de embarque</span>
                   </div>
                 </div>
-              )}
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-500/40">
+                  R$ {activeRide.fareAmount.toFixed(2)}
+                </span>
+              </div>
 
-              {activeRide.status !== 'IN_PROGRESS' && activeRide.status !== 'COMPLETED' && (
+              {/* 4-Minute Countdown Clock */}
+              <div className="py-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+                  Passageiro Chegando
+                </span>
+                <span
+                  className={`text-4xl sm:text-5xl font-black font-mono tracking-tight my-1 block ${
+                    arrivedSecondsRemaining === 0
+                      ? 'text-rose-400'
+                      : arrivedSecondsRemaining <= 60
+                      ? 'text-amber-400'
+                      : 'text-emerald-400'
+                  }`}
+                >
+                  {formattedArrivedTime}
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  {arrivedSecondsRemaining === 0
+                    ? '⚠️ Prazo de 4 minutos expirado. Pode cancelar se não comparecer.'
+                    : 'Aguarde o passageiro no veículo (tolerância 4 min)'}
+                </span>
+              </div>
+
+              {/* Primary Button: [ INICIAR CORRIDA ] */}
+              <button
+                type="button"
+                onClick={handleStartRide}
+                disabled={actionLoading}
+                className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 transition-all hover:scale-[1.01]"
+              >
+                <Check className="w-5 h-5 text-white" />
+                Iniciar Corrida
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDriverCancelPreRide}
+                disabled={actionLoading}
+                className="w-full py-1 text-center text-[11px] text-slate-500 hover:text-rose-400 transition-colors"
+              >
+                Passageiro não compareceu • Cancelar
+              </button>
+            </div>
+          ) : activeRide?.status === 'IN_PROGRESS' ? (
+            /* D. TRIP IN PROGRESS (IN_PROGRESS) */
+            <div className="space-y-3 animate-in fade-in duration-150">
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Valor a Receber</span>
+                  <span className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight">
+                    R$ {activeRide.fareAmount.toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-extrabold text-white flex items-center justify-end gap-1">
+                    <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                    ~{activeRide.durationMinutes || 12} min • {activeRide.distanceKm || 6.4} km
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">💵 {activeRide.paymentMethod} direto</span>
+                </div>
+              </div>
+
+              {/* Destination & Quick External Nav */}
+              <div className="bg-slate-950/90 rounded-2xl p-3 border border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-slate-200 truncate font-medium">
+                  <Navigation className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span className="truncate">{activeRide.destination.address}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <a
+                    href={`https://waze.com/ul?ll=${activeRide.destination.lat},${activeRide.destination.lng}&navigate=yes`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-xl bg-cyan-600/90 hover:bg-cyan-500 text-white transition-colors"
+                    title="Navegar no Waze até o destino"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${activeRide.destination.lat},${activeRide.destination.lng}&travelmode=driving`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-white transition-colors"
+                    title="Navegar no Google Maps até o destino"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Primary Button: [ FINALIZAR CORRIDA ] */}
+              <button
+                type="button"
+                onClick={() => setShowPaymentCompletionModal(true)}
+                disabled={actionLoading}
+                className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 transition-all hover:scale-[1.01]"
+              >
+                <CheckCircle className="w-5 h-5 text-white" />
+                Finalizar Corrida
+              </button>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowDriverEmergencyModal(true)}
+                  className="text-[11px] text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1 transition-colors"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                  Emergência (Pane / Acidente)
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -1582,193 +1433,575 @@ export const DriverDashboardPage: React.FC = () => {
                     });
                     setShowReportModal(true);
                   }}
-                  className="w-full mt-2 py-2 rounded-xl bg-slate-950 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-800 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                  className="text-[11px] text-slate-500 hover:text-rose-400 transition-colors"
                 >
-                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                  Reportar Passageiro / Ocorrência
+                  Reportar
                 </button>
-              )}
-
-              {activeRide.status === 'COMPLETED' && (
-                <div className="space-y-3">
-                  {!activeRide.paymentApprovedByDriver || activeRide.paymentStatus === 'PENDING' ? (
-                    <div className="p-4 rounded-xl bg-amber-950/80 border-2 border-amber-500 text-xs space-y-3 shadow-lg">
-                      <div className="flex items-center gap-2 font-bold text-amber-300 text-sm">
-                        <Clock className="w-4 h-4 text-amber-400 animate-spin" />
-                        <span>Viagem Finalizada • Aguardando Sua Aprovação de Pagamento</span>
-                      </div>
-                      <p className="text-slate-300 leading-relaxed">
-                        O passageiro <strong>{activeRide.passengerName}</strong> está com novas corridas <strong>bloqueadas</strong> até você confirmar o recebimento de <strong>R$ {activeRide.fareAmount.toFixed(2)}</strong> via {activeRide.paymentMethod}.
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                        <button
-                          onClick={() => handleApprovePayment(activeRide.id)}
-                          disabled={actionLoading}
-                          className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-950"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          Confirmar Pagamento Recebido (R$ {activeRide.fareAmount.toFixed(2)})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setReportTarget({
-                              rideId: activeRide.id,
-                              targetName: activeRide.passengerName,
-                              amount: activeRide.fareAmount,
-                            });
-                            setShowReportModal(true);
-                          }}
-                          className="py-3 px-4 rounded-xl bg-rose-950 hover:bg-rose-900 border border-rose-600 text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5"
-                        >
-                          <AlertTriangle className="w-4 h-4 text-rose-400" />
-                          Relatar Calote
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-xl bg-emerald-950 border border-emerald-500 text-center text-xs text-emerald-300 font-semibold space-y-1">
-                      <div className="text-sm font-bold text-white flex items-center justify-center gap-1.5">
-                        <CheckCircle className="w-4 h-4 text-emerald-400" />
-                        Viagem Finalizada e Pagamento Aprovado!
-                      </div>
-                      <div>Cobrança de R$ {activeRide.fareAmount.toFixed(2)} via {activeRide.paymentMethod} confirmada com sucesso.</div>
-                    </div>
-                  )}
-
+              </div>
+            </div>
+          ) : activeRide?.status === 'COMPLETED' ? (
+            /* E. COMPLETED (Payment Approval or Done) */
+            <div className="space-y-3 animate-in fade-in duration-150">
+              {!activeRide.paymentApprovedByDriver || activeRide.paymentStatus === 'PENDING' ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Pagamento Pendente</span>
+                    <span className="text-xl font-black text-emerald-400">R$ {activeRide.fareAmount.toFixed(2)}</span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Confirme o recebimento de <strong>R$ {activeRide.fareAmount.toFixed(2)}</strong> via {activeRide.paymentMethod} de {activeRide.passengerName}.
+                  </p>
+                  <button
+                    onClick={() => handleApprovePayment(activeRide.id)}
+                    disabled={actionLoading}
+                    className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Confirmar Recebimento (R$ {activeRide.fareAmount.toFixed(2)})
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="text-center py-2 space-y-1">
+                    <CheckCircle className="w-9 h-9 text-emerald-400 mx-auto" />
+                    <span className="text-sm font-black text-white block">Viagem Finalizada com Sucesso!</span>
+                    <span className="text-xs text-emerald-300 font-medium">Pagamento aprovado e recibo emitido.</span>
+                  </div>
                   <button
                     onClick={() => setActiveRide(null)}
-                    className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider transition-colors"
+                    className="w-full py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs uppercase tracking-wider transition-colors"
                   >
-                    Concluir e Voltar a Ficar Disponível
+                    Voltar ao Cockpit
                   </button>
-                </div>
+                </>
               )}
             </div>
-          </div>
-        )}
-
-        {/* INCOMING RIDE REQUESTS (STREAM) */}
-        {!activeRide && isOnline && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Clock className="w-5 h-5 text-emerald-400 animate-spin" /> Corridas Disponíveis na Região
-              </h3>
-              <span className="text-xs text-slate-400">Atualização em tempo real</span>
+          ) : !isOnline ? (
+            /* F. OFFLINE STATE */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Status do Motorista</span>
+                  <span className="text-base sm:text-lg font-black text-rose-400">Você está Offline</span>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-rose-950/80 border border-rose-500/40 flex items-center justify-center text-rose-400">
+                  <Power className="w-5 h-5" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Fique online para que passageiros em São Sebastião possam ver você no mapa e solicitar corridas.
+              </p>
+              <button
+                type="button"
+                onClick={handleToggleOnline}
+                disabled={actionLoading || !isApproved}
+                className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 transition-all hover:scale-[1.01]"
+              >
+                <Power className="w-4 h-4 sm:w-5 sm:h-5" />
+                Ficar Online
+              </button>
             </div>
-
-            {availableRides.length === 0 ? (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-xs text-slate-400 space-y-2">
-                <Car className="w-10 h-10 text-emerald-500/50 mx-auto animate-pulse" />
-                <p className="font-semibold text-white">Você está ONLINE e visível no mapa!</p>
-                <p>Aguardando novas solicitações de passageiros em São Sebastião...</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {availableRides.map((ride) => (
-                  <div
-                    key={ride.id}
-                    className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 shadow-xl space-y-4 hover:border-emerald-500 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {ride.passengerPhotoUrl ? (
-                          <img
-                            src={ride.passengerPhotoUrl}
-                            alt={ride.passengerName}
-                            className="w-10 h-10 rounded-full object-cover border border-emerald-500"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-emerald-400">
-                            <User className="w-5 h-5" />
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-xs font-bold text-white block">{ride.passengerName}</span>
-                          <span className="text-[11px] text-slate-400">Solicitada agora</span>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {ride.discountApplied && ride.originalFareAmount && (
-                            <span className="text-[11px] line-through text-slate-400">
-                              R$ {ride.originalFareAmount.toFixed(2)}
-                            </span>
-                          )}
-                          <span className="text-xl font-black text-emerald-400">
-                            R$ {ride.fareAmount.toFixed(2)}
-                          </span>
-                        </div>
-                        {ride.discountApplied && (
-                          <span className="text-[10px] text-emerald-300 font-bold block">
-                            5% OFF Verificado
-                          </span>
-                        )}
-                        <span className="text-[10px] text-slate-400 block">{ride.paymentMethod}</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5 text-xs">
-                      <div className="flex items-start gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="text-slate-300 truncate">{ride.origin.address}</span>
-                      </div>
-                      <div className="flex items-start gap-1.5 pt-1.5 border-t border-slate-800">
-                        <Navigation className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
-                        <span className="text-slate-300 truncate">{ride.destination.address}</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleAcceptRide(ride.id)}
-                      disabled={actionLoading}
-                      className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
-                    >
-                      Aceitar Corrida
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* RIDE HISTORY LIST */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <History className="w-4 h-4 text-emerald-400" /> Histórico Recente de Viagens
-            </h3>
-            <span className="text-xs text-slate-400">{rideHistory.length} registros</span>
-          </div>
-
-          {rideHistory.length === 0 ? (
-            <p className="text-xs text-slate-500 text-center py-4">Nenhuma corrida registrada ainda.</p>
           ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {rideHistory.map((r) => (
-                <div
-                  key={r.id}
-                  className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between text-xs"
-                >
-                  <div>
-                    <span className="font-semibold text-white block">{r.passengerName}</span>
-                    <span className="text-[11px] text-slate-400">
-                      {new Date(r.requestedAt).toLocaleDateString('pt-BR')} • {r.status}
-                    </span>
+            /* G. ONLINE & SEARCHING FOR RIDES */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-emerald-400 relative">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute" />
+                    <Car className="w-5 h-5 z-10" />
                   </div>
-                  <div className="text-right">
-                    <span className="font-bold text-emerald-400 block">R$ {r.fareAmount.toFixed(2)}</span>
-                    <span className="text-[10px] text-slate-500">{r.paymentMethod}</span>
+                  <div>
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Cockpit Ativo</span>
+                    <span className="text-sm sm:text-base font-extrabold text-white">Procurando passageiros...</span>
                   </div>
                 </div>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={() => setShowPricingModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+                  title="Configurar Minhas Tarifas"
+                >
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                  Tarifas
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  <span className="font-bold text-white">{driver?.rating?.toFixed(1) || '5.0'}</span>
+                  <span>• {driver?.vehicle?.brand} {driver?.vehicle?.model}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleToggleOnline}
+                  className="text-rose-400 hover:text-rose-300 font-bold transition-colors"
+                >
+                  Ficar Offline
+                </button>
+              </div>
             </div>
           )}
         </div>
-      </main>
+      </div>
+
+      {/* 4. SECONDARY DRAWER MENU (☰) */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-[10000] flex justify-end animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm"
+            onClick={() => setIsDrawerOpen(false)}
+          />
+
+          {/* Slide-over Drawer Panel */}
+          <div
+            className="relative w-full max-w-sm sm:max-w-md h-full bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer Header: Driver Identity */}
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+              <div className="flex items-center gap-3">
+                {driver?.photoUrl ? (
+                  <img
+                    src={driver.photoUrl}
+                    alt={driver.name}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-slate-800 border-2 border-emerald-500/60 flex items-center justify-center text-emerald-400 font-black text-lg">
+                    {driver?.name ? driver.name.charAt(0) : <User className="w-6 h-6" />}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-extrabold text-white text-sm">{driver?.name || 'Motorista Parceiro'}</h3>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                    <span className="flex items-center gap-1 text-amber-400 font-bold">
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      {driver?.rating?.toFixed(1) || '5.0'}
+                    </span>
+                    <span>•</span>
+                    <span className="text-emerald-400 font-medium">
+                      {isApproved ? 'Aprovado' : 'Em Análise'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title="Fechar Menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Drawer Body Views */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {drawerTab === 'menu' && (
+                <div className="space-y-1">
+                  {/* Pending Payments Alert in Drawer if any */}
+                  {pendingPayments.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setDrawerTab('earnings')}
+                      className="w-full mb-3 p-3.5 rounded-2xl bg-amber-950/80 border border-amber-500 text-left text-amber-200 flex items-center justify-between gap-3 shadow-lg"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <AlertCircle className="w-5 h-5 text-amber-400 animate-pulse shrink-0" />
+                        <div>
+                          <span className="font-bold text-white text-xs block">
+                            {pendingPayments.length} Pagamento(s) Pendente(s)
+                          </span>
+                          <span className="text-[11px] text-amber-300">Toque para confirmar recebimento</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-amber-400 shrink-0" />
+                    </button>
+                  )}
+
+                  {/* 1. Meu Perfil */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      handleOpenProfileModal();
+                    }}
+                    className="w-full p-3.5 rounded-2xl hover:bg-slate-800/80 text-left flex items-center justify-between transition-colors border border-transparent hover:border-slate-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-emerald-400">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Meu Perfil</span>
+                        <span className="text-[11px] text-slate-400">Dados cadastrais, telefone, foto</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+
+                  {/* 2. Minhas Tarifas */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      setShowPricingModal(true);
+                    }}
+                    className="w-full p-3.5 rounded-2xl hover:bg-slate-800/80 text-left flex items-center justify-between transition-colors border border-transparent hover:border-slate-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-emerald-400">
+                        <DollarSign className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Minhas Tarifas</span>
+                        <span className="text-[11px] text-slate-400">Valor mínimo, por km e rotas fixas</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+
+                  {/* 3. Meu Veículo */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      handleOpenProfileModal();
+                    }}
+                    className="w-full p-3.5 rounded-2xl hover:bg-slate-800/80 text-left flex items-center justify-between transition-colors border border-transparent hover:border-slate-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-emerald-400">
+                        <Car className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Meu Veículo</span>
+                        <span className="text-[11px] text-slate-400">
+                          {driver?.vehicle ? `${driver.vehicle.brand} ${driver.vehicle.model} (${driver.vehicle.plate})` : 'Cadastrar veículo'}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+
+                  {/* 4. Documentos */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      handleOpenProfileModal();
+                    }}
+                    className="w-full p-3.5 rounded-2xl hover:bg-slate-800/80 text-left flex items-center justify-between transition-colors border border-transparent hover:border-slate-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-emerald-400 relative">
+                        <FileText className="w-4 h-4" />
+                        {driver?.documentsRequested && (
+                          <span className="w-2.5 h-2.5 bg-rose-500 rounded-full absolute -top-0.5 -right-0.5 animate-ping" />
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Documentos</span>
+                        <span className="text-[11px] text-slate-400">CNH, CRLV, Comprovante e Antecedentes (PDF/Foto)</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+
+                  {/* 5. Avaliações */}
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTab('ratings')}
+                    className="w-full p-3.5 rounded-2xl hover:bg-slate-800/80 text-left flex items-center justify-between transition-colors border border-transparent hover:border-slate-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-amber-400">
+                        <Star className="w-4 h-4 fill-amber-400" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Avaliações</span>
+                        <span className="text-[11px] text-slate-400">Nota média ⭐ {driver?.rating?.toFixed(1) || '5.0'} e feedbacks</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+
+                  {/* 6. Ganhos & Planos */}
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTab('earnings')}
+                    className="w-full p-3.5 rounded-2xl hover:bg-slate-800/80 text-left flex items-center justify-between transition-colors border border-transparent hover:border-slate-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-emerald-400">
+                        <Wallet className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Ganhos & Planos</span>
+                        <span className="text-[11px] text-slate-400">
+                          {driver?.subscriptionPlan === 'weekly_percent_10' ? '10% Semanal' : 'R$ 100/mês'} • Troca e pagamentos
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+
+                  {/* 7. Corridas */}
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTab('history')}
+                    className="w-full p-3.5 rounded-2xl hover:bg-slate-800/80 text-left flex items-center justify-between transition-colors border border-transparent hover:border-slate-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-cyan-400">
+                        <History className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Histórico de Corridas</span>
+                        <span className="text-[11px] text-slate-400">{rideHistory.length} viagens registradas</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+
+                  {/* 8. Configurações */}
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTab('settings')}
+                    className="w-full p-3.5 rounded-2xl hover:bg-slate-800/80 text-left flex items-center justify-between transition-colors border border-transparent hover:border-slate-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300">
+                        <Settings className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Configurações & GPS</span>
+                        <span className="text-[11px] text-slate-400">Calibragem de GPS e áudio</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                  </button>
+
+                  {/* 9. Status Online / Offline */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleToggleOnline();
+                        setIsDrawerOpen(false);
+                      }}
+                      disabled={actionLoading || !isApproved}
+                      className={`w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                        isOnline
+                          ? 'bg-rose-950/80 hover:bg-rose-900 border border-rose-600/60 text-rose-300'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg'
+                      }`}
+                    >
+                      <Power className="w-4 h-4" />
+                      {isOnline ? 'Ficar Offline' : 'Ficar Online'}
+                    </button>
+                  </div>
+
+                  {/* 10. Logout */}
+                  <div className="pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await logout();
+                        navigate('/driver/login');
+                      }}
+                      className="w-full py-2.5 text-center text-xs font-semibold text-slate-500 hover:text-rose-400 transition-colors"
+                    >
+                      Sair da Conta (Logout)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Subview: Avaliações */}
+              {drawerTab === 'ratings' && (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTab('menu')}
+                    className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 hover:underline"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Voltar ao Menu
+                  </button>
+
+                  <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 text-center space-y-2">
+                    <div className="flex items-center justify-center gap-1 text-3xl font-black text-white">
+                      <Star className="w-8 h-8 fill-amber-400 text-amber-400" />
+                      <span>{driver?.rating?.toFixed(1) || '5.0'}</span>
+                    </div>
+                    <span className="text-xs text-slate-400 block">Avaliação Média dos Passageiros</span>
+                    <span className="text-[11px] text-emerald-400 font-semibold block">
+                      {driver?.completedRidesCount || rideHistory.length} viagens realizadas com sucesso
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Sua pontuação reflete a pontualidade, educação e segurança durante as viagens realizadas na plataforma VaiCar em São Sebastião.
+                  </p>
+                </div>
+              )}
+
+              {/* Subview: Ganhos & Planos */}
+              {drawerTab === 'earnings' && (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTab('menu')}
+                    className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 hover:underline"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Voltar ao Menu
+                  </button>
+
+                  {/* Pending Payments Section */}
+                  {pendingPayments.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-amber-950/80 border border-amber-500 space-y-3">
+                      <span className="font-extrabold text-amber-300 text-xs uppercase tracking-wider block">
+                        Aprovar Pagamento Recebido ({pendingPayments.length})
+                      </span>
+                      {pendingPayments.map((pr) => (
+                        <div key={pr.id} className="bg-slate-950 p-3 rounded-xl border border-amber-500/50 space-y-2 text-xs">
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-white">{pr.passengerName}</span>
+                            <span className="font-black text-emerald-400 text-sm">R$ {pr.fareAmount.toFixed(2)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleApprovePayment(pr.id)}
+                            disabled={actionLoading}
+                            className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5"
+                          >
+                            <CheckCircle className="w-4 h-4" /> Confirmar Recebimento
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Plan Card */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
+                    <span className="text-slate-400 block font-medium">Plano Atual:</span>
+                    <span className="text-base font-black text-emerald-400 block">
+                      {driver?.subscriptionPlan === 'weekly_percent_10'
+                        ? '10% por Corrida (Semanal)'
+                        : 'R$ 100,00 / mês (Mensalidade Fixa)'}
+                    </span>
+                    <p className="text-[11px] text-slate-400">
+                      {isSwitchEligible ? (
+                        <span className="text-emerald-400 font-semibold">✓ Troca de plano liberada</span>
+                      ) : (
+                        <span>Troca disponível em {daysRemaining} dia(s)</span>
+                      )}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowPlanModal(true)}
+                      className="w-full mt-2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-colors"
+                    >
+                      Alterar Plano
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Subview: Histórico de Corridas */}
+              {drawerTab === 'history' && (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTab('menu')}
+                    className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 hover:underline"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Voltar ao Menu
+                  </button>
+
+                  <span className="text-xs font-bold text-white block">
+                    Histórico de Corridas ({rideHistory.length})
+                  </span>
+
+                  {rideHistory.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-slate-500 bg-slate-950 rounded-2xl border border-slate-800">
+                      Nenhuma corrida registrada ainda.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {rideHistory.map((r) => (
+                        <div
+                          key={r.id}
+                          className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs space-y-1.5"
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-white">{r.passengerName}</span>
+                            <span className="font-extrabold text-emerald-400">R$ {r.fareAmount.toFixed(2)}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">
+                            {formatRouteSummary(r.origin.address, r.destination.address)}
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-900">
+                            <span>{new Date(r.requestedAt).toLocaleDateString('pt-BR')} • {r.paymentMethod}</span>
+                            <span className="font-semibold text-slate-400">{r.status}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Subview: Configurações */}
+              {drawerTab === 'settings' && (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => setDrawerTab('menu')}
+                    className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 hover:underline"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Voltar ao Menu
+                  </button>
+
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 text-xs">
+                    <span className="font-bold text-white block">Localização & GPS</span>
+                    <p className="text-slate-400 text-[11px]">
+                      {driverGps
+                        ? `GPS ativo e sincronizado: (${driverGps.lat.toFixed(4)}, ${driverGps.lng.toFixed(4)})`
+                        : 'GPS do dispositivo aguardando permissão.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={requestDriverGps}
+                      className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700"
+                    >
+                      <Crosshair className="w-4 h-4" /> Recalibrar GPS
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 text-xs">
+                    <span className="font-bold text-white block">Áudio de Chamadas</span>
+                    <p className="text-slate-400 text-[11px]">
+                      O sinal sonoro toca automaticamente quando um passageiro solicita uma nova corrida.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={playIncomingRideChime}
+                      className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700"
+                    >
+                      <Volume2 className="w-4 h-4 text-emerald-400" /> Testar Som de Corrida
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* RECEIPT MODAL */}
       {receiptToShow && <ReceiptModal receipt={receiptToShow} onClose={() => setReceiptToShow(null)} />}
