@@ -18,6 +18,7 @@ import { AdminLoginPage } from './pages/admin/AdminLoginPage.js';
 
 import { TermsPage } from './pages/TermsPage.js';
 import { PrivacyPage } from './pages/PrivacyPage.js';
+import { LoginPage } from './pages/LoginPage.js';
 
 export const App: React.FC = () => {
   return (
@@ -29,6 +30,8 @@ export const App: React.FC = () => {
             <Routes>
               {/* Home */}
               <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/entrar" element={<LoginPage />} />
 
               {/* Passenger */}
               <Route path="/passenger" element={<PassengerDashboardPage />} />

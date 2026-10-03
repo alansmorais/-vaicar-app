@@ -63,29 +63,36 @@ authRouter.post('/register-passenger', async (req: Request, res: Response, next:
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Aceite dos termos de uso é obrigatório.', 400);
     }
 
-    // Check duplicate registrations (allows existing driver to register as passenger)
+    // Allow same user to register as passenger, driver, and courier
     const existingByEmail = await findUserByEmail(email);
-    if (existingByEmail && existingByEmail.uid !== uid) {
+    const existingByPhone = await findUserByWhatsApp(whatsapp);
+
+    // If an account with this email already exists with a passenger profile belonging to a different user, reject
+    if (existingByEmail) {
       const existingPassenger = await getPassengerProfile(existingByEmail.uid);
-      if (existingPassenger) {
+      if (existingPassenger && existingByEmail.uid !== uid && (!existingByPhone || existingByPhone.uid !== existingByEmail.uid)) {
         throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe uma conta de passageiro cadastrada com este e-mail.', 409);
       }
     }
 
-    const existingByPhone = await findUserByWhatsApp(whatsapp);
-    if (existingByPhone && existingByPhone.uid !== uid && (!existingByEmail || existingByPhone.uid !== existingByEmail.uid)) {
+    if (existingByPhone) {
       const existingPassenger = await getPassengerProfile(existingByPhone.uid);
-      if (existingPassenger) {
+      if (existingPassenger && existingByPhone.uid !== uid && (!existingByEmail || existingByPhone.uid !== existingByEmail.uid)) {
         throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe uma conta de passageiro cadastrada com este WhatsApp.', 409);
       }
     }
 
-    const effectiveUid = existingByEmail ? existingByEmail.uid : uid;
+    const effectiveUid = existingByEmail ? existingByEmail.uid : existingByPhone ? existingByPhone.uid : uid;
     const now = new Date().toISOString();
     const hasRecordCheck = Boolean(hasCriminalRecordCheck || criminalRecordUrl);
     const normalizedPhone = normalizeInternationalPhone(whatsapp);
 
-    const isDriverAlready = Boolean(existingByEmail?.isDriver || (await getDriverProfile(effectiveUid)));
+    const isDriverAlready = Boolean(
+      existingByEmail?.isDriver || existingByPhone?.isDriver || (await getDriverProfile(effectiveUid))
+    );
+    const isCourierAlready = Boolean(
+      existingByEmail?.isCourier || existingByPhone?.isCourier
+    );
 
     const userProfile: UserProfile = {
       uid: effectiveUid,
@@ -94,11 +101,14 @@ authRouter.post('/register-passenger', async (req: Request, res: Response, next:
       role: isDriverAlready ? 'driver' : 'passenger',
       isPassenger: true,
       isDriver: isDriverAlready,
+      isCourier: isCourierAlready,
       photoUrl,
       whatsapp: normalizedPhone,
-      createdAt: existingByEmail?.createdAt || now,
+      createdAt: existingByEmail?.createdAt || existingByPhone?.createdAt || now,
       updatedAt: now,
     };
+
+    const existingPassenger = await getPassengerProfile(effectiveUid);
 
     const passengerProfile: PassengerProfile = {
       uid: effectiveUid,
@@ -107,12 +117,12 @@ authRouter.post('/register-passenger', async (req: Request, res: Response, next:
       whatsapp: normalizedPhone,
       photoUrl,
       termsAccepted: true,
-      hasCriminalRecordCheck: hasRecordCheck,
-      criminalRecordUrl: criminalRecordUrl || undefined,
-      criminalRecordStatus: hasRecordCheck ? 'VERIFIED' : 'NONE',
-      rating: 5.0,
-      totalRides: 0,
-      createdAt: now,
+      hasCriminalRecordCheck: hasRecordCheck || Boolean(existingPassenger?.hasCriminalRecordCheck),
+      criminalRecordUrl: criminalRecordUrl || existingPassenger?.criminalRecordUrl || undefined,
+      criminalRecordStatus: (hasRecordCheck || existingPassenger?.hasCriminalRecordCheck) ? 'VERIFIED' : 'NONE',
+      rating: existingPassenger?.rating ?? 5.0,
+      totalRides: existingPassenger?.totalRides ?? 0,
+      createdAt: existingPassenger?.createdAt || now,
       updatedAt: now,
     };
 
@@ -206,31 +216,22 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Selecione ao menos uma região de atuação em São Sebastião.', 400);
     }
 
-    // Check duplicates (allows existing passenger to register as driver)
+    // Allow same user to register as passenger, driver, and courier
     const dupEmail = await findUserByEmail(email);
-    if (dupEmail && dupEmail.uid !== uid) {
-      const existingDriver = await getDriverProfile(dupEmail.uid);
-      if (existingDriver) {
-        throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe cadastro de motorista com este e-mail.', 409);
-      }
-    }
     const dupPhone = await findUserByWhatsApp(whatsapp);
-    if (dupPhone && dupPhone.uid !== uid && (!dupEmail || dupPhone.uid !== dupEmail.uid)) {
-      const existingDriver = await getDriverProfile(dupPhone.uid);
-      if (existingDriver) {
-        throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe cadastro de motorista com este WhatsApp.', 409);
-      }
-    }
     const dupCpf = await findDriverByCpf(cpf);
-    if (dupCpf && dupCpf.uid !== uid && (!dupEmail || dupCpf.uid !== dupEmail.uid)) {
-      throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe cadastro com este CPF.', 409);
+
+    // If CPF belongs to a completely different user account with different email and phone, reject
+    if (dupCpf && (!dupEmail || dupCpf.uid !== dupEmail.uid) && (!dupPhone || dupCpf.uid !== dupPhone.uid) && dupCpf.uid !== uid) {
+      throw new AppError(ErrorCode.DUPLICATE_ACCOUNT, 'Já existe cadastro com este CPF em outra conta.', 409);
     }
 
-    const effectiveUid = dupEmail ? dupEmail.uid : uid;
+    const effectiveUid = dupEmail ? dupEmail.uid : dupPhone ? dupPhone.uid : dupCpf ? dupCpf.uid : uid;
     const now = new Date().toISOString();
     const normalizedPhone = normalizeInternationalPhone(whatsapp);
 
-    const isPassengerAlready = Boolean(dupEmail?.isPassenger || (await getPassengerProfile(effectiveUid)));
+    const isPassengerAlready = Boolean(dupEmail?.isPassenger || dupPhone?.isPassenger || (await getPassengerProfile(effectiveUid)));
+    const isCourierMode = isBicycle || vehicle?.type === 'motorcycle' || professionalCategory.toLowerCase().includes('entregador');
 
     const userProfile: UserProfile = {
       uid: effectiveUid,
@@ -238,6 +239,7 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       displayName: name.trim(),
       role: 'driver',
       isDriver: true,
+      isCourier: Boolean(isCourierMode || dupEmail?.isCourier),
       isPassenger: isPassengerAlready,
       photoUrl,
       whatsapp: normalizedPhone,
@@ -254,6 +256,7 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       whatsapp: normalizedPhone,
       photoUrl,
       professionalCategory,
+      isCourier: isCourierMode,
       cnhNumber: isBicycle ? (cnhNumber || 'ISENTO_BIKE') : cnhNumber.replace(/\D/g, ''),
       criminalRecordUrl: criminalRecordUrl || undefined,
       criminalRecordStatus: criminalRecordUrl ? 'PENDING' : undefined,
@@ -395,6 +398,7 @@ authRouter.get('/me', authenticate, async (req: Request, res: Response, next: Ne
           ...user,
           isDriver: Boolean(driver),
           isPassenger: Boolean(passenger),
+          isCourier: Boolean(user.isCourier || driver?.isCourier),
         }
       : null;
 

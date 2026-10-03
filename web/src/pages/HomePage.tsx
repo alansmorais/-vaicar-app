@@ -4,6 +4,7 @@ import { Car, Bike, ShieldCheck, MapPin, ArrowRight, Zap, CheckCircle2, DollarSi
 import { ridesApi } from '../api/rides.js';
 import { mapsApi, KnownLocation } from '../api/maps.js';
 import { driversApi, PublicDriverMarker } from '../api/drivers.js';
+import { MapDisplay } from '../components/MapDisplay.js';
 
 export const HomePage: React.FC = () => {
   const [popularPlaces, setPopularPlaces] = useState<KnownLocation[]>([]);
@@ -169,6 +170,36 @@ export const HomePage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Interactive Route Map Preview */}
+                <div className="rounded-xl overflow-hidden border border-slate-800 shadow-lg">
+                  <MapDisplay
+                    pickup={
+                      popularPlaces[originIndex]
+                        ? {
+                            address: popularPlaces[originIndex].address,
+                            lat: popularPlaces[originIndex].lat,
+                            lng: popularPlaces[originIndex].lng,
+                          }
+                        : {
+                            address: 'Centro, São Sebastião - SP',
+                            lat: -23.8055,
+                            lng: -45.4011,
+                          }
+                    }
+                    destination={
+                      popularPlaces[destinationIndex]
+                        ? {
+                            address: popularPlaces[destinationIndex].address,
+                            lat: popularPlaces[destinationIndex].lat,
+                            lng: popularPlaces[destinationIndex].lng,
+                          }
+                        : null
+                    }
+                    drivers={onlineDrivers}
+                    height="240px"
+                  />
+                </div>
 
                 <Link
                   to="/passenger"

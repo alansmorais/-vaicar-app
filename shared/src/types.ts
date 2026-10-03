@@ -13,6 +13,7 @@ export interface UserProfile {
   whatsapp?: string;
   isAdmin?: boolean;
   isDriver?: boolean;
+  isCourier?: boolean;
   isPassenger?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -61,6 +62,7 @@ export interface DriverProfile {
   photoUrl: string;
   professionalCategory: string;
   cnhNumber: string;
+  isCourier?: boolean;
   criminalRecordUrl?: string;
   criminalRecordStatus?: 'PENDING' | 'VERIFIED' | 'REJECTED';
   subscriptionPlan?: DriverSubscriptionPlan;

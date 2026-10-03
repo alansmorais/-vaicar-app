@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { WaitingTimer } from '../../components/WaitingTimer.js';
 import { ReceiptModal } from '../../components/ReceiptModal.js';
+import { MapDisplay } from '../../components/MapDisplay.js';
 import { driversApi } from '../../api/drivers.js';
 import { ridesApi } from '../../api/rides.js';
 import { DriverProfile, Ride, Receipt } from '../../../../shared/src/types.js';
@@ -593,6 +594,13 @@ export const DriverDashboardPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Live Interactive Route Map */}
+            <MapDisplay
+              pickup={activeRide.origin}
+              destination={activeRide.destination}
+              height="280px"
+            />
 
             {/* STAGE MACHINE ACTION BUTTONS */}
             <div className="pt-2">

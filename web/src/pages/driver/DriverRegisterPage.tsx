@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { authApi } from '../../api/auth.js';
 import { storageApi } from '../../api/storage.js';
@@ -31,11 +31,26 @@ import {
 
 export const DriverRegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initType = searchParams.get('type');
+  const initRole = searchParams.get('role');
+  const isInitDelivery = initRole === 'courier' || initType === 'bicycle' || initType === 'motorcycle';
+  const initialVehicleType: 'car' | 'motorcycle' | 'van' | 'bicycle' =
+    initType === 'bicycle'
+      ? 'bicycle'
+      : initType === 'motorcycle'
+      ? 'motorcycle'
+      : initType === 'van'
+      ? 'van'
+      : isInitDelivery
+      ? 'bicycle'
+      : 'car';
+
   const { registerEmailPassword, devLogin } = useAuth();
 
   // Activity Mode & Vehicle Type
-  const [activityMode, setActivityMode] = useState<'driver' | 'delivery'>('driver');
-  const [vehicleType, setVehicleType] = useState<'car' | 'motorcycle' | 'van' | 'bicycle'>('car');
+  const [activityMode, setActivityMode] = useState<'driver' | 'delivery'>(isInitDelivery ? 'delivery' : 'driver');
+  const [vehicleType, setVehicleType] = useState<'car' | 'motorcycle' | 'van' | 'bicycle'>(initialVehicleType);
 
   // Partnership Subscription Plan
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly_100' | 'weekly_percent_10'>('monthly_100');
@@ -55,7 +70,13 @@ export const DriverRegisterPage: React.FC = () => {
   const [photoPreview, setPhotoPreview] = useState<string>('');
 
   // Professional
-  const [professionalCategory, setProfessionalCategory] = useState('Motorista com EAR / Autônomo');
+  const [professionalCategory, setProfessionalCategory] = useState(
+    initialVehicleType === 'bicycle'
+      ? 'Entregador / Ciclista (Bike e Encomendas)'
+      : initialVehicleType === 'motorcycle'
+      ? 'Entregador / Motoboy (Delivery e Encomendas)'
+      : 'Motorista com EAR / Autônomo'
+  );
   const [cnhNumber, setCnhNumber] = useState('');
 
   // Criminal Record (Obligatory)
@@ -63,11 +84,11 @@ export const DriverRegisterPage: React.FC = () => {
   const [criminalRecordFileName, setCriminalRecordFileName] = useState<string>('');
 
   // Vehicle
-  const [brand, setBrand] = useState('');
-  const [model, setModel] = useState('');
+  const [brand, setBrand] = useState(initialVehicleType === 'bicycle' ? 'Caloi' : '');
+  const [model, setModel] = useState(initialVehicleType === 'bicycle' ? 'Aro 29' : '');
   const [year, setYear] = useState('2022');
   const [color, setColor] = useState('');
-  const [plate, setPlate] = useState('');
+  const [plate, setPlate] = useState(initialVehicleType === 'bicycle' ? 'BIKE' : '');
 
   // Operating Zones
   const [selectedZones, setSelectedZones] = useState<string[]>([

@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { PublicDriverMarker } from '../api/drivers.js';
 import { mapsApi } from '../api/maps.js';
-import { MapPin, Navigation, Car, AlertCircle } from 'lucide-react';
-
-const GOOGLE_MAPS_LIBRARIES: ('places' | 'geometry')[] = ['places', 'geometry'];
+import { Navigation, MapPin, Car, Crosshair, AlertCircle } from 'lucide-react';
 
 interface MapProps {
   pickup: { lat: number; lng: number; address?: string };
@@ -18,16 +17,109 @@ interface MapProps {
   className?: string;
 }
 
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
-  borderRadius: '12px',
+const DEFAULT_CENTER = {
+  lat: -23.8055,
+  lng: -45.4011, // Centro de São Sebastião - SP
 };
 
-const defaultCenter = {
-  lat: -23.8055,
-  lng: -45.4011, // Centro de São Sebastião
-};
+// Custom SVG Icons for Leaflet
+function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'assigned') {
+  if (type === 'pickup') {
+    return L.divIcon({
+      className: 'custom-pickup-marker',
+      html: `
+        <div style="
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: #10b981;
+          border: 3px solid #ffffff;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: grab;
+        ">
+          <div style="width: 10px; height: 10px; border-radius: 50%; background: #ffffff;"></div>
+        </div>
+      `,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    });
+  }
+
+  if (type === 'destination') {
+    return L.divIcon({
+      className: 'custom-destination-marker',
+      html: `
+        <div style="
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: #ef4444;
+          border: 3px solid #ffffff;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: grab;
+        ">
+          <div style="width: 10px; height: 10px; border-radius: 50%; background: #ffffff;"></div>
+        </div>
+      `,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    });
+  }
+
+  if (type === 'assigned') {
+    return L.divIcon({
+      className: 'custom-assigned-driver-marker',
+      html: `
+        <div style="
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: #059669;
+          border: 3px solid #ffffff;
+          box-shadow: 0 0 15px rgba(16, 185, 129, 0.9);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 16px;
+        ">
+          🚗
+        </div>
+      `,
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+    });
+  }
+
+  // Generic online driver
+  return L.divIcon({
+    className: 'custom-driver-marker',
+    html: `
+      <div style="
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #facc15;
+        border: 2px solid #000000;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+      ">
+        🚗
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
 
 export const MapDisplay: React.FC<MapProps> = ({
   pickup,
@@ -37,57 +129,24 @@ export const MapDisplay: React.FC<MapProps> = ({
   onMapClick,
   drivers = [],
   driverLocation,
-  height = '400px',
+  height = '480px',
   className = '',
 }) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY || '';
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: apiKey,
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  // Layer groups / markers references
+  const pickupMarkerRef = useRef<L.Marker | null>(null);
+  const destinationMarkerRef = useRef<L.Marker | null>(null);
+  const driversLayerRef = useRef<L.LayerGroup | null>(null);
+  const routePolylineRef = useRef<L.Polyline | null>(null);
+  const routeShadowPolylineRef = useRef<L.Polyline | null>(null);
 
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMinutes: number } | null>(null);
+  const [loadingRoute, setLoadingRoute] = useState(false);
 
-  const center = useMemo(() => {
-    if (pickup?.lat && pickup?.lng) {
-      return { lat: pickup.lat, lng: pickup.lng };
-    }
-    return defaultCenter;
-  }, [pickup]);
-
-  const onLoad = useCallback((m: google.maps.Map) => {
-    setMap(m);
-  }, []);
-
-  const onUnmount = useCallback(() => {
-    setMap(null);
-  }, []);
-
-  // Fit bounds when both pickup and destination are provided
-  useEffect(() => {
-    if (map && destination && pickup && window.google?.maps) {
-      const bounds = new window.google.maps.LatLngBounds();
-      bounds.extend(pickup);
-      bounds.extend(destination);
-      map.fitBounds(bounds, 50);
-    }
-  }, [map, pickup, destination]);
-
-  // Helper to reverse geocode coordinate
+  // Reverse geocoding helper
   const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
-    if (window.google?.maps?.Geocoder) {
-      try {
-        const geocoder = new window.google.maps.Geocoder();
-        const response = await geocoder.geocode({ location: { lat, lng } });
-        if (response.results && response.results[0]) {
-          return response.results[0].formatted_address;
-        }
-      } catch (err) {
-        console.warn('Browser geocoder fallback to API:', err);
-      }
-    }
     try {
       const res = await mapsApi.reverseGeocode(lat, lng);
       return res.address;
@@ -96,31 +155,36 @@ export const MapDisplay: React.FC<MapProps> = ({
     }
   }, []);
 
-  const handlePickupDragEnd = async (e: google.maps.MapMouseEvent) => {
-    if (e.latLng && onPickupChange) {
-      const lat = e.latLng.lat();
-      const lng = e.latLng.lng();
-      const address = await reverseGeocode(lat, lng);
-      onPickupChange(lat, lng, address);
-    }
-  };
+  // 1. Initialize Leaflet Map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return;
 
-  const handleDestinationDragEnd = async (e: google.maps.MapMouseEvent) => {
-    if (e.latLng && onDestinationChange) {
-      const lat = e.latLng.lat();
-      const lng = e.latLng.lng();
-      const address = await reverseGeocode(lat, lng);
-      onDestinationChange(lat, lng, address);
-    }
-  };
+    const initialLat = pickup?.lat || DEFAULT_CENTER.lat;
+    const initialLng = pickup?.lng || DEFAULT_CENTER.lng;
 
-  const handleMapClick = async (e: google.maps.MapMouseEvent) => {
-    if (!e.latLng) return;
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
+    const map = L.map(mapContainerRef.current, {
+      center: [initialLat, initialLng],
+      zoom: 14,
+      zoomControl: false,
+    });
 
-    // If destination change handler exists, clicking map sets or repositions destination
-    if (onDestinationChange || onMapClick) {
+    // Clean Dark Street Map Tiles from CartoDB (No API key needed, high reliability)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Zoom control at bottom right
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Create LayerGroup for drivers
+    driversLayerRef.current = L.layerGroup().addTo(map);
+
+    // Click handler on map
+    map.on('click', async (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
       const address = await reverseGeocode(lat, lng);
       if (onDestinationChange) {
         onDestinationChange(lat, lng, address);
@@ -128,233 +192,305 @@ export const MapDisplay: React.FC<MapProps> = ({
       if (onMapClick) {
         onMapClick(lat, lng, address);
       }
+    });
+
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, [reverseGeocode, onDestinationChange, onMapClick]);
+
+  // 2. Update Pickup Marker
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (!pickup?.lat || !pickup?.lng) {
+      if (pickupMarkerRef.current) {
+        pickupMarkerRef.current.remove();
+        pickupMarkerRef.current = null;
+      }
+      return;
+    }
+
+    const pos = L.latLng(pickup.lat, pickup.lng);
+
+    if (!pickupMarkerRef.current) {
+      const marker = L.marker(pos, {
+        icon: createCustomMarkerIcon('pickup'),
+        draggable: !!onPickupChange,
+        title: 'Ponto de Partida',
+      }).addTo(map);
+
+      marker.bindTooltip(pickup.address || 'Ponto de Partida', {
+        permanent: false,
+        direction: 'top',
+        className: 'bg-slate-900 text-white text-xs border border-emerald-500 rounded-lg px-2 py-1',
+      });
+
+      marker.on('dragend', async () => {
+        const newPos = marker.getLatLng();
+        const address = await reverseGeocode(newPos.lat, newPos.lng);
+        marker.setTooltipContent(address);
+        onPickupChange?.(newPos.lat, newPos.lng, address);
+      });
+
+      pickupMarkerRef.current = marker;
+    } else {
+      pickupMarkerRef.current.setLatLng(pos);
+      if (pickup.address) {
+        pickupMarkerRef.current.setTooltipContent(pickup.address);
+      }
+    }
+  }, [pickup, onPickupChange, reverseGeocode]);
+
+  // 3. Update Destination Marker
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (!destination?.lat || !destination?.lng) {
+      if (destinationMarkerRef.current) {
+        destinationMarkerRef.current.remove();
+        destinationMarkerRef.current = null;
+      }
+      return;
+    }
+
+    const pos = L.latLng(destination.lat, destination.lng);
+
+    if (!destinationMarkerRef.current) {
+      const marker = L.marker(pos, {
+        icon: createCustomMarkerIcon('destination'),
+        draggable: !!onDestinationChange,
+        title: 'Destino da Corrida',
+      }).addTo(map);
+
+      marker.bindTooltip(destination.address || 'Destino', {
+        permanent: false,
+        direction: 'top',
+        className: 'bg-slate-900 text-white text-xs border border-rose-500 rounded-lg px-2 py-1',
+      });
+
+      marker.on('dragend', async () => {
+        const newPos = marker.getLatLng();
+        const address = await reverseGeocode(newPos.lat, newPos.lng);
+        marker.setTooltipContent(address);
+        onDestinationChange?.(newPos.lat, newPos.lng, address);
+      });
+
+      destinationMarkerRef.current = marker;
+    } else {
+      destinationMarkerRef.current.setLatLng(pos);
+      if (destination.address) {
+        destinationMarkerRef.current.setTooltipContent(destination.address);
+      }
+    }
+  }, [destination, onDestinationChange, reverseGeocode]);
+
+  // 4. Update Drivers Markers
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const layer = driversLayerRef.current;
+    if (!map || !layer) return;
+
+    layer.clearLayers();
+
+    // Online drivers
+    drivers.forEach((d) => {
+      if (d.currentLocation?.lat && d.currentLocation?.lng) {
+        const marker = L.marker([d.currentLocation.lat, d.currentLocation.lng], {
+          icon: createCustomMarkerIcon('driver'),
+        });
+        marker.bindTooltip(`${d.name} (${d.vehicle.brand} ${d.vehicle.model})`, {
+          direction: 'top',
+          className: 'bg-slate-900 text-slate-100 text-[10px] rounded px-1.5 py-0.5 border border-slate-700',
+        });
+        layer.addLayer(marker);
+      }
+    });
+
+    // Live Assigned Driver
+    if (driverLocation?.lat && driverLocation?.lng) {
+      const assignedMarker = L.marker([driverLocation.lat, driverLocation.lng], {
+        icon: createCustomMarkerIcon('assigned'),
+      });
+      assignedMarker.bindTooltip('Seu Motorista está a caminho!', {
+        direction: 'top',
+        permanent: true,
+        className: 'bg-emerald-950 text-emerald-300 font-bold text-xs rounded-lg px-2 py-1 border border-emerald-500',
+      });
+      layer.addLayer(assignedMarker);
+    }
+  }, [drivers, driverLocation]);
+
+  // 5. Calculate and Render Real Driving Route (OSRM with fallback)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Clear existing route if either pickup or destination is missing
+    if (!pickup?.lat || !pickup?.lng || !destination?.lat || !destination?.lng) {
+      if (routePolylineRef.current) {
+        routePolylineRef.current.remove();
+        routePolylineRef.current = null;
+      }
+      if (routeShadowPolylineRef.current) {
+        routeShadowPolylineRef.current.remove();
+        routeShadowPolylineRef.current = null;
+      }
+      setRouteInfo(null);
+      return;
+    }
+
+    let isCancelled = false;
+    setLoadingRoute(true);
+
+    const fetchRoute = async () => {
+      try {
+        // Query OSRM driving service
+        const url = `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        if (!res.ok) throw new Error('OSRM error');
+        const data = await res.json();
+
+        if (isCancelled) return;
+
+        if (data.routes && data.routes[0]) {
+          const route = data.routes[0];
+          const coords: [number, number][] = route.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+
+          // Draw shadow and active polyline
+          if (routeShadowPolylineRef.current) routeShadowPolylineRef.current.remove();
+          if (routePolylineRef.current) routePolylineRef.current.remove();
+
+          const shadow = L.polyline(coords, {
+            color: '#064e3b',
+            weight: 8,
+            opacity: 0.6,
+          }).addTo(map);
+
+          const polyline = L.polyline(coords, {
+            color: '#10b981',
+            weight: 5,
+            opacity: 0.95,
+            lineJoin: 'round',
+          }).addTo(map);
+
+          routeShadowPolylineRef.current = shadow;
+          routePolylineRef.current = polyline;
+
+          setRouteInfo({
+            distanceKm: Math.round((route.distance / 1000) * 10) / 10,
+            durationMinutes: Math.max(3, Math.round(route.duration / 60)),
+          });
+
+          // Fit bounds smoothly with padding
+          map.fitBounds(polyline.getBounds(), { padding: [50, 50], maxZoom: 16 });
+          return;
+        }
+      } catch (err) {
+        // Fallback: draw direct line connecting the points
+        if (isCancelled) return;
+        const straightCoords: [number, number][] = [
+          [pickup.lat, pickup.lng],
+          [destination.lat, destination.lng],
+        ];
+
+        if (routeShadowPolylineRef.current) routeShadowPolylineRef.current.remove();
+        if (routePolylineRef.current) routePolylineRef.current.remove();
+
+        const polyline = L.polyline(straightCoords, {
+          color: '#10b981',
+          weight: 4,
+          opacity: 0.9,
+          dashArray: '8, 8',
+        }).addTo(map);
+
+        routePolylineRef.current = polyline;
+        map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+      } finally {
+        if (!isCancelled) setLoadingRoute(false);
+      }
+    };
+
+    fetchRoute();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [pickup, destination]);
+
+  const handleRecenter = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (routePolylineRef.current) {
+      map.fitBounds(routePolylineRef.current.getBounds(), { padding: [50, 50] });
+    } else if (pickup?.lat && pickup?.lng) {
+      map.setView([pickup.lat, pickup.lng], 14);
+    } else {
+      map.setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], 13);
     }
   };
 
-  // Route points array for polyline
-  const routePath = useMemo(() => {
-    if (pickup && destination) {
-      return [
-        { lat: pickup.lat, lng: pickup.lng },
-        { lat: destination.lat, lng: destination.lng },
-      ];
-    }
-    return [];
-  }, [pickup, destination]);
-
-  // If Google Maps API is loaded without error
-  if (isLoaded && !loadError && apiKey) {
-    return (
-      <div style={{ height }} className={`relative w-full rounded-xl overflow-hidden shadow-2xl border border-slate-800 ${className}`}>
-        <GoogleMap
-          mapContainerStyle={mapContainerStyle}
-          center={center}
-          zoom={14}
-          onLoad={onLoad}
-          onUnmount={onUnmount}
-          onClick={handleMapClick}
-          options={{
-            disableDefaultUI: false,
-            zoomControl: true,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: true,
-            styles: [
-              { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
-              { elementType: 'labels.text.stroke', stylers: [{ color: '#020617' }] },
-              { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
-              { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1e293b' }] },
-              { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#334155' }] },
-              { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#16a34a' }] },
-              { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#020617' }] },
-            ],
-          }}
-        >
-          {/* Draggable Pickup Marker */}
-          {pickup && (
-            <Marker
-              position={{ lat: pickup.lat, lng: pickup.lng }}
-              draggable={!!onPickupChange}
-              onDragEnd={handlePickupDragEnd}
-              title="Ponto de Partida (Arraste para reposicionar)"
-              icon={{
-                path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
-                scale: 10,
-                fillColor: '#22c55e',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 3,
-              }}
-            />
-          )}
-
-          {/* Draggable Destination Marker */}
-          {destination && (
-            <Marker
-              position={{ lat: destination.lat, lng: destination.lng }}
-              draggable={!!onDestinationChange}
-              onDragEnd={handleDestinationDragEnd}
-              title="Destino da Corrida (Arraste para reposicionar ou clique no mapa)"
-              icon={{
-                path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
-                scale: 10,
-                fillColor: '#ef4444',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 3,
-              }}
-            />
-          )}
-
-          {/* Online Drivers Markers */}
-          {drivers.map(
-            (d) =>
-              d.currentLocation && (
-                <Marker
-                  key={d.uid}
-                  position={{ lat: d.currentLocation.lat, lng: d.currentLocation.lng }}
-                  title={`Motorista: ${d.name} (${d.vehicle.model})`}
-                  icon={{
-                    path: window.google?.maps?.SymbolPath?.FORWARD_CLOSED_ARROW || 0,
-                    scale: 6,
-                    fillColor: '#facc15',
-                    fillOpacity: 1,
-                    strokeColor: '#000000',
-                    strokeWeight: 2,
-                    rotation: d.currentLocation.heading || 0,
-                  }}
-                />
-              )
-          )}
-
-          {/* Assigned Driver Live Marker */}
-          {driverLocation && (
-            <Marker
-              position={{ lat: driverLocation.lat, lng: driverLocation.lng }}
-              title="Seu Motorista"
-              icon={{
-                path: window.google?.maps?.SymbolPath?.FORWARD_CLOSED_ARROW || 0,
-                scale: 8,
-                fillColor: '#16a34a',
-                fillOpacity: 1,
-                strokeColor: '#ffffff',
-                strokeWeight: 3,
-                rotation: driverLocation.heading || 0,
-              }}
-            />
-          )}
-
-          {/* Route Polyline */}
-          {routePath.length > 1 && (
-            <Polyline
-              path={routePath}
-              options={{
-                strokeColor: '#22c55e',
-                strokeOpacity: 0.85,
-                strokeWeight: 4,
-              }}
-            />
-          )}
-        </GoogleMap>
-
-        {/* Floating Draggable & Click Hint Badge */}
-        <div className="absolute bottom-3 left-3 right-3 z-10 pointer-events-none flex justify-center">
-          <div className="bg-slate-950/90 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-1.5 shadow-xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-            <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm" /> Arraste a Partida
-            </span>
-            <span className="text-slate-600 hidden sm:inline">|</span>
-            <span className="flex items-center gap-1.5 font-semibold text-rose-400">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-sm" /> Arraste o Destino ou clique no mapa
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Interactive High-Fidelity São Sebastião Map Canvas Fallback
   return (
     <div
       style={{ height }}
-      className={`relative w-full rounded-xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl flex flex-col justify-between p-4 ${className}`}
+      className={`relative w-full rounded-2xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-950 ${className}`}
     >
-      {/* Background Visual Map Grid of São Sebastião */}
-      <div className="absolute inset-0 bg-radial-gradient from-slate-900 to-slate-950 pointer-events-none opacity-80" />
-      <svg className="absolute inset-0 w-full h-full stroke-slate-800/60 pointer-events-none" width="100%" height="100%">
-        <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
-        {/* Coastal Line Contour */}
-        <path
-          d="M 50,20 Q 200,100 350,140 T 700,220 T 1100,320"
-          fill="none"
-          stroke="#16A34A"
-          strokeWidth="3"
-          strokeDasharray="6 4"
-          className="opacity-40"
-        />
-      </svg>
+      {/* Map DOM Container */}
+      <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {/* Top Map HUD Status */}
-      <div className="relative z-10 flex items-center justify-between bg-slate-950/80 backdrop-blur-md p-3 rounded-lg border border-slate-800 text-xs">
-        <div className="flex items-center gap-2">
+      {/* Top HUD: Status & Active Drivers */}
+      <div className="absolute top-3 left-3 right-3 z-[400] pointer-events-none flex items-center justify-between gap-2">
+        <div className="bg-slate-950/90 backdrop-blur-md border border-slate-700/80 rounded-xl px-3 py-1.5 shadow-xl text-xs flex items-center gap-2 pointer-events-auto">
           <Navigation className="w-4 h-4 text-emerald-400 animate-pulse" />
-          <span className="font-semibold text-white">Mapa Interativo — São Sebastião / SP</span>
-        </div>
-        <div className="flex items-center gap-2 text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-          <span>{drivers.length} motoristas online na região</span>
-        </div>
-      </div>
-
-      {/* Center Interactive Visualization */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center py-6">
-        <div className="w-full max-w-md bg-slate-950/90 border border-emerald-500/30 rounded-xl p-4 shadow-xl backdrop-blur-sm space-y-3">
-          {/* Pickup info */}
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-400">
-              <MapPin className="w-5 h-5" />
-            </div>
-            <div className="flex-1">
-              <span className="text-[11px] font-bold uppercase text-emerald-400 tracking-wider">Partida / Embarque</span>
-              <p className="text-sm font-semibold text-white truncate">{pickup?.address || 'Centro Histórico, São Sebastião'}</p>
-              <span className="text-[11px] text-slate-400">GPS: {pickup?.lat.toFixed(4)}, {pickup?.lng.toFixed(4)}</span>
-            </div>
-          </div>
-
-          {/* Destination info */}
-          {destination && (
-            <div className="flex items-start gap-3 pt-2 border-t border-slate-800">
-              <div className="p-2 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-400">
-                <Navigation className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <span className="text-[11px] font-bold uppercase text-rose-400 tracking-wider">Destino</span>
-                <p className="text-sm font-semibold text-white truncate">{destination.address || 'Praia Selecionada'}</p>
-                <span className="text-[11px] text-slate-400">GPS: {destination.lat.toFixed(4)}, {destination.lng.toFixed(4)}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Active / Available Drivers in area */}
-          <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-300">
-            <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-              <Car className="w-4 h-4" /> Frota Local Ativa:
+          <span className="font-bold text-white text-[11px] sm:text-xs">
+            São Sebastião • Litoral Norte SP
+          </span>
+          {routeInfo && (
+            <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 font-bold text-[10px]">
+              🛣️ {routeInfo.distanceKm} km (~{routeInfo.durationMinutes} min)
             </span>
-            <span>{drivers.length > 0 ? `${drivers.length} veículos rastreados` : 'Buscando motoristas na zona...'}</span>
-          </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <button
+            type="button"
+            onClick={handleRecenter}
+            className="p-2 rounded-xl bg-slate-950/90 backdrop-blur-md border border-slate-700/80 text-slate-300 hover:text-emerald-400 hover:border-emerald-500 transition-colors shadow-xl"
+            title="Recentralizar Rota no Mapa"
+          >
+            <Crosshair className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* Bottom Hint */}
-      <div className="relative z-10 text-[11px] text-slate-400 text-center bg-slate-950/60 backdrop-blur-sm py-1.5 px-3 rounded-lg border border-slate-800/60 flex items-center justify-center gap-1.5">
-        <AlertCircle className="w-3.5 h-3.5 text-emerald-400" />
-        <span>Rastreamento georreferenciado contínuo em São Sebastião, Barequeçaba, Maresias e Costa Sul</span>
+      {/* Bottom HUD: Draggable markers guidance */}
+      <div className="absolute bottom-3 left-3 right-3 z-[400] pointer-events-none flex justify-center">
+        <div className="bg-slate-950/90 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pointer-events-auto">
+          <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" />
+            Ponto de Partida (Arraste)
+          </span>
+          <span className="text-slate-600 hidden sm:inline">|</span>
+          <span className="flex items-center gap-1.5 font-semibold text-rose-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
+            Destino (Arraste ou clique no mapa)
+          </span>
+          {loadingRoute && (
+            <span className="text-emerald-300 text-[10px] animate-pulse">
+              Calculando melhor trajeto...
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
 };
+
+export default MapDisplay;

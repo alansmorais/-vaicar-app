@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
-import { Mail, Lock, AlertCircle, ArrowRight, Car } from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowRight, Car, Bike } from 'lucide-react';
 
 export const DriverLoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isCourier = searchParams.get('role') === 'courier';
   const { loginEmailPassword, devLogin } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -22,7 +24,7 @@ export const DriverLoginPage: React.FC = () => {
       navigate('/driver');
     } catch (err: any) {
       console.error('Driver login error:', err);
-      setError(err.message || 'Credenciais de motorista inválidas.');
+      setError(err.message || 'Credenciais inválidas.');
     } finally {
       setLoading(false);
     }
@@ -47,9 +49,24 @@ export const DriverLoginPage: React.FC = () => {
           <Link to="/" className="inline-block">
             <img src="/vaicar_logo.png" alt="VaiCar" className="h-10 mx-auto rounded object-contain" />
           </Link>
-          <h2 className="text-2xl font-black text-white">Login do Motorista & Entregador</h2>
+          <div className="flex items-center justify-center gap-2">
+            {isCourier ? (
+              <span className="p-2 rounded-xl bg-amber-950/80 border border-amber-500/40 text-amber-400">
+                <Bike className="w-5 h-5" />
+              </span>
+            ) : (
+              <span className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-400">
+                <Car className="w-5 h-5" />
+              </span>
+            )}
+            <h2 className="text-2xl font-black text-white">
+              {isCourier ? 'Login do Entregador' : 'Login do Motorista'}
+            </h2>
+          </div>
           <p className="text-xs text-slate-400">
-            Acesse seu painel para gerenciar disponibilidade e receber corridas e entregas.
+            {isCourier
+              ? 'Acesse seu painel para gerenciar entregas rápidas de bicicleta ou motocicleta.'
+              : 'Acesse seu painel para gerenciar disponibilidade e receber chamadas de corridas.'}
           </p>
         </div>
 
