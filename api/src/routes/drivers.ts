@@ -74,12 +74,16 @@ driversRouter.patch('/me', async (req: Request, res: Response, next: NextFunctio
       throw new AppError(ErrorCode.NOT_FOUND, 'Perfil não encontrado.', 404);
     }
 
-    const { vehicle, operatingZones, photoUrl } = req.body;
+    const { vehicle, operatingZones, photoUrl, cnhUrl, crlvUrl, proofOfAddressUrl, criminalRecordUrl } = req.body;
     const updated = {
       ...driver,
       ...(vehicle ? { vehicle: { ...driver.vehicle, ...vehicle } } : {}),
       ...(operatingZones ? { operatingZones } : {}),
       ...(photoUrl ? { photoUrl } : {}),
+      ...(cnhUrl ? { cnhUrl } : {}),
+      ...(crlvUrl ? { crlvUrl } : {}),
+      ...(proofOfAddressUrl ? { proofOfAddressUrl } : {}),
+      ...(criminalRecordUrl ? { criminalRecordUrl, criminalRecordStatus: 'PENDING' as const } : {}),
       updatedAt: new Date().toISOString(),
     };
 

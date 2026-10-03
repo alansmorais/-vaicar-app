@@ -21,6 +21,8 @@ export const PassengerRegisterPage: React.FC = () => {
   const [wantDiscount, setWantDiscount] = useState(false);
   const [criminalRecordData, setCriminalRecordData] = useState<string>('');
   const [criminalRecordFileName, setCriminalRecordFileName] = useState<string>('');
+  const [idDocumentData, setIdDocumentData] = useState<string>('');
+  const [idDocumentFileName, setIdDocumentFileName] = useState<string>('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,19 @@ export const PassengerRegisterPage: React.FC = () => {
       setPhotoPreview(normalizedDataUrl);
     } catch (err: any) {
       setError(err?.message || 'Falha ao carregar foto. Selecione JPG, PNG ou WebP.');
+    }
+  };
+
+  const handleIdDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setError(null);
+      const normalized = await processImageFile(file);
+      setIdDocumentData(normalized);
+      setIdDocumentFileName(file.name);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao processar documento de identificação (RG/CNH).');
     }
   };
 
@@ -110,6 +125,17 @@ export const PassengerRegisterPage: React.FC = () => {
         }
       }
 
+      // 3b. Upload ID document if provided
+      let finalIdDocUrl = idDocumentData;
+      if (idDocumentData) {
+        try {
+          const uploadId = await storageApi.uploadImage(idDocumentData, 'users', `${fbUser.uid}_identidade`);
+          finalIdDocUrl = uploadId.url;
+        } catch (uploadErr) {
+          console.warn('ID document upload note:', uploadErr);
+        }
+      }
+
       // 4. Register passenger profile in Firestore via authoritative API
       await authApi.registerPassenger({
         uid: fbUser.uid,
@@ -117,6 +143,7 @@ export const PassengerRegisterPage: React.FC = () => {
         whatsapp: whatsapp.trim(),
         email: email.trim().toLowerCase(),
         photoUrl: finalPhotoUrl,
+        idDocumentUrl: finalIdDocUrl || undefined,
         termsAccepted: true,
         hasCriminalRecordCheck: Boolean(wantDiscount && finalCriminalUrl),
         criminalRecordUrl: finalCriminalUrl || undefined,
@@ -312,6 +339,38 @@ export const PassengerRegisterPage: React.FC = () => {
                   Emitir grátis online ↗
                 </a>
               </div>
+            </div>
+          </div>
+
+          {/* Documento Oficial de Identidade (RG/CNH) */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-base">🪪</span>
+                <span className="text-xs font-bold text-white">Documento Oficial de Identidade (RG ou CNH)</span>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                Recomendado
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Ajuda na verificação de segurança da sua conta para corridas noturnas e agendamentos.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+              <label
+                htmlFor="passenger-id-upload"
+                className="w-full sm:w-auto text-center py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs cursor-pointer transition-colors"
+              >
+                {idDocumentFileName ? `✓ Anexado: ${idDocumentFileName}` : 'Anexar Foto do RG ou CNH'}
+              </label>
+              <input
+                id="passenger-id-upload"
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleIdDocumentUpload}
+                className="hidden"
+              />
+              <span className="text-[10px] text-slate-400">Formatos aceitos: JPG, PNG ou PDF</span>
             </div>
           </div>
 

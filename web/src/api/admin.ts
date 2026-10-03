@@ -35,6 +35,17 @@ export const adminApi = {
       body: JSON.stringify({ reason }),
     }),
 
+  deleteDriver: (driverId: string) =>
+    apiFetch<{ message: string }>(`/admin/drivers/${driverId}`, {
+      method: 'DELETE',
+    }),
+
+  requestDriverDocs: (driverId: string, requestedDocs: string, reason?: string) =>
+    apiFetch<DriverProfile>(`/admin/drivers/${driverId}/request-docs`, {
+      method: 'POST',
+      body: JSON.stringify({ requestedDocs, reason }),
+    }),
+
   getPassengers: () => apiFetch<PassengerProfile[]>('/admin/passengers'),
 
   blockPassenger: (passengerId: string, reason?: string, unpaidAmount?: number) =>
@@ -51,6 +62,12 @@ export const adminApi = {
   deletePassenger: (passengerId: string) =>
     apiFetch<{ message: string }>(`/admin/passengers/${passengerId}`, {
       method: 'DELETE',
+    }),
+
+  requestPassengerDocs: (passengerId: string, requestedDocs: string, reason?: string) =>
+    apiFetch<PassengerProfile>(`/admin/passengers/${passengerId}/request-docs`, {
+      method: 'POST',
+      body: JSON.stringify({ requestedDocs, reason }),
     }),
 
   getReports: () => apiFetch<any[]>('/admin/reports'),

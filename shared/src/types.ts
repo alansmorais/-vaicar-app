@@ -25,10 +25,12 @@ export interface PassengerProfile {
   email: string;
   whatsapp: string;
   photoUrl: string;
+  idDocumentUrl?: string;
   termsAccepted: boolean;
   hasCriminalRecordCheck?: boolean;
   criminalRecordUrl?: string;
   criminalRecordStatus?: 'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  documentsRequested?: string;
   isBlocked?: boolean;
   blockedReason?: string;
   hasUnpaidDebt?: boolean;
@@ -60,6 +62,10 @@ export interface DriverProfile {
   email: string;
   whatsapp: string;
   photoUrl: string;
+  cnhUrl?: string;
+  crlvUrl?: string;
+  proofOfAddressUrl?: string;
+  documentsRequested?: string;
   professionalCategory: string;
   cnhNumber: string;
   isCourier?: boolean;

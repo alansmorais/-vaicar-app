@@ -7,6 +7,7 @@ import {
   listAllDrivers,
   getDriverProfile,
   saveDriverProfile,
+  deleteDriverProfile,
   listAllPassengers,
   getPassengerProfile,
   savePassengerProfile,
@@ -18,7 +19,7 @@ import {
   getPlatformPricing,
   updatePlatformPricing,
 } from '../services/firestore.js';
-import { sendDriverStatusEmail, emailLogs, sendTransactionalEmail } from '../services/email.js';
+import { sendDriverStatusEmail, sendDocumentsRequestedEmail, emailLogs, sendTransactionalEmail } from '../services/email.js';
 
 export const adminRouter = Router();
 
@@ -138,6 +139,77 @@ adminRouter.post('/drivers/:id/suspend', async (req: Request, res: Response, nex
   }
 });
 
+adminRouter.post('/drivers/:id/request-docs', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const driverId = String(req.params.id);
+    const driver = await getDriverProfile(driverId);
+    if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
+
+    const { requestedDocs, reason } = req.body;
+    if (!requestedDocs) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Especifique os documentos solicitados.', 400);
+    }
+
+    const updated = {
+      ...driver,
+      status: 'PENDING_APPROVAL' as const,
+      isOnline: false,
+      documentsRequested: requestedDocs,
+      rejectionReason: `Documentação pendente: ${requestedDocs}`,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await saveDriverProfile(updated);
+
+    sendDocumentsRequestedEmail(driver.email, driver.name, requestedDocs, reason).catch(console.error);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      message: 'Solicitação de documentos enviada por e-mail com sucesso.',
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.delete('/drivers/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const driverId = String(req.params.id);
+    const driver = await getDriverProfile(driverId);
+    if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
+
+    await deleteDriverProfile(driverId);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      message: `Motorista/Entregador "${driver.name}" excluído com sucesso.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/drivers/:id/delete', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const driverId = String(req.params.id);
+    const driver = await getDriverProfile(driverId);
+    if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
+
+    await deleteDriverProfile(driverId);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      message: `Motorista/Entregador "${driver.name}" excluído com sucesso.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 adminRouter.get('/passengers', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const passengers = await listAllPassengers();
@@ -234,6 +306,39 @@ adminRouter.post('/passengers/:id/delete', async (req: Request, res: Response, n
       success: true,
       requestId: req.id,
       message: `Passageiro ${passenger.name} excluído com sucesso.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post('/passengers/:id/request-docs', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const passengerId = String(req.params.id);
+    const passenger = await getPassengerProfile(passengerId);
+    if (!passenger) throw new AppError(ErrorCode.NOT_FOUND, 'Passageiro não encontrado.', 404);
+
+    const { requestedDocs, reason } = req.body;
+    if (!requestedDocs) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Especifique os documentos solicitados.', 400);
+    }
+
+    const updated = {
+      ...passenger,
+      documentsRequested: requestedDocs,
+      criminalRecordStatus: 'PENDING' as const,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await savePassengerProfile(updated);
+
+    sendDocumentsRequestedEmail(passenger.email, passenger.name, requestedDocs, reason).catch(console.error);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      message: 'Solicitação de documentos enviada por e-mail com sucesso.',
+      data: updated,
     });
   } catch (error) {
     next(error);

@@ -473,6 +473,25 @@ export const DriverDashboardPage: React.FC = () => {
           </div>
         )}
 
+        {/* PENDING DOCUMENTS REQUEST CARD */}
+        {driver && driver.documentsRequested && (
+          <div className="p-5 rounded-2xl border bg-amber-950/60 border-amber-500 text-amber-200 text-xs space-y-3 shadow-lg">
+            <div className="flex items-center gap-2 font-bold text-sm text-amber-300">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              <span>Documentação Solicitada pela Administração</span>
+            </div>
+            <div className="p-3 bg-amber-900/30 rounded-xl border border-amber-600/40 text-amber-100 text-xs space-y-1">
+              <span className="font-semibold block">O administrador do VaiCar solicitou os seguintes documentos:</span>
+              <p className="whitespace-pre-wrap font-mono text-[11px] bg-slate-950/60 p-2.5 rounded-lg border border-amber-500/30 text-amber-200">
+                {driver.documentsRequested}
+              </p>
+            </div>
+            <p className="text-[11px] text-amber-300/80">
+              Você também recebeu um e-mail com estas orientações. Por favor, regularize os documentos solicitados para liberação da sua conta.
+            </p>
+          </div>
+        )}
+
         {/* APPROVAL STATUS NOTIFICATION CARD */}
         {driver && !isApproved && (
           <div

@@ -225,6 +225,34 @@ export async function sendDriverStatusEmail(
   });
 }
 
+export async function sendDocumentsRequestedEmail(
+  to: string,
+  name: string,
+  requestedDocs: string,
+  instructions?: string
+) {
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #F59E0B; border-radius: 12px; background: #0F172A; color: #F8FAFC;">
+      <h1 style="color: #F59E0B; margin-bottom: 8px;">Ação Necessária: Envio de Documentos</h1>
+      <p style="font-size: 16px; color: #94A3B8;">Olá, ${name}.</p>
+      <div style="background: #1E293B; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+        <p style="color: #FACC15; margin: 0; font-weight: bold;">Documentos solicitados pela administração VaiCar:</p>
+        <p style="color: #F8FAFC; margin-top: 8px; font-size: 14px; white-space: pre-wrap;">${requestedDocs}</p>
+        ${instructions ? `<p style="color: #94A3B8; font-size: 12px; margin-top: 10px;"><strong>Observação:</strong> ${instructions}</p>` : ''}
+      </div>
+      <p style="color: #CBD5E1; font-size: 13px;">Para a segurança da comunidade de São Sebastião, analisamos cuidadosamente fotos da CNH, CRLV do veículo e Atestado de Antecedentes Criminais.</p>
+      <p style="color: #64748B; font-size: 11px; margin-top: 16px;">Acesse seu painel no VaiCar para enviar os arquivos solicitados.</p>
+    </div>
+  `;
+
+  return sendTransactionalEmail({
+    to,
+    subject: 'Ação Necessária: Envio de Documentos — VaiCar São Sebastião',
+    template: 'DOCUMENTS_REQUESTED',
+    html,
+  });
+}
+
 export async function sendRideReceiptEmail(to: string, receipt: Receipt) {
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #16A34A; border-radius: 12px; background: #0F172A; color: #F8FAFC;">

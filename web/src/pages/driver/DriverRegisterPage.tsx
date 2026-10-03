@@ -83,6 +83,14 @@ export const DriverRegisterPage: React.FC = () => {
   const [criminalRecordData, setCriminalRecordData] = useState<string>('');
   const [criminalRecordFileName, setCriminalRecordFileName] = useState<string>('');
 
+  // Additional Verification Documents (CNH, CRLV, Residência)
+  const [cnhPhotoData, setCnhPhotoData] = useState<string>('');
+  const [cnhPhotoName, setCnhPhotoName] = useState<string>('');
+  const [crlvPhotoData, setCrlvPhotoData] = useState<string>('');
+  const [crlvPhotoName, setCrlvPhotoName] = useState<string>('');
+  const [proofAddressData, setProofAddressData] = useState<string>('');
+  const [proofAddressName, setProofAddressName] = useState<string>('');
+
   // Vehicle
   const [brand, setBrand] = useState(initialVehicleType === 'bicycle' ? 'Caloi' : '');
   const [model, setModel] = useState(initialVehicleType === 'bicycle' ? 'Aro 29' : '');
@@ -153,6 +161,48 @@ export const DriverRegisterPage: React.FC = () => {
       setCriminalRecordFileName(file.name);
     } catch (err: any) {
       setError(err?.message || 'Falha ao processar arquivo de antecedentes criminais.');
+    }
+  };
+
+  const handleCnhUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setError(null);
+      const normalized = await processImageFile(file);
+      setCnhPhotoData(normalized);
+      setCnhPhotoName(file.name);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao processar foto da CNH/documento.');
+    }
+  };
+
+  const handleCrlvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setError(null);
+      const normalized = await processImageFile(file);
+      setCrlvPhotoData(normalized);
+      setCrlvPhotoName(file.name);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao processar documento do veículo (CRLV).');
+    }
+  };
+
+  const handleProofAddressUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setError(null);
+      const normalized = await processImageFile(file);
+      setProofAddressData(normalized);
+      setProofAddressName(file.name);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao processar comprovante de residência.');
     }
   };
 
@@ -239,6 +289,39 @@ export const DriverRegisterPage: React.FC = () => {
         }
       }
 
+      // 3b. Upload CNH / Document
+      let finalCnhUrl: string | undefined = undefined;
+      if (cnhPhotoData) {
+        try {
+          const uploadCnh = await storageApi.uploadImage(cnhPhotoData, 'drivers', `${fbUser.uid}_cnh`);
+          finalCnhUrl = uploadCnh.url;
+        } catch (uploadErr) {
+          console.warn('CNH upload note:', uploadErr);
+        }
+      }
+
+      // 3c. Upload CRLV (Vehicle document)
+      let finalCrlvUrl: string | undefined = undefined;
+      if (crlvPhotoData) {
+        try {
+          const uploadCrlv = await storageApi.uploadImage(crlvPhotoData, 'drivers', `${fbUser.uid}_crlv`);
+          finalCrlvUrl = uploadCrlv.url;
+        } catch (uploadErr) {
+          console.warn('CRLV upload note:', uploadErr);
+        }
+      }
+
+      // 3d. Upload Proof of Address
+      let finalProofAddressUrl: string | undefined = undefined;
+      if (proofAddressData) {
+        try {
+          const uploadProof = await storageApi.uploadImage(proofAddressData, 'drivers', `${fbUser.uid}_residencia`);
+          finalProofAddressUrl = uploadProof.url;
+        } catch (uploadErr) {
+          console.warn('Proof of address upload note:', uploadErr);
+        }
+      }
+
       // 4. Register Driver in backend
       await authApi.registerDriver({
         uid: fbUser.uid,
@@ -248,6 +331,9 @@ export const DriverRegisterPage: React.FC = () => {
         whatsapp: whatsapp.trim(),
         email: email.trim().toLowerCase(),
         photoUrl: finalPhotoUrl,
+        cnhUrl: finalCnhUrl,
+        crlvUrl: finalCrlvUrl,
+        proofOfAddressUrl: finalProofAddressUrl,
         professionalCategory,
         cnhNumber: isBicycle ? (cnhNumber || 'ISENTO_BIKE') : cnhNumber.trim(),
         criminalRecordUrl: finalCriminalUrl,
@@ -576,6 +662,40 @@ export const DriverRegisterPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Foto da CNH ou RG */}
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-emerald-400" />
+                  {vehicleType === 'bicycle' ? 'Foto do Documento de Identidade (RG/CNH) *' : 'Foto da CNH (Frente e Verso com EAR) *'}
+                </span>
+                <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700">
+                  Obrigatório
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                {vehicleType === 'bicycle'
+                  ? 'Envie foto legível do seu RG ou CNH para validação de segurança da sua conta.'
+                  : 'Envie foto nítida da sua CNH física aberta ou o print/PDF da CNH Digital pelo aplicativo CDT.'}
+              </p>
+              <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                <label
+                  htmlFor="driver-cnh-upload"
+                  className="w-full sm:w-auto text-center py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer transition-colors"
+                >
+                  {cnhPhotoName ? `✓ Anexado: ${cnhPhotoName}` : 'Anexar Foto da CNH / RG *'}
+                </label>
+                <input
+                  id="driver-cnh-upload"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleCnhUpload}
+                  className="hidden"
+                />
+                <span className="text-[11px] text-slate-400">Formatos aceitos: JPG, PNG ou PDF</span>
+              </div>
+            </div>
+
             {/* Atestado de Antecedentes Criminais (Obrigatório) */}
             <div className="p-3.5 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-2">
               <div className="flex items-center justify-between">
@@ -611,6 +731,36 @@ export const DriverRegisterPage: React.FC = () => {
                 >
                   Emitir grátis online na Polícia Civil ↗
                 </a>
+              </div>
+            </div>
+
+            {/* Comprovante de Residência */}
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-emerald-400" /> Comprovante de Residência
+                </span>
+                <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                  Recomendado
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Comprovante recente no Litoral Norte (energia, água, internet ou fatura de cartão em seu nome ou de familiar).
+              </p>
+              <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                <label
+                  htmlFor="driver-residence-upload"
+                  className="w-full sm:w-auto text-center py-2 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs cursor-pointer transition-colors"
+                >
+                  {proofAddressName ? `✓ Anexado: ${proofAddressName}` : 'Anexar Comprovante de Residência'}
+                </label>
+                <input
+                  id="driver-residence-upload"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleProofAddressUpload}
+                  className="hidden"
+                />
               </div>
             </div>
           </div>
@@ -734,6 +884,39 @@ export const DriverRegisterPage: React.FC = () => {
                 />
               </div>
             </div>
+
+            {/* CRLV - Documento do Veículo */}
+            {vehicleType !== 'bicycle' && (
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2 mt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-emerald-400" /> Documento do Veículo (CRLV Digital ou Foto) *
+                  </span>
+                  <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700">
+                    Obrigatório
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Envie o CRLV do ano vigente (PDF emitido pelo Detran/CDT ou foto legível do documento impresso).
+                </p>
+                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                  <label
+                    htmlFor="driver-crlv-upload"
+                    className="w-full sm:w-auto text-center py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer transition-colors"
+                  >
+                    {crlvPhotoName ? `✓ Anexado: ${crlvPhotoName}` : 'Anexar Documento do Veículo (CRLV) *'}
+                  </label>
+                  <input
+                    id="driver-crlv-upload"
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={handleCrlvUpload}
+                    className="hidden"
+                  />
+                  <span className="text-[11px] text-slate-400">Formatos aceitos: JPG, PNG ou PDF</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 6. ZONAS DE ATUAÇÃO */}

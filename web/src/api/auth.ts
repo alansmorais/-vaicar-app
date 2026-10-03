@@ -7,6 +7,7 @@ export interface RegisterPassengerInput {
   whatsapp: string;
   email: string;
   photoUrl: string;
+  idDocumentUrl?: string;
   termsAccepted: boolean;
   hasCriminalRecordCheck?: boolean;
   criminalRecordUrl?: string;
@@ -20,6 +21,9 @@ export interface RegisterDriverInput {
   whatsapp: string;
   email: string;
   photoUrl: string;
+  cnhUrl?: string;
+  crlvUrl?: string;
+  proofOfAddressUrl?: string;
   professionalCategory: string;
   cnhNumber: string;
   criminalRecordUrl?: string;

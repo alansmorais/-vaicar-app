@@ -42,7 +42,7 @@ export const authRouter = Router();
  */
 authRouter.post('/register-passenger', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { uid, name, whatsapp, email, photoUrl, termsAccepted, hasCriminalRecordCheck, criminalRecordUrl } = req.body;
+    const { uid, name, whatsapp, email, photoUrl, termsAccepted, hasCriminalRecordCheck, criminalRecordUrl, idDocumentUrl } = req.body;
 
     if (!uid || typeof uid !== 'string') {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Identificador de usuário (uid) obrigatório.', 400);
@@ -116,6 +116,7 @@ authRouter.post('/register-passenger', async (req: Request, res: Response, next:
       email: email.trim().toLowerCase(),
       whatsapp: normalizedPhone,
       photoUrl,
+      idDocumentUrl: idDocumentUrl || existingPassenger?.idDocumentUrl || undefined,
       termsAccepted: true,
       hasCriminalRecordCheck: hasRecordCheck || Boolean(existingPassenger?.hasCriminalRecordCheck),
       criminalRecordUrl: criminalRecordUrl || existingPassenger?.criminalRecordUrl || undefined,
@@ -167,6 +168,9 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       whatsapp,
       email,
       photoUrl,
+      cnhUrl,
+      crlvUrl,
+      proofOfAddressUrl,
       professionalCategory,
       cnhNumber,
       criminalRecordUrl,
@@ -255,6 +259,9 @@ authRouter.post('/register-driver', async (req: Request, res: Response, next: Ne
       email: email.trim().toLowerCase(),
       whatsapp: normalizedPhone,
       photoUrl,
+      cnhUrl: cnhUrl || undefined,
+      crlvUrl: crlvUrl || undefined,
+      proofOfAddressUrl: proofOfAddressUrl || undefined,
       professionalCategory,
       isCourier: isCourierMode,
       cnhNumber: isBicycle ? (cnhNumber || 'ISENTO_BIKE') : cnhNumber.replace(/\D/g, ''),
