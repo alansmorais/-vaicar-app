@@ -83,13 +83,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/80 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] overflow-y-auto bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
-      <div
-        className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 sm:p-7 relative my-auto animate-in zoom-in-95 duration-150"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="min-h-full flex items-center justify-center p-3 sm:p-4 py-6 sm:py-8">
+        <div
+          className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 sm:p-7 relative animate-in zoom-in-95 duration-150"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -230,6 +231,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             </div>
           </form>
         )}
+      </div>
       </div>
     </div>,
     document.body

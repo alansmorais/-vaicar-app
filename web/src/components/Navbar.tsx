@@ -299,114 +299,116 @@ export const Navbar: React.FC = () => {
         typeof document !== 'undefined' &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
+            className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={() => setLoginModalOpen(false)}
             role="dialog"
             aria-modal="true"
             aria-label="Como você deseja entrar"
           >
-            <div
-              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 relative my-auto animate-in zoom-in-95 duration-150"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={() => setLoginModalOpen(false)}
-                className="absolute top-5 right-5 text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
-                title="Fechar modal"
+            <div className="min-h-full flex items-center justify-center p-3 sm:p-4 py-6 sm:py-8">
+              <div
+                className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 relative animate-in zoom-in-95 duration-150"
+                onClick={(e) => e.stopPropagation()}
               >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="text-center space-y-2 pt-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-500/30">
-                  Acesso à Plataforma VaiCar
-                </span>
-                <h3 className="text-2xl font-black text-white tracking-tight">Como você deseja entrar?</h3>
-                <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  Selecione o seu perfil para acessar o painel correspondente:
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {/* Option 1: Passageiro */}
-                <Link
-                  to="/passenger/login"
+                <button
+                  type="button"
                   onClick={() => setLoginModalOpen(false)}
-                  className="w-full p-4 rounded-2xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/60 flex items-center justify-between group transition-all shadow-md"
+                  className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Fechar modal"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-emerald-950/90 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
-                      <User className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors block">
-                        Entrar como Passageiro
-                      </span>
-                      <span className="text-[11px] text-slate-400 block">
-                        Pedir corridas, acompanhar motoristas e entregas
-                      </span>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
-                </Link>
+                  <X className="w-5 h-5" />
+                </button>
 
-                {/* Option 2: Motorista */}
-                <Link
-                  to="/driver/login"
-                  onClick={() => setLoginModalOpen(false)}
-                  className="w-full p-4 rounded-2xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/60 flex items-center justify-between group transition-all shadow-md"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-emerald-950/90 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
-                      <Car className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                      <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors block">
-                        Entrar como Motorista
-                      </span>
-                      <span className="text-[11px] text-slate-400 block">
-                        Conduzir carro ou moto (R$ 100/mês ou 10%)
-                      </span>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
-                </Link>
+                <div className="text-center space-y-1.5 pt-1 pr-6">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                    Acesso VaiCar
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">Como você deseja entrar?</h3>
+                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                    Selecione o seu perfil para acessar o painel correspondente:
+                  </p>
+                </div>
 
-                {/* Option 3: Entregador */}
-                <Link
-                  to="/driver/login?role=courier"
-                  onClick={() => setLoginModalOpen(false)}
-                  className="w-full p-4 rounded-2xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 flex items-center justify-between group transition-all shadow-md"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-amber-950/90 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
-                      <Bike className="w-5 h-5" />
+                <div className="space-y-2.5">
+                  {/* Option 1: Passageiro */}
+                  <Link
+                    to="/passenger/login"
+                    onClick={() => setLoginModalOpen(false)}
+                    className="w-full p-3.5 rounded-2xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/60 flex items-center justify-between group transition-all shadow-md"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-950/90 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors block">
+                          Entrar como Passageiro
+                        </span>
+                        <span className="text-[11px] text-slate-400 block">
+                          Pedir corridas, acompanhar motoristas e entregas
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <span className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors block">
-                        Entrar como Entregador
-                      </span>
-                      <span className="text-[11px] text-slate-400 block">
-                        Delivery de bike (sem CNH) ou moto
-                      </span>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
-                </Link>
-              </div>
+                    <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
+                  </Link>
 
-              <div className="pt-2 border-t border-slate-800 flex flex-col gap-2 text-center">
-                <p className="text-[11px] text-slate-400">
-                  💡 <strong>Conta Unificada:</strong> Você pode usar o mesmo e-mail e telefone para os 3 perfis!
-                </p>
-                <Link
-                  to="/login"
-                  onClick={() => setLoginModalOpen(false)}
-                  className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold"
-                >
-                  Ver tela completa de login →
-                </Link>
+                  {/* Option 2: Motorista */}
+                  <Link
+                    to="/driver/login"
+                    onClick={() => setLoginModalOpen(false)}
+                    className="w-full p-3.5 rounded-2xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/60 flex items-center justify-between group transition-all shadow-md"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-950/90 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <span className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors block">
+                          Entrar como Motorista
+                        </span>
+                        <span className="text-[11px] text-slate-400 block">
+                          Conduzir carro ou moto (R$ 100/mês ou 10%)
+                        </span>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
+                  </Link>
+
+                  {/* Option 3: Entregador */}
+                  <Link
+                    to="/driver/login?role=courier"
+                    onClick={() => setLoginModalOpen(false)}
+                    className="w-full p-3.5 rounded-2xl bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 flex items-center justify-between group transition-all shadow-md"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-950/90 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
+                        <Bike className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <span className="text-sm font-bold text-white group-hover:text-amber-400 transition-colors block">
+                          Entrar como Entregador
+                        </span>
+                        <span className="text-[11px] text-slate-400 block">
+                          Delivery de bike (sem CNH) ou moto
+                        </span>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
+                  </Link>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 flex flex-col gap-1.5 text-center">
+                  <p className="text-[11px] text-slate-400">
+                    💡 <strong>Conta Unificada:</strong> Você pode usar o mesmo e-mail e telefone para os 3 perfis!
+                  </p>
+                  <Link
+                    to="/login"
+                    onClick={() => setLoginModalOpen(false)}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold"
+                  >
+                    Ver tela completa de login →
+                  </Link>
+                </div>
               </div>
             </div>
           </div>,
