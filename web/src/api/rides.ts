@@ -43,6 +43,11 @@ export const ridesApi = {
       method: 'POST',
     }),
 
+  decline: (rideId: string) =>
+    apiFetch<Ride>(`/rides/${rideId}/decline`, {
+      method: 'POST',
+    }),
+
   arrived: (rideId: string) =>
     apiFetch<Ride>(`/rides/${rideId}/arrived`, {
       method: 'POST',

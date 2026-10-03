@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PublicDriverMarker } from '../api/drivers.js';
 import { mapsApi } from '../api/maps.js';
-import { Navigation, Crosshair, LocateFixed } from 'lucide-react';
+import { Navigation, Crosshair, LocateFixed, ExternalLink } from 'lucide-react';
 
 interface MapProps {
   pickup: { lat: number; lng: number; address?: string };
@@ -30,30 +30,31 @@ function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'ass
     return L.divIcon({
       className: 'custom-pickup-marker-icon',
       html: `
-        <div style="position:relative; display:flex; flex-direction:column; align-items:center; transform:translate(-50%, -100%); cursor:grab;">
+        <div style="width:130px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:grab; pointer-events:auto; touch-action:none; user-select:none;">
           <!-- Floating Pill Badge -->
           <div style="
             background: #064e3b;
             color: #ecfdf5;
             font-size: 11px;
             font-weight: 800;
-            padding: 3px 8px;
+            padding: 4px 10px;
             border-radius: 9999px;
-            border: 1.5px solid #34d399;
+            border: 2px solid #34d399;
             box-shadow: 0 4px 14px rgba(0,0,0,0.6);
             white-space: nowrap;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
             display: flex;
             align-items: center;
-            gap: 4px;
-            pointer-events: none;
+            gap: 5px;
+            pointer-events: auto;
+            cursor: grab;
           ">
             <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#34d399; box-shadow:0 0 6px #34d399;"></span>
             Partida (Arraste)
           </div>
 
           <!-- Teardrop Pin with Needle pointing to exact GPS -->
-          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));">
+          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); cursor:grab;">
             <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 0C8.05887 0 0 8.05887 0 18C0 29.5 18 44 18 44C18 44 36 29.5 36 18C36 8.05887 27.9411 0 18 0Z" fill="#10b981"/>
               <path d="M18 2C9.16344 2 2 9.16344 2 18C2 28.5 18 41.5 18 41.5C18 41.5 34 28.5 34 18C34 9.16344 26.8366 2 18 2Z" fill="#059669"/>
@@ -66,8 +67,8 @@ function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'ass
           <div style="width:14px; height:4px; border-radius:50%; background:rgba(0,0,0,0.35); filter:blur(1px); margin-top:-2px;"></div>
         </div>
       `,
-      iconSize: [0, 0],
-      iconAnchor: [0, 0],
+      iconSize: [130, 80],
+      iconAnchor: [65, 80],
     });
   }
 
@@ -75,30 +76,31 @@ function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'ass
     return L.divIcon({
       className: 'custom-destination-marker-icon',
       html: `
-        <div style="position:relative; display:flex; flex-direction:column; align-items:center; transform:translate(-50%, -100%); cursor:grab;">
+        <div style="width:130px; height:80px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:grab; pointer-events:auto; touch-action:none; user-select:none;">
           <!-- Floating Pill Badge -->
           <div style="
             background: #881337;
             color: #fff1f2;
             font-size: 11px;
             font-weight: 800;
-            padding: 3px 8px;
+            padding: 4px 10px;
             border-radius: 9999px;
-            border: 1.5px solid #fb7185;
+            border: 2px solid #fb7185;
             box-shadow: 0 4px 14px rgba(0,0,0,0.6);
             white-space: nowrap;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
             display: flex;
             align-items: center;
-            gap: 4px;
-            pointer-events: none;
+            gap: 5px;
+            pointer-events: auto;
+            cursor: grab;
           ">
             <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#fb7185; box-shadow:0 0 6px #fb7185;"></span>
             Destino (Arraste)
           </div>
 
           <!-- Teardrop Pin with Needle pointing to exact GPS -->
-          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));">
+          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); cursor:grab;">
             <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 0C8.05887 0 0 8.05887 0 18C0 29.5 18 44 18 44C18 44 36 29.5 36 18C36 8.05887 27.9411 0 18 0Z" fill="#f43f5e"/>
               <path d="M18 2C9.16344 2 2 9.16344 2 18C2 28.5 18 41.5 18 41.5C18 41.5 34 28.5 34 18C34 9.16344 26.8366 2 18 2Z" fill="#e11d48"/>
@@ -111,8 +113,8 @@ function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'ass
           <div style="width:14px; height:4px; border-radius:50%; background:rgba(0,0,0,0.35); filter:blur(1px); margin-top:-2px;"></div>
         </div>
       `,
-      iconSize: [0, 0],
-      iconAnchor: [0, 0],
+      iconSize: [130, 80],
+      iconAnchor: [65, 80],
     });
   }
 
@@ -334,13 +336,19 @@ export const MapDisplay: React.FC<MapProps> = ({
       marker.bindTooltip(pickup.address || 'Ponto de Partida (Arraste)', {
         permanent: false,
         direction: 'top',
+        interactive: false,
         className: 'bg-slate-900 text-emerald-300 text-xs font-bold border border-emerald-500 rounded-lg px-2.5 py-1 shadow-xl',
+      });
+
+      marker.on('dragstart', () => {
+        marker.closeTooltip();
       });
 
       marker.on('dragend', async () => {
         const newPos = marker.getLatLng();
         const address = await reverseGeocode(newPos.lat, newPos.lng);
         marker.setTooltipContent(address);
+        marker.openTooltip();
         onPickupChangeRef.current?.(newPos.lat, newPos.lng, address);
       });
 
@@ -379,13 +387,19 @@ export const MapDisplay: React.FC<MapProps> = ({
       marker.bindTooltip(destination.address || 'Destino (Arraste)', {
         permanent: false,
         direction: 'top',
+        interactive: false,
         className: 'bg-slate-900 text-rose-300 text-xs font-bold border border-rose-500 rounded-lg px-2.5 py-1 shadow-xl',
+      });
+
+      marker.on('dragstart', () => {
+        marker.closeTooltip();
       });
 
       marker.on('dragend', async () => {
         const newPos = marker.getLatLng();
         const address = await reverseGeocode(newPos.lat, newPos.lng);
         marker.setTooltipContent(address);
+        marker.openTooltip();
         onDestinationChangeRef.current?.(newPos.lat, newPos.lng, address);
       });
 
@@ -643,6 +657,32 @@ export const MapDisplay: React.FC<MapProps> = ({
         </div>
 
         <div className="flex items-center gap-2 pointer-events-auto">
+          {/* Real-time GPS Navigation Launchers directly on Map */}
+          {(destination?.lat || pickup?.lat) && (
+            <div className="flex items-center gap-1.5">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${destination?.lat || pickup?.lat},${destination?.lng || pickup?.lng}&travelmode=driving`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1.5 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-white font-bold text-[11px] flex items-center gap-1 shadow-xl transition-all"
+                title="Abrir rota no Google Maps"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Google Maps</span>
+              </a>
+              <a
+                href={`https://waze.com/ul?ll=${destination?.lat || pickup?.lat},${destination?.lng || pickup?.lng}&navigate=yes`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1.5 rounded-xl bg-cyan-600/90 hover:bg-cyan-500 text-white font-bold text-[11px] flex items-center gap-1 shadow-xl transition-all"
+                title="Abrir rota no Waze"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Waze</span>
+              </a>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleLocateGps}

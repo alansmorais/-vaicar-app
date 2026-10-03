@@ -1057,6 +1057,90 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(res.body.data.fixedRouteName).toBe('Centro → Maresias');
       expect(res.body.data.driverId).toBe(driverUid);
       expect(res.body.data.driverName).toBe('Carlos Motorista Empreendedor');
+      expect(res.body.data.status).toBe('REQUESTED');
+    });
+
+    it('allows driver to receive incoming ride in REQUESTED status and decline to release to pool', async () => {
+      // 0. Cancel previous ride so passenger is free
+      const activeRes = await request(app)
+        .get('/api/v1/passengers/active-ride')
+        .set('Authorization', `Bearer ${passToken}`);
+      if (activeRes.body.data) {
+        await request(app)
+          .post(`/api/v1/rides/${activeRes.body.data.id}/cancel`)
+          .set('Authorization', `Bearer ${passToken}`)
+          .send({ reason: 'Teste concluído' });
+      }
+
+      // 1. Create a ride requested for driverUid
+      const rideRes = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${passToken}`)
+        .send({
+          origin: { address: 'Centro, Caraguatatuba - SP', lat: -23.6229, lng: -45.4124 },
+          destination: { address: 'Centro, São Sebastião - SP', lat: -23.8055, lng: -45.4011 },
+          paymentMethod: 'PIX',
+          requestedDriverId: driverUid,
+        });
+
+      expect(rideRes.status).toBe(201);
+      const rideId = rideRes.body.data.id;
+      expect(rideRes.body.data.status).toBe('REQUESTED');
+
+      // 2. Driver polls available-rides and receives the incoming ride
+      const availableRes = await request(app)
+        .get('/api/v1/drivers/available-rides')
+        .set('Authorization', `Bearer ${driverToken}`);
+
+      expect(availableRes.status).toBe(200);
+      const incoming = availableRes.body.data.find((r: any) => r.id === rideId);
+      expect(incoming).toBeDefined();
+      expect(incoming.status).toBe('REQUESTED');
+
+      // 3. Driver declines the ride
+      const declineRes = await request(app)
+        .post(`/api/v1/rides/${rideId}/decline`)
+        .set('Authorization', `Bearer ${driverToken}`);
+
+      expect(declineRes.status).toBe(200);
+      expect(declineRes.body.data.driverId).toBeUndefined();
+
+      // 4. Ride is still in REQUESTED status, but now open in the general pool
+      const openRideRes = await request(app)
+        .get(`/api/v1/rides/${rideId}`)
+        .set('Authorization', `Bearer ${passToken}`);
+
+      expect(openRideRes.status).toBe(200);
+      expect(openRideRes.body.data.status).toBe('REQUESTED');
+      expect(openRideRes.body.data.driverId).toBeUndefined();
+    });
+  });
+
+  describe('Maps Open Search for Any Brazilian City', () => {
+    it('allows autocomplete for any city in Brazil without forcing Sao Sebastiao', async () => {
+      const res = await request(app)
+        .post('/api/v1/maps/autocomplete')
+        .send({ input: 'Caraguatatuba' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      // Ensure description does NOT forcefully append ", São Sebastião - SP" to Caraguatatuba
+      const match = res.body.data[0];
+      expect(match.description).not.toContain('Caraguatatuba, São Sebastião');
+    });
+
+    it('geocodes addresses across neighboring cities without forcing Sao Sebastiao', async () => {
+      const res = await request(app)
+        .post('/api/v1/maps/geocode')
+        .send({ address: 'Praia Martim de Sa, Caraguatatuba, SP' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.lat).toBeDefined();
+      expect(res.body.data.lng).toBeDefined();
+      expect(res.body.data.address).not.toContain('São Sebastião');
     });
   });
 });

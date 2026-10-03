@@ -278,9 +278,8 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
 
     if (requestedDriverId) {
       chosenDriver = await getDriverProfile(requestedDriverId);
-      if (chosenDriver) {
-        initialStatus = 'DRIVER_ARRIVING';
-      }
+      // Keep initialStatus as REQUESTED so driver receives pop-up alert with Accept / Decline modal!
+      initialStatus = 'REQUESTED';
     }
 
     // Calculate fare: if specific driver was chosen by passenger, use that driver's configured pricing!
@@ -330,7 +329,7 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
       paymentStatus: 'PENDING',
       status: initialStatus,
       requestedAt: now,
-      acceptedAt: chosenDriver ? now : undefined,
+      acceptedAt: undefined,
     };
 
     await saveRide(ride);
@@ -340,6 +339,34 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
       requestId: req.id,
       data: ride,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Driver Declines Ride Request
+ * Releases the ride back to the general pool (driverId: undefined) so other online drivers can take it
+ */
+ridesRouter.post('/:id/decline', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ride = await getRide(String(req.params.id));
+    if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
+
+    if (ride.status === 'REQUESTED') {
+      const updatedRide: Ride = {
+        ...ride,
+        driverId: undefined,
+        driverName: undefined,
+        driverPhone: undefined,
+        driverPhotoUrl: undefined,
+        vehicle: undefined,
+      };
+      await saveRide(updatedRide);
+      return res.json({ success: true, requestId: req.id, data: updatedRide });
+    }
+
+    res.json({ success: true, requestId: req.id, data: ride });
   } catch (error) {
     next(error);
   }

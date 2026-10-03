@@ -469,7 +469,9 @@ driversRouter.get('/available-rides', async (req: Request, res: Response, next: 
     }
 
     const allRides = await listAllRides();
-    const available = allRides.filter(r => r.status === 'REQUESTED');
+    const available = allRides.filter(
+      r => r.status === 'REQUESTED' && (!r.driverId || r.driverId === driver.uid)
+    );
 
     res.json({
       success: true,

@@ -44,6 +44,9 @@ import { ReportModal } from '../../components/ReportModal.js';
 // Synthesizes an audible incoming ride chime without external audio file dependencies
 function playIncomingRideChime() {
   try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 300]);
+    }
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
@@ -218,26 +221,34 @@ export const DriverDashboardPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeRide]);
 
-  // Stream available rides when online and not in active ride
+  // Stream available rides and active ride state when online
   useEffect(() => {
-    if (!isOnline || activeRide) {
+    if (!isOnline) {
       setAvailableRides([]);
       return;
     }
 
-    const fetchAvailable = async () => {
+    const fetchUpdates = async () => {
       try {
-        const rides = await driversApi.getAvailableRides();
+        const [rides, active] = await Promise.all([
+          driversApi.getAvailableRides(),
+          driversApi.getActiveRide().catch(() => null),
+        ]);
+        if (active) {
+          setActiveRide(active);
+          setAvailableRides([]);
+          return;
+        }
         setAvailableRides(rides);
       } catch (err) {
         console.error('Available rides error:', err);
       }
     };
 
-    fetchAvailable();
-    const interval = setInterval(fetchAvailable, 3000);
+    fetchUpdates();
+    const interval = setInterval(fetchUpdates, 2500);
     return () => clearInterval(interval);
-  }, [isOnline, activeRide]);
+  }, [isOnline]);
 
   // Find current incoming ride alert (first available ride not dismissed)
   const incomingRide = useMemo(() => {
@@ -258,10 +269,15 @@ export const DriverDashboardPage: React.FC = () => {
     }
 
     setIncomingCountdown(30);
+    let elapsed = 0;
     const timer = setInterval(() => {
+      elapsed++;
+      if (elapsed % 5 === 0) {
+        playIncomingRideChime();
+      }
       setIncomingCountdown((prev) => {
         if (prev <= 1) {
-          setDismissedRideIds((curr) => [...curr, incomingRide.id]);
+          handleDeclineRide(incomingRide.id);
           return 30;
         }
         return prev - 1;
@@ -394,6 +410,15 @@ export const DriverDashboardPage: React.FC = () => {
       setError(err.message || 'Não foi possível aceitar a corrida.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDeclineRide = async (rideId: string) => {
+    setDismissedRideIds((curr) => [...curr, rideId]);
+    try {
+      await ridesApi.decline(rideId);
+    } catch {
+      // ignore
     }
   };
 
@@ -1897,7 +1922,7 @@ export const DriverDashboardPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => setDismissedRideIds((curr) => [...curr, incomingRide.id])}
+                  onClick={() => handleDeclineRide(incomingRide.id)}
                   disabled={actionLoading}
                   className="w-full py-4 px-4 rounded-2xl bg-slate-950 hover:bg-rose-950/70 border-2 border-rose-600/50 hover:border-rose-500 text-rose-300 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
                 >

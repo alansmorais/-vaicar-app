@@ -67,9 +67,10 @@ mapsRouter.post('/autocomplete', async (req: Request, res: Response, next: NextF
     // 1. If Google Maps API Key is available, call Places Autocomplete API
     if (config.googleMaps.apiKey) {
       try {
+        // Bias nearby to northern coast/SP without restricting other cities
         const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
           trimmed
-        )}&components=country:br&location=-23.8055,-45.4011&radius=50000&language=pt-BR&key=${config.googleMaps.apiKey}`;
+        )}&components=country:br&locationbias=point:-23.8055,-45.4011&language=pt-BR&key=${config.googleMaps.apiKey}`;
         const response = await fetch(url);
         const data = (await response.json()) as any;
         if (data.status === 'OK' && Array.isArray(data.predictions) && data.predictions.length > 0) {
@@ -77,7 +78,7 @@ mapsRouter.post('/autocomplete', async (req: Request, res: Response, next: NextF
             description: p.description,
             placeId: p.place_id,
             mainText: p.structured_formatting?.main_text || p.description,
-            secondaryText: p.structured_formatting?.secondary_text || 'São Sebastião, SP',
+            secondaryText: p.structured_formatting?.secondary_text || '',
           }));
           return res.json({ success: true, requestId: req.id, data: suggestions });
         }
@@ -86,7 +87,39 @@ mapsRouter.post('/autocomplete', async (req: Request, res: Response, next: NextF
       }
     }
 
-    // 2. Fallback matching against comprehensive São Sebastião locations
+    // 2. OpenStreetMap Nominatim search (supports any city, street, or neighborhood in Brazil)
+    try {
+      const osmUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        trimmed
+      )}&countrycodes=br&limit=6&addressdetails=1`;
+      const osmRes = await fetch(osmUrl, {
+        headers: { 'User-Agent': 'VaiCar-App/1.0 (contato@vaicar.app)' },
+        signal: AbortSignal.timeout(3500),
+      });
+      if (osmRes.ok) {
+        const osmData = (await osmRes.json()) as any;
+        if (Array.isArray(osmData) && osmData.length > 0) {
+          const suggestions = osmData.map((item: any) => {
+            const parts = (item.display_name || '').split(',');
+            const mainText = parts[0]?.trim() || trimmed;
+            const secondaryText = parts.slice(1, 4).join(',').trim();
+            return {
+              description: item.display_name,
+              placeId: `osm-${item.place_id || item.osm_id}`,
+              mainText,
+              secondaryText,
+              lat: parseFloat(item.lat),
+              lng: parseFloat(item.lon),
+            };
+          });
+          return res.json({ success: true, requestId: req.id, data: suggestions });
+        }
+      }
+    } catch (osmErr) {
+      console.warn('[Maps Autocomplete] OSM Nominatim warning:', osmErr);
+    }
+
+    // 3. Fallback matching against known regional locations
     const lower = trimmed.toLowerCase();
     const matches = KNOWN_LOCATIONS.filter(
       loc => loc.name.toLowerCase().includes(lower) || loc.address.toLowerCase().includes(lower)
@@ -103,18 +136,18 @@ mapsRouter.post('/autocomplete', async (req: Request, res: Response, next: NextF
       description: loc.address,
       placeId: `loc-${loc.lat}-${loc.lng}`,
       mainText: loc.name,
-      secondaryText: 'São Sebastião - SP',
+      secondaryText: 'Litoral Norte - SP',
       lat: loc.lat,
       lng: loc.lng,
     }));
 
-    // If no direct matches, return general suggestion
+    // If no direct matches, return free-text suggestion for any Brazilian location
     if (fallbackSuggestions.length === 0) {
       fallbackSuggestions.push({
-        description: `${trimmed}, São Sebastião - SP`,
+        description: trimmed,
         placeId: `custom-${Date.now()}`,
         mainText: trimmed,
-        secondaryText: 'São Sebastião - SP',
+        secondaryText: 'Localização livre',
       });
     }
 
@@ -150,11 +183,11 @@ mapsRouter.post('/geocode', async (req: Request, res: Response, next: NextFuncti
       });
     }
 
-    // If Google Maps API Key is available, call Google Geocoding API
+    // 1. If Google Maps API Key is available, call Google Geocoding API (nationwide/regional)
     if (config.googleMaps.apiKey) {
       try {
-        const query = address.toLowerCase().includes('são sebastião') ? address : `${address}, São Sebastião, SP, Brasil`;
-        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&language=pt-BR&key=${config.googleMaps.apiKey}`;
+        const query = address.toLowerCase().includes('brasil') ? address : `${address}, Brasil`;
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&components=country:BR&language=pt-BR&key=${config.googleMaps.apiKey}`;
         const response = await fetch(url);
         const data = (await response.json()) as any;
         if (data.results && data.results.length > 0) {
@@ -174,11 +207,9 @@ mapsRouter.post('/geocode', async (req: Request, res: Response, next: NextFuncti
       }
     }
 
-    // 2. OpenStreetMap Nominatim Search Fallback
+    // 2. OpenStreetMap Nominatim Search Fallback (any city in Brazil)
     try {
-      const query = address.toLowerCase().includes('são sebastião') || address.toLowerCase().includes('sp')
-        ? address
-        : `${address}, São Sebastião, SP`;
+      const query = address.toLowerCase().includes('brasil') ? address : `${address}, Brasil`;
       const osmUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&limit=1`;
       const osmRes = await fetch(osmUrl, {
         headers: { 'User-Agent': 'VaiCar-App/1.0 (contato@vaicar.app)' },
@@ -192,7 +223,7 @@ mapsRouter.post('/geocode', async (req: Request, res: Response, next: NextFuncti
             success: true,
             requestId: req.id,
             data: {
-              address: first.display_name.split(',').slice(0, 3).join(',').trim(),
+              address: first.display_name.split(',').slice(0, 4).join(',').trim(),
               lat: parseFloat(first.lat),
               lng: parseFloat(first.lon),
             },
@@ -203,12 +234,12 @@ mapsRouter.post('/geocode', async (req: Request, res: Response, next: NextFuncti
       console.warn('[Maps Geocode] OSM Nominatim warning:', osmErr);
     }
 
-    // 3. Fallback: Default São Sebastião Centro (deterministic, no random jitter)
+    // 3. Fallback: Return address as requested
     res.json({
       success: true,
       requestId: req.id,
       data: {
-        address: `${address}, São Sebastião - SP`,
+        address,
         lat: -23.8055,
         lng: -45.4011,
       },

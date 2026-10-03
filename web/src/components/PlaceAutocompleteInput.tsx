@@ -63,8 +63,6 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
           {
             input: query,
             componentRestrictions: { country: 'br' },
-            location: new window.google.maps.LatLng(-23.8055, -45.4011),
-            radius: 60000,
           },
           (results, status) => {
             setLoading(false);
@@ -73,7 +71,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
                 description: p.description,
                 placeId: p.place_id,
                 mainText: p.structured_formatting?.main_text || p.description,
-                secondaryText: p.structured_formatting?.secondary_text || 'São Sebastião - SP',
+                secondaryText: p.structured_formatting?.secondary_text || '',
               }));
               setPredictions(mapped);
               setIsOpen(true);
@@ -92,6 +90,8 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
     // 2. Fallback to backend autocomplete API
     fetchBackendPredictions(query);
   }, []);
+
+  const lastSelectedAddressRef = useRef<string>('');
 
   const fetchBackendPredictions = async (query: string) => {
     try {
@@ -118,6 +118,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
 
   const handleSelectPrediction = async (item: PlacePrediction) => {
     setIsOpen(false);
+    lastSelectedAddressRef.current = item.description;
     onChange(item.description);
 
     if (item.lat && item.lng) {
@@ -129,9 +130,27 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
     try {
       // Geocode to coordinates
       const geocoded = await mapsApi.geocode(item.description);
+      lastSelectedAddressRef.current = geocoded.address;
       onSelectPlace(geocoded);
     } catch (err) {
       console.error('Failed to geocode selected prediction:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const geocodeCurrentValue = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || trimmed === lastSelectedAddressRef.current) return;
+    setIsOpen(false);
+    setLoading(true);
+    try {
+      const geocoded = await mapsApi.geocode(trimmed);
+      lastSelectedAddressRef.current = geocoded.address;
+      onChange(geocoded.address);
+      onSelectPlace(geocoded);
+    } catch (err) {
+      console.warn('Geocoding fallback notice:', err);
     } finally {
       setLoading(false);
     }
@@ -143,21 +162,22 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
       if (predictions.length > 0 && isOpen) {
         handleSelectPrediction(predictions[0]);
       } else if (value.trim()) {
-        setIsOpen(false);
-        setLoading(true);
-        try {
-          const geocoded = await mapsApi.geocode(value.trim());
-          onSelectPlace(geocoded);
-        } catch {
-          // ignore
-        } finally {
-          setLoading(false);
-        }
+        geocodeCurrentValue(value);
       }
     }
   };
 
+  const handleBlur = () => {
+    // Give time for prediction click to register
+    setTimeout(() => {
+      if (value.trim() && value.trim() !== lastSelectedAddressRef.current) {
+        geocodeCurrentValue(value);
+      }
+    }, 250);
+  };
+
   const handleClear = () => {
+    lastSelectedAddressRef.current = '';
     onChange('');
     setPredictions([]);
     setIsOpen(false);
@@ -203,6 +223,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
           onFocus={() => {
             if (predictions.length > 0) setIsOpen(true);
           }}
+          onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-8 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition-colors shadow-inner"
@@ -225,13 +246,31 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
       {helperText && <span className="text-[10px] text-slate-500 block leading-tight">{helperText}</span>}
 
       {/* Predictive Autocomplete Dropdown */}
-      {isOpen && predictions.length > 0 && (
+      {isOpen && (predictions.length > 0 || value.trim().length >= 2) && (
         <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-slate-900/98 backdrop-blur-md border border-slate-700 rounded-xl shadow-2xl overflow-hidden divide-y divide-slate-800 max-h-60 overflow-y-auto">
+          {/* Quick manual selection chip */}
+          {value.trim().length >= 2 && (
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                geocodeCurrentValue(value);
+              }}
+              className="w-full px-3.5 py-2 text-left text-xs bg-slate-950/70 hover:bg-emerald-950/50 text-emerald-300 font-semibold flex items-center gap-2 transition-colors border-b border-slate-800"
+            >
+              <Navigation className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="truncate">Usar endereço digitado: &ldquo;{value.trim()}&rdquo;</span>
+            </button>
+          )}
+
           {predictions.map((p, idx) => (
             <button
               key={p.placeId || `${p.description}-${idx}`}
               type="button"
-              onClick={() => handleSelectPrediction(p)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelectPrediction(p);
+              }}
               className="w-full px-3.5 py-2.5 text-left text-xs hover:bg-slate-800/80 transition-colors flex items-start gap-2.5 group"
             >
               <div className="p-1 rounded-md bg-slate-950 text-slate-400 group-hover:text-emerald-400 shrink-0 mt-0.5">

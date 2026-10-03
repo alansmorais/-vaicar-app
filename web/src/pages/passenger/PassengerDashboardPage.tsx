@@ -34,6 +34,7 @@ import {
   Camera,
   Upload,
   Crosshair,
+  ExternalLink,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
 
@@ -643,6 +644,36 @@ export const PassengerDashboardPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Real-time External GPS Navigation (Google Maps & Waze) */}
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                      <Navigation className="w-3.5 h-3.5 text-emerald-400" /> Acompanhar no GPS Externo:
+                    </span>
+                    <span className="text-[10px] text-slate-500">1 toque</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${activeRide.destination.lat},${activeRide.destination.lng}&travelmode=driving`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Google Maps
+                    </a>
+                    <a
+                      href={`https://waze.com/ul?ll=${activeRide.destination.lat},${activeRide.destination.lng}&navigate=yes`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2.5 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Waze
+                    </a>
+                  </div>
+                </div>
+
                 {/* Actions */}
                 <div className="space-y-2">
                   <div className="flex gap-2">
@@ -726,7 +757,7 @@ export const PassengerDashboardPage: React.FC = () => {
               {/* Pickup PlaceAutocompleteInput */}
               <PlaceAutocompleteInput
                 label="Ponto de Partida (Embarque)"
-                placeholder="Digite a rua, bairro ou número..."
+                placeholder="Digite a rua, bairro ou qualquer cidade (ex: Caraguá, São Sebastião, Ilhabela...)..."
                 value={pickupInput}
                 onChange={setPickupInput}
                 onSelectPlace={handleSelectPickup}
@@ -736,7 +767,7 @@ export const PassengerDashboardPage: React.FC = () => {
                 helperText={
                   hasUserGps
                     ? '📍 Localização exata obtida via GPS do dispositivo. Arraste o pino verde para ajustar.'
-                    : "Arraste o pino verde no mapa ou digite o endereço de partida."
+                    : "Digite qualquer endereço/cidade ou arraste o pino verde no mapa."
                 }
               />
               {!pickupInput.trim() && (
@@ -749,7 +780,7 @@ export const PassengerDashboardPage: React.FC = () => {
                     }}
                     className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-300 hover:text-emerald-300 transition-colors"
                   >
-                    📍 Definir Centro Histórico
+                    📍 Definir Centro
                   </button>
                   <button
                     type="button"
@@ -764,18 +795,18 @@ export const PassengerDashboardPage: React.FC = () => {
               {/* Destination PlaceAutocompleteInput */}
               <PlaceAutocompleteInput
                 label="Para onde vamos? (Destino)"
-                placeholder="Digite a praia, rua, condomínio ou clique no mapa..."
+                placeholder="Digite qualquer endereço, praia ou cidade vizinha..."
                 value={destinationInput}
                 onChange={setDestinationInput}
                 onSelectPlace={handleSelectDestination}
                 icon="destination"
-                helperText="Busca inteligente Google Maps. Você também pode arrastar o pino vermelho ou clicar no mapa."
+                helperText="Busca aberta para qualquer cidade ou região. Você também pode arrastar o pino vermelho ou clicar no mapa."
               />
 
               {/* Quick Popular Destinos (Shortcuts) */}
               <div>
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                  Atalhos Rápidos de São Sebastião:
+                  Destinos Populares (Litoral Norte):
                 </span>
                 <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
                   {popularPlaces.map((place) => (

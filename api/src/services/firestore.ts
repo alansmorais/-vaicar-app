@@ -489,10 +489,9 @@ export async function saveRide(ride: Ride): Promise<void> {
   const clean = sanitizeFirestoreData(ride);
   const db = getFirebaseAdminFirestore();
   if (db) {
-    await db.collection('rides').doc(ride.id).set(clean, { merge: true });
+    await db.collection('rides').doc(ride.id).set(clean);
   }
-  const existing = localStore.rides.get(ride.id) || {};
-  localStore.rides.set(ride.id, { ...existing, ...clean });
+  localStore.rides.set(ride.id, clean as any);
 }
 
 export async function listRidesForPassenger(passengerId: string): Promise<Ride[]> {
