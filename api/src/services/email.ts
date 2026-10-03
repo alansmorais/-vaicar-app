@@ -21,6 +21,13 @@ let transporter: nodemailer.Transporter | null = null;
 async function getTransporter(): Promise<nodemailer.Transporter> {
   if (transporter) return transporter;
 
+  if (process.env.NODE_ENV === 'test') {
+    transporter = nodemailer.createTransport({
+      jsonTransport: true,
+    });
+    return transporter;
+  }
+
   if (config.email.smtpHost && config.email.smtpUser) {
     transporter = nodemailer.createTransport({
       host: config.email.smtpHost,

@@ -448,7 +448,13 @@ export const DriverDashboardPage: React.FC = () => {
             }`}
           >
             <Power className={`w-4 h-4 ${isOnline ? 'text-white' : 'text-slate-400'}`} />
-            {isOnline ? 'Online (Disponível)' : 'Ficar Online'}
+            {!isApproved
+              ? driver?.status === 'PENDING_APPROVAL'
+                ? 'Aguardando Aprovação'
+                : 'Conta Não Aprovada'
+              : isOnline
+              ? 'Online (Disponível)'
+              : 'Ficar Online'}
           </button>
         </div>
       </header>
@@ -647,7 +653,15 @@ export const DriverDashboardPage: React.FC = () => {
                 isApproved ? 'text-emerald-400' : 'text-amber-400'
               }`}
             >
-              {driver?.status || 'Carregando...'}
+              {driver?.status === 'APPROVED'
+                ? 'Aprovado'
+                : driver?.status === 'PENDING_APPROVAL'
+                ? 'Em Análise'
+                : driver?.status === 'REJECTED'
+                ? 'Recusado'
+                : driver?.status === 'SUSPENDED'
+                ? 'Suspenso'
+                : driver?.status || 'Carregando...'}
             </span>
           </div>
 

@@ -69,14 +69,29 @@ adminRouter.post('/drivers/:id/approve', async (req: Request, res: Response, nex
     }
     if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
 
+    const now = new Date().toISOString();
     const updated = {
       ...driver,
       status: 'APPROVED' as const,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     };
     delete (updated as any).rejectionReason;
 
     await saveDriverProfile(updated);
+
+    // Sync all matching driver documents across all UIDs with same email or CPF
+    if (driver.email || driver.cpf) {
+      const allDrivers = await listAllDrivers();
+      for (const d of allDrivers) {
+        const matchesEmail = driver.email && d.email?.toLowerCase() === driver.email.toLowerCase();
+        const matchesCpf = driver.cpf && d.cpf === driver.cpf;
+        if ((matchesEmail || matchesCpf) && d.uid !== driver.uid) {
+          const syncCopy = { ...d, status: 'APPROVED' as const, updatedAt: now };
+          delete (syncCopy as any).rejectionReason;
+          await saveDriverProfile(syncCopy);
+        }
+      }
+    }
 
     // Also sync user profile in users collection so user document has isDriver = true
     let user = await getUserProfile(driver.uid);
@@ -89,7 +104,7 @@ adminRouter.post('/drivers/:id/approve', async (req: Request, res: Response, nex
         isDriver: true,
         role: 'driver',
         isCourier: Boolean(user.isCourier || driver.isCourier),
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
       });
     }
 
@@ -116,15 +131,34 @@ adminRouter.post('/drivers/:id/reject', async (req: Request, res: Response, next
     if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
 
     const { reason } = req.body;
+    const now = new Date().toISOString();
     const updated = {
       ...driver,
       status: 'REJECTED' as const,
       isOnline: false,
       rejectionReason: reason || 'Documentação não atendeu aos critérios da plataforma.',
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     };
 
     await saveDriverProfile(updated);
+
+    // Sync all matching driver documents across all UIDs with same email or CPF
+    if (driver.email || driver.cpf) {
+      const allDrivers = await listAllDrivers();
+      for (const d of allDrivers) {
+        const matchesEmail = driver.email && d.email?.toLowerCase() === driver.email.toLowerCase();
+        const matchesCpf = driver.cpf && d.cpf === driver.cpf;
+        if ((matchesEmail || matchesCpf) && d.uid !== driver.uid) {
+          await saveDriverProfile({
+            ...d,
+            status: 'REJECTED' as const,
+            isOnline: false,
+            rejectionReason: updated.rejectionReason,
+            updatedAt: now,
+          });
+        }
+      }
+    }
 
     sendDriverStatusEmail(driver.email, driver.name, 'REJECTED', updated.rejectionReason).catch(console.error);
 
@@ -140,19 +174,42 @@ adminRouter.post('/drivers/:id/reject', async (req: Request, res: Response, next
 
 adminRouter.post('/drivers/:id/suspend', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const driver = await getDriverProfile(String(req.params.id));
+    const id = String(req.params.id);
+    let driver = await getDriverProfile(id);
+    if (!driver) {
+      driver = await resolveDriverProfile(id);
+    }
     if (!driver) throw new AppError(ErrorCode.NOT_FOUND, 'Motorista não encontrado.', 404);
 
     const { reason } = req.body;
+    const now = new Date().toISOString();
     const updated = {
       ...driver,
       status: 'SUSPENDED' as const,
       isOnline: false,
       rejectionReason: reason || 'Conta temporariamente suspensa por infração aos termos.',
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     };
 
     await saveDriverProfile(updated);
+
+    // Sync all matching driver documents across all UIDs with same email or CPF
+    if (driver.email || driver.cpf) {
+      const allDrivers = await listAllDrivers();
+      for (const d of allDrivers) {
+        const matchesEmail = driver.email && d.email?.toLowerCase() === driver.email.toLowerCase();
+        const matchesCpf = driver.cpf && d.cpf === driver.cpf;
+        if ((matchesEmail || matchesCpf) && d.uid !== driver.uid) {
+          await saveDriverProfile({
+            ...d,
+            status: 'SUSPENDED' as const,
+            isOnline: false,
+            rejectionReason: updated.rejectionReason,
+            updatedAt: now,
+          });
+        }
+      }
+    }
 
     sendDriverStatusEmail(driver.email, driver.name, 'SUSPENDED', updated.rejectionReason).catch(console.error);
 

@@ -108,11 +108,13 @@ export const AdminDashboardPage: React.FC = () => {
 
   const handleApproveDriver = async (driverId: string) => {
     try {
+      setDrivers(prev => prev.map(d => d.uid === driverId ? { ...d, status: 'APPROVED' as const } : d));
       await adminApi.approveDriver(driverId);
       setMessage({ type: 'success', text: 'Motorista aprovado com sucesso! E-mail de confirmação enviado.' });
       loadAllAdminData();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Falha ao aprovar motorista.' });
+      loadAllAdminData();
     }
   };
 
@@ -120,11 +122,13 @@ export const AdminDashboardPage: React.FC = () => {
     const reason = window.prompt('Informe o motivo da recusa do motorista:');
     if (!reason) return;
     try {
+      setDrivers(prev => prev.map(d => d.uid === driverId ? { ...d, status: 'REJECTED' as const } : d));
       await adminApi.rejectDriver(driverId, reason);
       setMessage({ type: 'success', text: 'Motorista reprovado. Notificação enviada por e-mail.' });
       loadAllAdminData();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Falha ao rejeitar motorista.' });
+      loadAllAdminData();
     }
   };
 
@@ -132,11 +136,13 @@ export const AdminDashboardPage: React.FC = () => {
     const reason = window.prompt('Informe o motivo da suspensão da conta:');
     if (!reason) return;
     try {
+      setDrivers(prev => prev.map(d => d.uid === driverId ? { ...d, status: 'SUSPENDED' as const } : d));
       await adminApi.suspendDriver(driverId, reason);
       setMessage({ type: 'success', text: 'Conta do motorista suspensa.' });
       loadAllAdminData();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Falha ao suspender motorista.' });
+      loadAllAdminData();
     }
   };
 

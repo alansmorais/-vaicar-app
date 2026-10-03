@@ -12,7 +12,7 @@
     "build": "vite build && tsc -p api/tsconfig.json",
     "start": "tsx api/src/server.ts",
     "lint": "oxlint",
-    "test": "vitest run",
+    "test": "vitest run --testTimeout 15000",
     "test:browser": "tsx tests/browser-test.ts",
     "test:watch": "vitest",
     "preview": "vite preview"

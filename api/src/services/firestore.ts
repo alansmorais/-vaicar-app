@@ -317,12 +317,39 @@ export async function findDriverByWhatsApp(whatsapp: string): Promise<DriverProf
  * Guarantees that approved drivers logging in with Firebase Auth or email can always access their profile.
  */
 export async function resolveDriverProfile(uid: string, email?: string): Promise<DriverProfile | null> {
+  const normalizedEmail = email?.trim().toLowerCase();
+
   // 1. Direct lookup by UID
-  const existingByUid = await getDriverProfile(uid);
-  if (existingByUid) return existingByUid;
+  let currentDriver = await getDriverProfile(uid);
+
+  // If found but not approved, check if an approved profile with the same email exists in drivers
+  if (normalizedEmail) {
+    const existingByEmail = await findDriverByEmail(normalizedEmail);
+    if (existingByEmail) {
+      if (!currentDriver || (currentDriver.status !== 'APPROVED' && existingByEmail.status === 'APPROVED')) {
+        currentDriver = { ...existingByEmail, uid };
+        await saveDriverProfile(currentDriver);
+      }
+    }
+  }
+
+  if (currentDriver) {
+    // Ensure user profile in users collection reflects driver role
+    let user = await getUserProfile(uid);
+    if (!user && normalizedEmail) user = await findUserByEmail(normalizedEmail);
+    if (user && (!user.isDriver || user.role !== 'driver')) {
+      await saveUserProfile({
+        ...user,
+        isDriver: true,
+        role: 'driver',
+        isCourier: Boolean(user.isCourier || currentDriver.isCourier),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    return currentDriver;
+  }
 
   // 2. Lookup by email in drivers collection
-  const normalizedEmail = email?.trim().toLowerCase();
   if (normalizedEmail) {
     const existingByEmail = await findDriverByEmail(normalizedEmail);
     if (existingByEmail) {
@@ -405,12 +432,32 @@ export async function deleteDriverProfile(uid: string): Promise<void> {
 }
 
 export async function listAllDrivers(): Promise<DriverProfile[]> {
+  let list: DriverProfile[] = [];
   const db = getFirebaseAdminFirestore();
   if (db) {
     const snap = await db.collection('drivers').get();
-    return snap.docs.map(d => d.data() as DriverProfile);
+    list = snap.docs.map(d => d.data() as DriverProfile);
+  } else {
+    list = Array.from(localStore.drivers.values());
   }
-  return Array.from(localStore.drivers.values());
+
+  // Deduplicate drivers by normalized email or CPF so admin never sees conflicting duplicate rows
+  const seen = new Map<string, DriverProfile>();
+  for (const d of list) {
+    const key = (d.email && d.email.trim().toLowerCase()) || (d.cpf && d.cpf.replace(/\D/g, '')) || d.uid;
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, d);
+    } else {
+      // Prioritize APPROVED status over PENDING_APPROVAL
+      if (d.status === 'APPROVED' && existing.status !== 'APPROVED') {
+        seen.set(key, d);
+      } else if (new Date(d.updatedAt || 0).getTime() > new Date(existing.updatedAt || 0).getTime() && existing.status !== 'APPROVED') {
+        seen.set(key, d);
+      }
+    }
+  }
+  return Array.from(seen.values());
 }
 
 export async function listOnlineDrivers(): Promise<DriverProfile[]> {
