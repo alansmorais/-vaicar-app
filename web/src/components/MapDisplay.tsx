@@ -169,10 +169,9 @@ export const MapDisplay: React.FC<MapProps> = ({
       zoomControl: false,
     });
 
-    // Clean Dark Street Map Tiles from CartoDB (No API key needed, high reliability)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      subdomains: 'abcd',
+    // OpenStreetMap standard street tiles (100% open, reliable, no API key required)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
       maxZoom: 19,
     }).addTo(map);
 
@@ -352,7 +351,7 @@ export const MapDisplay: React.FC<MapProps> = ({
       try {
         // Query OSRM driving service
         const url = `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
-        const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        const res = await fetch(url, { signal: AbortSignal.timeout(7000) });
         if (!res.ok) throw new Error('OSRM error');
         const data = await res.json();
 

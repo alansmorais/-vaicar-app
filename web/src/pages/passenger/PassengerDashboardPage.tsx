@@ -41,8 +41,12 @@ export const PassengerDashboardPage: React.FC = () => {
     lng: -45.4011,
   });
   const [pickupInput, setPickupInput] = useState('Av. Dr. Altino Arantes, Centro, São Sebastião - SP');
-  const [destination, setDestination] = useState<{ address: string; lat: number; lng: number } | null>(null);
-  const [destinationInput, setDestinationInput] = useState('');
+  const [destination, setDestination] = useState<{ address: string; lat: number; lng: number } | null>({
+    address: 'Av. Dr. Francisco Loup, Maresias, São Sebastião - SP',
+    lat: -23.7915,
+    lng: -45.5683,
+  });
+  const [destinationInput, setDestinationInput] = useState('Praia de Maresias (Entrada 8)');
   const [popularPlaces, setPopularPlaces] = useState<KnownLocation[]>([]);
 
   // Drivers and estimate
