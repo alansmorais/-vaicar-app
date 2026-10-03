@@ -16,6 +16,7 @@ import {
   Car,
   Bike,
   Power,
+  Shield,
   ShieldAlert,
   ShieldCheck,
   MapPin,
@@ -146,6 +147,12 @@ export const DriverDashboardPage: React.FC = () => {
 
   // Custom Pricing modal state
   const [showPricingModal, setShowPricingModal] = useState<boolean>(false);
+
+  // Driver emergency cancellation state
+  const [showDriverEmergencyModal, setShowDriverEmergencyModal] = useState<boolean>(false);
+  const [driverEmergencyType, setDriverEmergencyType] = useState<string>('Pane mecânica no veículo');
+  const [driverEmergencyDetails, setDriverEmergencyDetails] = useState<string>('');
+  const [driverEmergencySubmitting, setDriverEmergencySubmitting] = useState<boolean>(false);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
@@ -445,6 +452,52 @@ export const DriverDashboardPage: React.FC = () => {
       setError(err.message || 'Falha ao iniciar viagem.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDriverCancelPreRide = async () => {
+    if (!activeRide) return;
+    const reason = window.prompt(
+      'Motivo do cancelamento (ex: Passageiro não compareceu no embarque / Imprevisto no trajeto):',
+      'Passageiro não compareceu no ponto de embarque'
+    );
+    if (!reason || !reason.trim()) return;
+
+    setActionLoading(true);
+    setError(null);
+    try {
+      await ridesApi.cancel(activeRide.id, reason.trim());
+      setActiveRide(null);
+      alert('Corrida cancelada.');
+      loadDriverProfile();
+    } catch (err: any) {
+      setError(err.message || 'Falha ao cancelar corrida.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmDriverEmergencyCancel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRide) return;
+    if (!driverEmergencyDetails.trim()) {
+      setError('Por favor, informe a justificativa detalhada da ocorrência.');
+      return;
+    }
+    setDriverEmergencySubmitting(true);
+    setError(null);
+    try {
+      const fullReason = `${driverEmergencyType}: ${driverEmergencyDetails.trim()}`;
+      await ridesApi.cancel(activeRide.id, fullReason, true);
+      setShowDriverEmergencyModal(false);
+      setDriverEmergencyDetails('');
+      setActiveRide(null);
+      alert('Cancelamento emergencial registrado com sucesso. A equipe do VaiCar foi notificada da ocorrência.');
+      loadDriverProfile();
+    } catch (err: any) {
+      setError(err.message || 'Falha ao registrar cancelamento emergencial.');
+    } finally {
+      setDriverEmergencySubmitting(false);
     }
   };
 
@@ -1302,23 +1355,45 @@ export const DriverDashboardPage: React.FC = () => {
             {/* STAGE MACHINE ACTION BUTTONS */}
             <div className="pt-2">
               {activeRide.status === 'DRIVER_ARRIVING' && (
-                <button
-                  onClick={handleMarkArrived}
-                  disabled={actionLoading}
-                  className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
-                >
-                  Cheguei no Embarque (ARRIVED) — Iniciar Tolerância 4min
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleMarkArrived}
+                    disabled={actionLoading}
+                    className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    Cheguei no Embarque (ARRIVED) — Iniciar Tolerância 4min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDriverCancelPreRide}
+                    disabled={actionLoading}
+                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-rose-950/70 text-slate-400 hover:text-rose-300 border border-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <X className="w-4 h-4 text-rose-400" />
+                    Cancelar Corrida (Antes do Embarque)
+                  </button>
+                </div>
               )}
 
               {activeRide.status === 'ARRIVED' && (
-                <button
-                  onClick={handleStartRide}
-                  disabled={actionLoading}
-                  className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
-                >
-                  Passageiro Embarcou — Iniciar Viagem (START)
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleStartRide}
+                    disabled={actionLoading}
+                    className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    Passageiro Embarcou — Iniciar Viagem (START)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDriverCancelPreRide}
+                    disabled={actionLoading}
+                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-rose-950/70 text-slate-400 hover:text-rose-300 border border-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <X className="w-4 h-4 text-rose-400" />
+                    Cancelar Corrida (Passageiro Não Compareceu)
+                  </button>
+                </div>
               )}
 
               {activeRide.status === 'IN_PROGRESS' && (
@@ -1359,6 +1434,21 @@ export const DriverDashboardPage: React.FC = () => {
                       <AlertTriangle className="w-4 h-4 text-rose-400" />
                       Não Pagou (Calote)
                     </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowDriverEmergencyModal(true)}
+                    disabled={actionLoading}
+                    className="w-full py-2.5 rounded-xl bg-rose-950/70 hover:bg-rose-900 border border-rose-600/70 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-lg"
+                  >
+                    <ShieldAlert className="w-4 h-4 text-rose-400" />
+                    ⚠️ Cancelar Viagem por Emergência (Pane / Acidente / Saúde)
+                  </button>
+
+                  <div className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Viagem em andamento. Cancelamentos comuns estão bloqueados pelo sistema por segurança, exceto em emergências.</span>
                   </div>
                 </div>
               )}
@@ -2531,6 +2621,107 @@ export const DriverDashboardPage: React.FC = () => {
                   >
                     <CheckCircle className="w-4 h-4" />
                     {profileSaving ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* DRIVER EMERGENCY CANCELLATION MODAL */}
+      {showDriverEmergencyModal &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] overflow-y-auto bg-black/85 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={() => !driverEmergencySubmitting && setShowDriverEmergencyModal(false)}
+          >
+            <div
+              className="bg-slate-900 border-2 border-rose-600 rounded-2xl max-w-lg w-full p-6 space-y-4 relative my-auto animate-in zoom-in-95 duration-150 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-start pb-3 border-b border-rose-950">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-950 border border-rose-600 flex items-center justify-center text-rose-400 shrink-0">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                      Cancelamento Emergencial da Viagem
+                    </h3>
+                    <span className="text-[10px] font-semibold text-rose-400">
+                      Viagem já iniciada • Exclusivo para imprevistos graves
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={driverEmergencySubmitting}
+                  onClick={() => setShowDriverEmergencyModal(false)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-700/60 text-rose-200 text-xs space-y-1.5 leading-relaxed">
+                <div className="flex items-center gap-1.5 font-bold text-rose-300">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>Atenção: A corrida já está em andamento!</span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  Por segurança mútua e transparência na plataforma VaiCar, viagens em andamento só podem ser canceladas por força maior (pane mecânica do veículo, colisão/acidente, emergência médica ou risco à segurança). O registro é enviado para auditoria da administração.
+                </p>
+              </div>
+
+              <form onSubmit={handleConfirmDriverEmergencyCancel} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Tipo de Emergência
+                  </label>
+                  <select
+                    value={driverEmergencyType}
+                    onChange={(e) => setDriverEmergencyType(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-rose-500 font-medium"
+                  >
+                    <option value="Pane mecânica no veículo">Pane mecânica no veículo (motor/pneu/bateria)</option>
+                    <option value="Colisão ou acidente de trânsito">Colisão ou acidente de trânsito</option>
+                    <option value="Emergência médica (passageiro ou motorista)">Emergência médica (passageiro ou motorista)</option>
+                    <option value="Risco à segurança ou desentendimento grave">Risco à integridade física / desentendimento grave</option>
+                    <option value="Outro motivo de força maior">Outro motivo grave de força maior</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Justificativa e Detalhes da Emergência <span className="text-rose-400">*</span>
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={driverEmergencyDetails}
+                    onChange={(e) => setDriverEmergencyDetails(e.target.value)}
+                    placeholder="Descreva o ocorrido em detalhes (ex: furou o pneu na serra e precisei parar o veículo com segurança)..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-rose-500 resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    disabled={driverEmergencySubmitting}
+                    onClick={() => setShowDriverEmergencyModal(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors"
+                  >
+                    Voltar para a Viagem
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={driverEmergencySubmitting || !driverEmergencyDetails.trim()}
+                    className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-500 text-xs font-bold text-white transition-all shadow-lg flex items-center justify-center gap-1.5"
+                  >
+                    {driverEmergencySubmitting ? 'Cancelando...' : 'Confirmar Cancelamento'}
                   </button>
                 </div>
               </form>

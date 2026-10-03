@@ -21,6 +21,7 @@ import {
   QrCode,
   Car,
   Clock,
+  Shield,
   ShieldCheck,
   ShieldAlert,
   AlertTriangle,
@@ -140,7 +141,11 @@ export const PassengerDashboardPage: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editWhatsapp, setEditWhatsapp] = useState('');
   const [editPhotoUrl, setEditPhotoUrl] = useState('');
-  const [photoUploading, setPhotoUploading] = useState(false);
+  // Emergency cancellation state
+  const [showEmergencyCancelModal, setShowEmergencyCancelModal] = useState(false);
+  const [emergencyReasonType, setEmergencyReasonType] = useState('Pane mecânica no veículo');
+  const [emergencyDetails, setEmergencyDetails] = useState('');
+  const [emergencySubmitting, setEmergencySubmitting] = useState(false);
 
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -333,6 +338,12 @@ export const PassengerDashboardPage: React.FC = () => {
 
   const handleCancelRide = async () => {
     if (!activeRide) return;
+
+    if (activeRide.status === 'IN_PROGRESS') {
+      setShowEmergencyCancelModal(true);
+      return;
+    }
+
     if (!window.confirm('Tem certeza que deseja cancelar esta corrida?')) return;
 
     try {
@@ -340,6 +351,30 @@ export const PassengerDashboardPage: React.FC = () => {
       setActiveRide(null);
     } catch (err: any) {
       setError(err.message || 'Falha ao cancelar corrida.');
+    }
+  };
+
+  const handleConfirmEmergencyCancel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRide) return;
+    if (!emergencyDetails.trim()) {
+      setError('Informe o detalhamento da ocorrência emergencial.');
+      return;
+    }
+
+    setEmergencySubmitting(true);
+    setError(null);
+    try {
+      const fullReason = `${emergencyReasonType}: ${emergencyDetails.trim()}`;
+      await ridesApi.cancel(activeRide.id, fullReason, true);
+      setShowEmergencyCancelModal(false);
+      setEmergencyDetails('');
+      setActiveRide(null);
+      alert('Cancelamento emergencial registrado com sucesso. A equipe do VaiCar foi notificada da ocorrência.');
+    } catch (err: any) {
+      setError(err.message || 'Falha ao registrar cancelamento emergencial.');
+    } finally {
+      setEmergencySubmitting(false);
     }
   };
 
@@ -678,12 +713,24 @@ export const PassengerDashboardPage: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex gap-2">
                     {activeRide.status !== 'COMPLETED' && (
-                      <button
-                        onClick={handleCancelRide}
-                        className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors"
-                      >
-                        Cancelar Corrida
-                      </button>
+                      activeRide.status === 'IN_PROGRESS' ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowEmergencyCancelModal(true)}
+                          className="flex-1 py-2.5 px-3 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-600 text-rose-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-lg"
+                        >
+                          <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                          Cancelar por Emergência
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleCancelRide}
+                          className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors"
+                        >
+                          Cancelar Corrida
+                        </button>
+                      )
                     )}
                     {activeRide.status === 'COMPLETED' && (
                       <button
@@ -708,6 +755,13 @@ export const PassengerDashboardPage: React.FC = () => {
                       </button>
                     )}
                   </div>
+
+                  {activeRide.status === 'IN_PROGRESS' && (
+                    <div className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Viagem em andamento. Cancelamento normal bloqueado pelo sistema por segurança, exceto em emergência.</span>
+                    </div>
+                  )}
 
                   <button
                     type="button"
@@ -1378,6 +1432,107 @@ export const PassengerDashboardPage: React.FC = () => {
                     className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition-colors"
                   >
                     Salvar Alterações
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* EMERGENCY CANCELLATION MODAL */}
+      {showEmergencyCancelModal &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] overflow-y-auto bg-black/85 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={() => !emergencySubmitting && setShowEmergencyCancelModal(false)}
+          >
+            <div
+              className="bg-slate-900 border-2 border-rose-600 rounded-2xl max-w-lg w-full p-6 space-y-4 relative my-auto animate-in zoom-in-95 duration-150 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-start pb-3 border-b border-rose-950">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-950 border border-rose-600 flex items-center justify-center text-rose-400 shrink-0">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                      Cancelamento Emergencial
+                    </h3>
+                    <span className="text-[10px] font-semibold text-rose-400">
+                      Viagem já iniciada • Exclusivo para emergências
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={emergencySubmitting}
+                  onClick={() => setShowEmergencyCancelModal(false)}
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-700/60 text-rose-200 text-xs space-y-1.5 leading-relaxed">
+                <div className="flex items-center gap-1.5 font-bold text-rose-300">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>Atenção: A corrida já está em andamento!</span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  Para segurança mútua do passageiro e do motorista parceiro, cancelamentos com a viagem em curso são estritamente restritos a motivos de força maior ou emergência física/mecânica. Esta ocorrência será registrada e auditada pela administração do VaiCar.
+                </p>
+              </div>
+
+              <form onSubmit={handleConfirmEmergencyCancel} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Tipo de Emergência
+                  </label>
+                  <select
+                    value={emergencyReasonType}
+                    onChange={(e) => setEmergencyReasonType(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-rose-500 font-medium"
+                  >
+                    <option value="Pane mecânica no veículo">Pane mecânica ou falha do veículo</option>
+                    <option value="Colisão ou acidente de trânsito">Colisão ou acidente de trânsito</option>
+                    <option value="Emergência médica / mal-estar súbito">Emergência médica / mal-estar súbito</option>
+                    <option value="Risco à segurança ou ameaça à integridade">Risco à segurança / ameaça à integridade</option>
+                    <option value="Outro motivo grave de força maior">Outro motivo grave de força maior</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Justificativa e Detalhes da Emergência <span className="text-rose-400">*</span>
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={emergencyDetails}
+                    onChange={(e) => setEmergencyDetails(e.target.value)}
+                    placeholder="Descreva o que ocorreu (ex: o carro teve pane no motor / pneu estourou e não é possível prosseguir)..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-rose-500 resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    disabled={emergencySubmitting}
+                    onClick={() => setShowEmergencyCancelModal(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors"
+                  >
+                    Voltar para a Viagem
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={emergencySubmitting || !emergencyDetails.trim()}
+                    className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-500 text-xs font-bold text-white transition-all shadow-lg flex items-center justify-center gap-1.5"
+                  >
+                    {emergencySubmitting ? 'Cancelando...' : 'Confirmar Cancelamento'}
                   </button>
                 </div>
               </form>

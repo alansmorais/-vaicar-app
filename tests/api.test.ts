@@ -1143,4 +1143,97 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(res.body.data.address).not.toContain('São Sebastião');
     });
   });
+
+  describe('Ride Cancellation Policy: Emergency Only Once IN_PROGRESS', () => {
+    let testRideId = '';
+
+    it('allows passenger or driver to cancel before IN_PROGRESS (e.g. in REQUESTED)', async () => {
+      const rideRes = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${passengerToken}`)
+        .send({
+          origin: { address: 'Centro, São Sebastião - SP', lat: -23.8055, lng: -45.4011 },
+          destination: { address: 'Maresias, São Sebastião - SP', lat: -23.7915, lng: -45.5683 },
+          paymentMethod: 'PIX',
+        });
+      expect(rideRes.status).toBe(201);
+      const rideId = rideRes.body.data.id;
+
+      const cancelRes = await request(app)
+        .post(`/api/v1/rides/${rideId}/cancel`)
+        .set('Authorization', `Bearer ${passengerToken}`)
+        .send({ reason: 'Mudei de ideia' });
+
+      expect(cancelRes.status).toBe(200);
+      expect(cancelRes.body.data.status).toBe('CANCELLED_BY_PASSENGER');
+      expect(cancelRes.body.data.cancelReason).toBe('Mudei de ideia');
+    });
+
+    it('blocks normal cancellation once ride transitions to IN_PROGRESS', async () => {
+      const rideRes = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${passengerToken}`)
+        .send({
+          origin: { address: 'Centro, São Sebastião - SP', lat: -23.8055, lng: -45.4011 },
+          destination: { address: 'Maresias, São Sebastião - SP', lat: -23.7915, lng: -45.5683 },
+          paymentMethod: 'PIX',
+        });
+      testRideId = rideRes.body.data.id;
+
+      await request(app)
+        .post(`/api/v1/rides/${testRideId}/accept`)
+        .set('Authorization', `Bearer ${driverToken}`);
+
+      await request(app)
+        .post(`/api/v1/rides/${testRideId}/arrived`)
+        .set('Authorization', `Bearer ${driverToken}`);
+
+      const startRes = await request(app)
+        .post(`/api/v1/rides/${testRideId}/start`)
+        .set('Authorization', `Bearer ${driverToken}`);
+      expect(startRes.body.data.status).toBe('IN_PROGRESS');
+
+      const passCancelRes = await request(app)
+        .post(`/api/v1/rides/${testRideId}/cancel`)
+        .set('Authorization', `Bearer ${passengerToken}`)
+        .send({ reason: 'Não quero mais a corrida' });
+
+      expect(passCancelRes.status).toBe(400);
+      expect(passCancelRes.body.error.message).toContain('A corrida já está em andamento');
+
+      const drivCancelRes = await request(app)
+        .post(`/api/v1/rides/${testRideId}/cancel`)
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({ reason: 'Quero desistir da viagem' });
+
+      expect(drivCancelRes.status).toBe(400);
+      expect(drivCancelRes.body.error.message).toContain('A corrida já está em andamento');
+    });
+
+    it('rejects emergency cancellation if emergency reason is missing or empty', async () => {
+      const res = await request(app)
+        .post(`/api/v1/rides/${testRideId}/cancel`)
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({ isEmergency: true, reason: '   ' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.message).toContain('é obrigatório informar o motivo detalhado');
+    });
+
+    it('successfully processes emergency cancellation with isEmergency: true and valid reason', async () => {
+      const res = await request(app)
+        .post(`/api/v1/rides/${testRideId}/cancel`)
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({
+          isEmergency: true,
+          reason: 'Pane mecânica: Pneu furado e defeito elétrico na rodovia',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.status).toBe('CANCELLED_BY_DRIVER');
+      expect(res.body.data.cancelReason).toContain('[EMERGÊNCIA]');
+      expect(res.body.data.cancelReason).toContain('Pneu furado');
+      expect(res.body.data.isEmergencyCancellation).toBe(true);
+    });
+  });
 });

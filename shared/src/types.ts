@@ -188,6 +188,7 @@ export interface Ride {
   cancelledAt?: string;
   cancelledBy?: 'passenger' | 'driver' | 'system';
   cancelReason?: string;
+  isEmergencyCancellation?: boolean;
   ratingByPassenger?: number;
   feedbackByPassenger?: string;
   ratingByDriver?: number;

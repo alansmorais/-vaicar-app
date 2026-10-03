@@ -750,16 +750,39 @@ ridesRouter.post('/:id/cancel', async (req: Request, res: Response, next: NextFu
       throw new AppError(ErrorCode.INVALID_RIDE_STATE, `Não é possível cancelar uma corrida com status: ${ride.status}.`, 400);
     }
 
-    const { reason } = req.body;
+    const { reason, isEmergency } = req.body;
+
+    // Regra estrita: Se a corrida já começou (IN_PROGRESS), nem passageiro nem motorista podem cancelar normalmente, apenas em emergência
+    if (ride.status === 'IN_PROGRESS' && !isEmergency && !isAdmin) {
+      throw new AppError(
+        ErrorCode.INVALID_RIDE_STATE,
+        'A corrida já está em andamento. O cancelamento não é permitido após o início da viagem, exceto em caso de emergência comprovada (ex: pane mecânica, emergência médica, colisão ou risco à segurança).',
+        400
+      );
+    }
+
+    if (ride.status === 'IN_PROGRESS' && isEmergency && (!reason || !String(reason).trim())) {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        'Para cancelar uma corrida já iniciada em caso de emergência, é obrigatório informar o motivo detalhado.',
+        400
+      );
+    }
+
     const cancelledBy = isPassenger ? 'passenger' : isDriver ? 'driver' : 'system';
     const newStatus: RideStatus = isPassenger ? 'CANCELLED_BY_PASSENGER' : isDriver ? 'CANCELLED_BY_DRIVER' : 'CANCELLED_BY_SYSTEM';
+
+    const formattedReason = isEmergency
+      ? `[EMERGÊNCIA] ${String(reason || '').trim() || 'Ocorrência emergencial informada durante a viagem'}`
+      : (String(reason || '').trim() || 'Cancelado pelo usuário');
 
     const updatedRide: Ride = {
       ...ride,
       status: newStatus,
       cancelledAt: new Date().toISOString(),
       cancelledBy,
-      cancelReason: reason || 'Cancelado pelo usuário',
+      cancelReason: formattedReason,
+      isEmergencyCancellation: !!isEmergency,
     };
 
     await saveRide(updatedRide);

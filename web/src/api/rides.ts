@@ -69,10 +69,10 @@ export const ridesApi = {
       method: 'POST',
     }),
 
-  cancel: (rideId: string, reason?: string) =>
+  cancel: (rideId: string, reason?: string, isEmergency?: boolean) =>
     apiFetch<Ride>(`/rides/${rideId}/cancel`, {
       method: 'POST',
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason, isEmergency }),
     }),
 
   getById: (rideId: string) =>
