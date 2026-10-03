@@ -118,7 +118,7 @@ export const TermsPage: React.FC = () => {
                 <strong>Pagamento Direto ao Condutor:</strong> O passageiro efetua o pagamento integral da viagem diretamente ao motorista ou entregador ao final do trajeto, utilizando Pix (chave pessoal do motorista) ou dinheiro em espécie. A plataforma não cobra intermediadores financeiros nem retém percentual do passageiro.
               </li>
               <li>
-                <strong>Planos para os Condutores Parceiros:</strong> O condutor escolhe livremente entre a <em>Mensalidade Fixa de R$ 100/mês</em> (com taxa zero por corrida e 100% dos ganhos para si) ou a <em>Taxa de 10% Semanal</em> por corrida completada. A troca de plano pode ser solicitada após 30 dias (mensal) ou após 7 dias (semanal).
+                <strong>Planos para os Condutores Parceiros:</strong> O condutor escolhe livremente entre a <em>Mensalidade Fixa de R$ 100/mês</em> (sem desconto percentual por corrida e 100% dos ganhos para si) ou a <em>Taxa de 10% Semanal</em> por corrida completada. A troca de plano pode ser solicitada após 30 dias (mensal) ou após 7 dias (semanal).
               </li>
             </ul>
           </section>

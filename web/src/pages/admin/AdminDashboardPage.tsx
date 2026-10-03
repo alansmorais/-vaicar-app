@@ -727,7 +727,7 @@ export const AdminDashboardPage: React.FC = () => {
         {/* 4. RIDES TAB */}
         {activeTab === 'rides' && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-sm font-bold text-white">Monitoramento de Corridas</h3>
+            <h3 className="text-sm font-bold text-white">Histórico e Gestão de Corridas</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-300">
                 <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">

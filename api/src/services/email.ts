@@ -247,7 +247,7 @@ export async function sendRideReceiptEmail(to: string, receipt: Receipt) {
         <p style="margin: 4px 0; color: #94A3B8; font-size: 13px;"><strong>Distância:</strong> ${receipt.distanceKm.toFixed(1)} km | <strong>Duração:</strong> ${receipt.durationMinutes} min</p>
       </div>
 
-      <p style="color: #64748B; font-size: 12px;">VaiCar — Transporte Seguro e Justo em São Sebastião.</p>
+      <p style="color: #64748B; font-size: 12px;">VaiCar — Mobilidade Justa e Confiável em São Sebastião.</p>
     </div>
   `;
 

@@ -343,7 +343,7 @@ export const DriverDashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300 text-[11px]">
               <div className="flex items-center gap-1.5">
                 <span className="text-emerald-400 font-bold">•</span>
-                <span><strong>Opção 1:</strong> Mensalidade Fixa de R$ 100/mês (taxa zero por corrida)</span>
+                <span><strong>Opção 1:</strong> Mensalidade Fixa de R$ 100/mês (sem taxa por corrida, 100% dos ganhos para você)</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-emerald-400 font-bold">•</span>
