@@ -916,4 +916,147 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(toggleRes.body.data.status).toBe('APPROVED');
     });
   });
+
+  describe('Driver Controlled Pricing & Passenger Price Comparison', () => {
+    const driverUid = `pricing-driver-${Date.now()}`;
+    const driverEmail = `pricing.driver.${Date.now()}@teste.vaicar.app`;
+    const driverToken = `${driverUid}:${driverEmail}`;
+
+    const passUid = `pricing-pass-${Date.now()}`;
+    const passEmail = `pricing.pass.${Date.now()}@teste.vaicar.app`;
+    const passToken = `${passUid}:${passEmail}`;
+
+    it('registers driver and passenger for pricing tests', async () => {
+      // Register passenger
+      const passRes = await request(app)
+        .post('/api/v1/auth/register-passenger')
+        .send({
+          uid: passUid,
+          name: 'Passageiro Comparador',
+          email: passEmail,
+          whatsapp: '(12) 99999-0099',
+          photoUrl: 'https://storage.googleapis.com/vaicar/photo.jpg',
+          termsAccepted: true,
+        });
+      expect(passRes.status).toBe(201);
+
+      // Register driver
+      const drvRes = await request(app)
+        .post('/api/v1/auth/register-driver')
+        .send({
+          uid: driverUid,
+          name: 'Carlos Motorista Empreendedor',
+          cpf: '85384620080',
+          birthDate: '1988-06-15',
+          email: driverEmail,
+          whatsapp: '(12) 98888-7766',
+          photoUrl: 'https://storage.googleapis.com/vaicar/users/carlos.jpg',
+          professionalCategory: 'Motorista de Aplicativo / EAR',
+          cnhNumber: '99887766554',
+          vehicle: { brand: 'Toyota', model: 'Corolla', year: 2022, color: 'Prata', plate: 'CAR2A22' },
+          operatingZones: ['Centro', 'Maresias'],
+        });
+      expect(drvRes.status).toBe(201);
+
+      // Approve driver
+      await request(app)
+        .post(`/api/v1/admin/drivers/${driverUid}/approve`)
+        .set('Authorization', 'Bearer test-admin-01:admin@vaicar.app');
+
+      // Set online
+      const onlineRes = await request(app)
+        .post('/api/v1/drivers/toggle-online')
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({ isOnline: true });
+      expect(onlineRes.status).toBe(200);
+    });
+
+    it('rejects custom pricing below platform floor', async () => {
+      // Try minimumFare below platform floor (R$ 10)
+      const res1 = await request(app)
+        .put('/api/v1/drivers/pricing')
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({
+          minimumFare: 5.00,
+          perKmRate: 5.00,
+        });
+      expect(res1.status).toBe(400);
+      expect(res1.body.error.message).toContain('piso da plataforma');
+
+      // Try perKmRate below platform floor
+      const res2 = await request(app)
+        .put('/api/v1/drivers/pricing')
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({
+          minimumFare: 15.00,
+          perKmRate: 2.00,
+        });
+      expect(res2.status).toBe(400);
+      expect(res2.body.error.message).toContain('piso da plataforma');
+    });
+
+    it('successfully configures driver custom pricing and fixed route', async () => {
+      const res = await request(app)
+        .put('/api/v1/drivers/pricing')
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({
+          minimumFare: 20.00,
+          perKmRate: 5.00,
+          perMinuteRate: 0.50,
+          allowFixedRoutes: true,
+          fixedRoutes: [
+            {
+              name: 'Centro → Maresias',
+              originZone: 'Centro',
+              destinationZone: 'Maresias',
+              price: 80.00,
+            },
+          ],
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.customPricing.minimumFare).toBe(20.00);
+      expect(res.body.data.customPricing.perKmRate).toBe(5.00);
+      expect(res.body.data.customPricing.fixedRoutes).toHaveLength(1);
+    });
+
+    it('passenger estimates ride and sees driver with fixed route pricing of R$ 80', async () => {
+      const res = await request(app)
+        .post('/api/v1/rides/estimate')
+        .set('Authorization', `Bearer ${passToken}`)
+        .send({
+          origin: { address: 'Centro Histórico, São Sebastião - SP', lat: -23.8055, lng: -45.4011 },
+          destination: { address: 'Praia de Maresias, São Sebastião - SP', lat: -23.7915, lng: -45.5683 },
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.availableDrivers).toBeDefined();
+
+      const carlos = res.body.data.availableDrivers.find((d: any) => d.driverId === driverUid);
+      expect(carlos).toBeDefined();
+      expect(carlos.isFixedRoute).toBe(true);
+      expect(carlos.fixedRouteName).toBe('Centro → Maresias');
+      expect(carlos.fareAmount).toBe(80.00);
+    });
+
+    it('passenger requests ride locking in chosen driver and custom fare', async () => {
+      const res = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${passToken}`)
+        .send({
+          origin: { address: 'Centro Histórico, São Sebastião', lat: -23.8055, lng: -45.4011 },
+          destination: { address: 'Praia de Maresias, São Sebastião', lat: -23.7915, lng: -45.5683 },
+          paymentMethod: 'PIX',
+          requestedDriverId: driverUid,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.fareAmount).toBe(80.00);
+      expect(res.body.data.fixedRouteApplied).toBe(true);
+      expect(res.body.data.fixedRouteName).toBe('Centro → Maresias');
+      expect(res.body.data.driverId).toBe(driverUid);
+      expect(res.body.data.driverName).toBe('Carlos Motorista Empreendedor');
+    });
+  });
 });

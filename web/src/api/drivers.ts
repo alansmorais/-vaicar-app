@@ -1,5 +1,5 @@
 import { apiFetch } from './client.js';
-import { DriverProfile, Ride } from '../../../shared/src/types.js';
+import { DriverProfile, Ride, DriverCustomPricing } from '../../../shared/src/types.js';
 
 export interface PublicDriverMarker {
   uid: string;
@@ -27,6 +27,22 @@ export const driversApi = {
   getOnlineDrivers: () => apiFetch<PublicDriverMarker[]>('/drivers/online'),
 
   getMe: () => apiFetch<DriverProfile>('/drivers/me'),
+
+  getPricing: () =>
+    apiFetch<{
+      customPricing: DriverCustomPricing;
+      platformFloor: { minimumFare: number; perKmRate: number; perMinuteRate: number };
+    }>('/drivers/pricing'),
+
+  updatePricing: (pricing: Partial<DriverCustomPricing>) =>
+    apiFetch<{
+      customPricing: DriverCustomPricing;
+      platformFloor: { minimumFare: number; perKmRate: number; perMinuteRate: number };
+      message: string;
+    }>('/drivers/pricing', {
+      method: 'PUT',
+      body: JSON.stringify(pricing),
+    }),
 
   updateMe: (data: Partial<DriverProfile>) =>
     apiFetch<DriverProfile>('/drivers/me', {

@@ -384,6 +384,11 @@ export const PassengerDashboardPage: React.FC = () => {
     }
   };
 
+  const selectedDriver = estimate?.availableDrivers?.find((d) => d.driverId === selectedDriverId);
+  const activeFareAmount = selectedDriver ? selectedDriver.fareAmount : (estimate?.fareAmount ?? 0);
+  const activeOriginalFare = selectedDriver ? (selectedDriver.originalFareAmount ?? selectedDriver.fareAmount) : (estimate?.originalFareAmount ?? 0);
+  const activeDiscountApplied = selectedDriver ? (selectedDriver.discountApplied ?? false) : (estimate?.discountApplied ?? false);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Top Header */}
@@ -764,18 +769,20 @@ export const PassengerDashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Driver Selection List */}
+              {/* Driver Selection & Price Comparison List */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-semibold text-slate-300">
-                    Escolha o Motorista ou Entregador:
+                    Escolha o Motorista por Preço e Proximidade:
                   </label>
-                  <span className={`text-[11px] font-semibold ${onlineDrivers.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {onlineDrivers.length > 0 ? `${onlineDrivers.length} disponíveis na cidade` : '0 online no momento'}
+                  <span className={`text-[11px] font-semibold ${(estimate?.availableDrivers?.length || onlineDrivers.length) > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {(estimate?.availableDrivers?.length || onlineDrivers.length) > 0
+                      ? `${estimate?.availableDrivers?.length || onlineDrivers.length} disponíveis na cidade`
+                      : '0 online no momento'}
                   </span>
                 </div>
 
-                {onlineDrivers.length === 0 ? (
+                {onlineDrivers.length === 0 && (!estimate?.availableDrivers || estimate.availableDrivers.length === 0) ? (
                   <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-left space-y-2.5">
                     <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
                       <Clock className="w-4 h-4 shrink-0" />
@@ -795,8 +802,8 @@ export const PassengerDashboardPage: React.FC = () => {
                     </a>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    {/* Automatic (Nearest) option */}
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {/* Automatic (Best Price / Fastest) Option */}
                     <div
                       onClick={() => setSelectedDriverId(null)}
                       className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
@@ -806,76 +813,172 @@ export const PassengerDashboardPage: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-base">
+                        <div className="w-9 h-9 rounded-lg bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-base shrink-0">
                           ⚡
                         </div>
                         <div>
-                          <span className="text-xs font-bold block">Mais Rápido (Automático)</span>
-                          <span className="text-[10px] text-slate-400">Chamar o veículo mais próximo disponível</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold block">Mais Rápido / Melhor Tarifa</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-900/80 text-emerald-300 font-bold uppercase">
+                              Automático
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400">
+                            Chama o primeiro motorista disponível mais próximo
+                          </span>
                         </div>
                       </div>
-                      {selectedDriverId === null && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950">
-                          Selecionado
-                        </span>
-                      )}
-                    </div>
 
-                    {/* List of individual online drivers */}
-                    {onlineDrivers.map((d) => {
-                      const isSelected = selectedDriverId === d.uid;
-                      const isBike = d.vehicle?.type === 'bicycle';
-                      const isMoto = d.vehicle?.type === 'motorcycle' || d.isCourier;
-                      return (
-                        <div
-                          key={d.uid}
-                          onClick={() => setSelectedDriverId(d.uid)}
-                          className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                            isSelected
-                              ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/40 text-white'
-                              : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                      <div className="text-right shrink-0">
+                        {estimate ? (
+                          <span className="text-xs font-extrabold text-emerald-400 block">
+                            A partir de R$ {estimate.fareAmount.toFixed(2)}
+                          </span>
+                        ) : null}
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
+                            selectedDriverId === null
+                              ? 'bg-emerald-500 text-slate-950'
+                              : 'bg-slate-800 text-slate-400'
                           }`}
                         >
-                          <div className="flex items-center gap-2.5">
-                            {d.photoUrl ? (
-                              <img
-                                src={d.photoUrl}
-                                alt={d.name}
-                                className="w-8 h-8 rounded-lg object-cover border border-slate-700 shrink-0"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-sm shrink-0">
-                                {isBike ? '🚲' : isMoto ? '🛵' : '🚗'}
-                              </div>
-                            )}
-                            <div className="text-left">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-bold text-white">{d.name}</span>
-                                <span className="text-[10px] text-amber-400 font-semibold flex items-center">
-                                  ⭐ {d.rating.toFixed(1)}
+                          {selectedDriverId === null ? 'Selecionado' : 'Escolher'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* If estimate with availableDrivers is loaded, show each driver with their individual fare */}
+                    {estimate?.availableDrivers && estimate.availableDrivers.length > 0 ? (
+                      estimate.availableDrivers.map((d) => {
+                        const isSelected = selectedDriverId === d.driverId;
+                        const isBike = d.vehicle?.type === 'bicycle';
+                        const isMoto = d.vehicle?.type === 'motorcycle' || d.isCourier;
+                        return (
+                          <div
+                            key={d.driverId}
+                            onClick={() => setSelectedDriverId(d.driverId)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/40 text-white'
+                                : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {d.photoUrl ? (
+                                <img
+                                  src={d.photoUrl}
+                                  alt={d.name}
+                                  className="w-9 h-9 rounded-lg object-cover border border-slate-700 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-sm shrink-0">
+                                  {isBike ? '🚲' : isMoto ? '🛵' : '🚗'}
+                                </div>
+                              )}
+                              <div className="text-left min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-xs font-bold text-white truncate max-w-[130px]">{d.name}</span>
+                                  <span className="text-[10px] text-amber-400 font-semibold flex items-center">
+                                    ⭐ {d.rating.toFixed(1)}
+                                  </span>
+                                  {d.isFixedRoute && (
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold">
+                                      🏷️ Rota Fixa
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-slate-400 block truncate max-w-[180px]">
+                                  {d.vehicle?.brand} {d.vehicle?.model} ({d.vehicle?.color})
+                                  {d.vehicle?.plate ? ` • ${d.vehicle.plate}` : ''}
+                                </span>
+                                <span className="text-[10px] text-emerald-400 font-medium block">
+                                  📍 {d.distanceToPickupKm.toFixed(1)} km • ~{d.etaMinutes} min até você
                                 </span>
                               </div>
-                              <span className="text-[10px] text-slate-400 block truncate max-w-[200px]">
-                                {d.vehicle.brand} {d.vehicle.model} ({d.vehicle.color})
-                                {d.vehicle.plate ? ` • ${d.vehicle.plate}` : ''}
+                            </div>
+
+                            <div className="text-right shrink-0 ml-2">
+                              <div className="text-base font-extrabold text-emerald-400 leading-none">
+                                R$ {d.fareAmount.toFixed(2)}
+                              </div>
+                              {d.discountApplied && d.originalFareAmount && d.originalFareAmount > d.fareAmount && (
+                                <span className="text-[10px] line-through text-slate-500 block">
+                                  R$ {d.originalFareAmount.toFixed(2)}
+                                </span>
+                              )}
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${
+                                  isSelected
+                                    ? 'bg-emerald-500 text-slate-950'
+                                    : 'bg-slate-800 text-slate-400'
+                                }`}
+                              >
+                                {isSelected ? 'Escolhido' : 'Escolher'}
                               </span>
                             </div>
                           </div>
+                        );
+                      })
+                    ) : (
+                      /* When no destination selected yet, list online drivers */
+                      onlineDrivers.map((d) => {
+                        const isSelected = selectedDriverId === d.uid;
+                        const isBike = d.vehicle?.type === 'bicycle';
+                        const isMoto = d.vehicle?.type === 'motorcycle' || d.isCourier;
+                        return (
+                          <div
+                            key={d.uid}
+                            onClick={() => setSelectedDriverId(d.uid)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/40 text-white'
+                                : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              {d.photoUrl ? (
+                                <img
+                                  src={d.photoUrl}
+                                  alt={d.name}
+                                  className="w-8 h-8 rounded-lg object-cover border border-slate-700 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-sm shrink-0">
+                                  {isBike ? '🚲' : isMoto ? '🛵' : '🚗'}
+                                </div>
+                              )}
+                              <div className="text-left">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-bold text-white">{d.name}</span>
+                                  <span className="text-[10px] text-amber-400 font-semibold flex items-center">
+                                    ⭐ {d.rating.toFixed(1)}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-slate-400 block truncate max-w-[200px]">
+                                  {d.vehicle.brand} {d.vehicle.model} ({d.vehicle.color})
+                                  {d.vehicle.plate ? ` • ${d.vehicle.plate}` : ''}
+                                </span>
+                                <span className="text-[9px] text-slate-500 block">
+                                  Digite o destino para ver a tarifa deste motorista
+                                </span>
+                              </div>
+                            </div>
 
-                          <div className="text-right shrink-0">
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                isSelected
-                                  ? 'bg-emerald-500 text-slate-950'
-                                  : 'bg-slate-800 text-slate-400'
-                              }`}
-                            >
-                              {isSelected ? 'Escolhido' : 'Escolher'}
-                            </span>
+                            <div className="text-right shrink-0">
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  isSelected
+                                    ? 'bg-emerald-500 text-slate-950'
+                                    : 'bg-slate-800 text-slate-400'
+                                }`}
+                              >
+                                {isSelected ? 'Escolhido' : 'Escolher'}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 )}
               </div>
@@ -927,14 +1030,16 @@ export const PassengerDashboardPage: React.FC = () => {
                 <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Tarifa Estimada:</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        {selectedDriver ? `Tarifa de ${selectedDriver.name}:` : 'Tarifa Estimada (A partir de):'}
+                      </span>
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl font-extrabold text-emerald-400">
-                          R$ {estimate.fareAmount.toFixed(2)}
+                          R$ {activeFareAmount.toFixed(2)}
                         </span>
-                        {estimate.discountApplied && estimate.originalFareAmount && (
+                        {activeDiscountApplied && activeOriginalFare > activeFareAmount && (
                           <span className="text-sm line-through text-slate-500">
-                            R$ {estimate.originalFareAmount.toFixed(2)}
+                            R$ {activeOriginalFare.toFixed(2)}
                           </span>
                         )}
                       </div>
@@ -945,10 +1050,10 @@ export const PassengerDashboardPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {estimate.discountApplied ? (
+                  {activeDiscountApplied ? (
                     <div className="pt-2 border-t border-slate-800 text-[11px] text-emerald-400 flex items-center justify-between font-semibold">
                       <span>🏷️ 5% Desconto Passageiro Verificado incluso!</span>
-                      <span>-R$ {estimate.discountAmount?.toFixed(2)}</span>
+                      <span>-R$ {(activeOriginalFare - activeFareAmount).toFixed(2)}</span>
                     </div>
                   ) : (
                     <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
@@ -960,13 +1065,28 @@ export const PassengerDashboardPage: React.FC = () => {
                   )}
 
                   <div className="pt-2 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
-                    <span>Transparência tarifária:</span>
-                    <span className="font-mono text-emerald-400 font-semibold">R$ 10,00 fixo + R$ 1,00/km + R$ 0,25/min</span>
+                    <span>Base de cálculo:</span>
+                    {selectedDriver ? (
+                      selectedDriver.isFixedRoute ? (
+                        <span className="font-semibold text-emerald-400">
+                          Preço Fixo da Rota ({selectedDriver.fixedRouteName})
+                        </span>
+                      ) : (
+                        <span className="font-mono text-emerald-400 font-semibold">
+                          Mínimo R$ {selectedDriver.customPricing?.minimumFare.toFixed(2)} + R$ {selectedDriver.customPricing?.perKmRate.toFixed(2)}/km
+                          {selectedDriver.customPricing?.perMinuteRate ? ` + R$ ${selectedDriver.customPricing.perMinuteRate.toFixed(2)}/min` : ''}
+                        </span>
+                      )
+                    ) : (
+                      <span className="font-mono text-emerald-400 font-semibold">
+                        Piso VaiCar: R$ 10,00 mín + R$ 1,00/km (cada motorista define sua tarifa)
+                      </span>
+                    )}
                   </div>
 
                   <div className="pt-2 border-t border-slate-800/80 text-[11px] text-amber-300/90 flex items-center gap-1.5">
                     <span>💵</span>
-                    <span>Pagamento direto ao motorista (Pix ou dinheiro) no veículo.</span>
+                    <span>Pagamento direto ao motorista (Pix, cartão ou dinheiro) no veículo.</span>
                   </div>
                 </div>
               )}
@@ -985,6 +1105,10 @@ export const PassengerDashboardPage: React.FC = () => {
                   ? 'Solicitando...'
                   : passenger?.isBlocked
                   ? 'Conta Suspensa por Falta de Pagamento'
+                  : selectedDriver
+                  ? `Chamar ${selectedDriver.name} • R$ ${selectedDriver.fareAmount.toFixed(2)}`
+                  : estimate
+                  ? `Confirmar e Pedir VaiCar • R$ ${estimate.fareAmount.toFixed(2)}`
                   : 'Confirmar e Pedir VaiCar'}
               </button>
             </div>

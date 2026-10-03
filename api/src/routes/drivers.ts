@@ -13,7 +13,9 @@ import {
   listAllRides,
   listRidesForDriver,
   getActiveRideForUser,
+  getPlatformPricing,
 } from '../services/firestore.js';
+import { DriverCustomPricing, FixedRoutePricing } from '../../../shared/src/types.js';
 
 export const driversRouter = Router();
 
@@ -64,6 +66,144 @@ driversRouter.get('/me', async (req: Request, res: Response, next: NextFunction)
       success: true,
       requestId: req.id,
       data: driver,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Get current driver's custom pricing and platform minimum floor
+ */
+driversRouter.get('/pricing', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    if (!driver) {
+      throw new AppError(ErrorCode.NOT_FOUND, 'Perfil de motorista não encontrado.', 404);
+    }
+    const platform = await getPlatformPricing();
+
+    const customPricing: DriverCustomPricing = driver.customPricing || {
+      minimumFare: platform.minimumFare,
+      perKmRate: platform.perKmRate,
+      perMinuteRate: platform.perMinuteRate || 0,
+      allowFixedRoutes: false,
+      fixedRoutes: [],
+      updatedAt: driver.updatedAt,
+    };
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: {
+        customPricing,
+        platformFloor: {
+          minimumFare: platform.minimumFare,
+          perKmRate: platform.perKmRate,
+          perMinuteRate: 0,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Configure driver custom pricing (must not be lower than platform floor)
+ */
+driversRouter.put('/pricing', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    if (!driver) {
+      throw new AppError(ErrorCode.NOT_FOUND, 'Perfil de motorista não encontrado.', 404);
+    }
+    const platform = await getPlatformPricing();
+
+    const {
+      minimumFare,
+      perKmRate,
+      perMinuteRate,
+      allowFixedRoutes,
+      fixedRoutes,
+    } = req.body;
+
+    const minFareNum = Number(minimumFare);
+    const perKmNum = Number(perKmRate);
+    const perMinNum = perMinuteRate !== undefined && perMinuteRate !== null ? Number(perMinuteRate) : 0;
+
+    if (isNaN(minFareNum) || minFareNum < platform.minimumFare) {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        `O valor mínimo da corrida não pode ser menor que o piso da plataforma (R$ ${platform.minimumFare.toFixed(2)}).`,
+        400
+      );
+    }
+
+    if (isNaN(perKmNum) || perKmNum < platform.perKmRate) {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        `O valor por KM não pode ser menor que o piso da plataforma (R$ ${platform.perKmRate.toFixed(2)}/km).`,
+        400
+      );
+    }
+
+    if (isNaN(perMinNum) || perMinNum < 0) {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        'O valor por minuto deve ser zero ou um valor positivo.',
+        400
+      );
+    }
+
+    const cleanedFixedRoutes: FixedRoutePricing[] = [];
+    if (Array.isArray(fixedRoutes)) {
+      for (const r of fixedRoutes) {
+        if (!r.name || r.price === undefined || r.price === null) continue;
+        const priceNum = Number(r.price);
+        if (isNaN(priceNum) || priceNum < platform.minimumFare) {
+          throw new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            `O preço da rota fixa "${r.name}" não pode ser menor que o valor mínimo da plataforma (R$ ${platform.minimumFare.toFixed(2)}).`,
+            400
+          );
+        }
+        cleanedFixedRoutes.push({
+          id: r.id || `fr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          name: String(r.name).trim(),
+          originZone: String(r.originZone || '').trim(),
+          destinationZone: String(r.destinationZone || '').trim(),
+          price: Math.round(priceNum * 100) / 100,
+        });
+      }
+    }
+
+    const now = new Date().toISOString();
+    const updatedPricing: DriverCustomPricing = {
+      minimumFare: Math.round(minFareNum * 100) / 100,
+      perKmRate: Math.round(perKmNum * 100) / 100,
+      perMinuteRate: Math.round(perMinNum * 100) / 100,
+      allowFixedRoutes: Boolean(allowFixedRoutes),
+      fixedRoutes: cleanedFixedRoutes,
+      updatedAt: now,
+    };
+
+    driver.customPricing = updatedPricing;
+    driver.updatedAt = now;
+    await saveDriverProfile(driver);
+
+    res.json({
+      success: true,
+      requestId: req.id,
+      data: {
+        customPricing: updatedPricing,
+        platformFloor: {
+          minimumFare: platform.minimumFare,
+          perKmRate: platform.perKmRate,
+          perMinuteRate: 0,
+        },
+        message: 'Tarifas personalizadas atualizadas com sucesso!',
+      },
     });
   } catch (error) {
     next(error);

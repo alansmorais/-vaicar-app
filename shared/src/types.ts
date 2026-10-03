@@ -54,6 +54,45 @@ export interface VehicleInfo {
   plate: string;
 }
 
+export interface FixedRoutePricing {
+  id: string;
+  name: string; // e.g. "Centro → Maresias"
+  originZone: string; // e.g. "Centro"
+  destinationZone: string; // e.g. "Maresias"
+  price: number; // e.g. 80.00
+}
+
+export interface DriverCustomPricing {
+  minimumFare: number;       // Valor mínimo da corrida (e.g. R$ 20.00)
+  perKmRate: number;          // Valor por KM (e.g. R$ 2.50)
+  perMinuteRate?: number;     // Valor por minuto (opcional, e.g. R$ 0.50)
+  allowFixedRoutes?: boolean; // Permitir preço por rota
+  fixedRoutes?: FixedRoutePricing[]; // Rotas com preço fixo
+  updatedAt?: string;
+}
+
+export interface DriverRideOption {
+  driverId: string;
+  name: string;
+  photoUrl?: string;
+  rating: number;
+  completedRidesCount: number;
+  vehicle: VehicleInfo;
+  isCourier?: boolean;
+  distanceToPickupKm: number;
+  etaMinutes: number;
+  fareAmount: number;
+  originalFareAmount?: number;
+  discountApplied?: boolean;
+  isFixedRoute?: boolean;
+  fixedRouteName?: string;
+  customPricing?: {
+    minimumFare: number;
+    perKmRate: number;
+    perMinuteRate?: number;
+  };
+}
+
 export interface DriverProfile {
   uid: string;
   name: string;
@@ -76,6 +115,7 @@ export interface DriverProfile {
   nextPlanSwitchAllowedAt?: string;
   vehicle: VehicleInfo;
   operatingZones: string[];
+  customPricing?: DriverCustomPricing;
   status: DriverApprovalStatus;
   rejectionReason?: string;
   isOnline: boolean;
@@ -132,6 +172,8 @@ export interface Ride {
   originalFareAmount?: number;
   discountAmount?: number;
   discountApplied?: boolean;
+  fixedRouteApplied?: boolean;
+  fixedRouteName?: string;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentState;
   paymentApprovedByDriver?: boolean;

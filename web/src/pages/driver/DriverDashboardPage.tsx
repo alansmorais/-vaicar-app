@@ -11,6 +11,7 @@ import { storageApi } from '../../api/storage.js';
 import { processDocumentOrImageFile } from '../../utils/imageUtils.js';
 import { zones } from '../../../../shared/src/tokens.js';
 import { DriverProfile, Ride, Receipt } from '../../../../shared/src/types.js';
+import { DriverPricingModal } from '../../components/DriverPricingModal.js';
 import {
   Car,
   Bike,
@@ -139,6 +140,9 @@ export const DriverDashboardPage: React.FC = () => {
   // Report modal state
   const [showReportModal, setShowReportModal] = useState<boolean>(false);
   const [reportTarget, setReportTarget] = useState<{ rideId?: string; targetName?: string; amount?: number } | null>(null);
+
+  // Custom Pricing modal state
+  const [showPricingModal, setShowPricingModal] = useState<boolean>(false);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
@@ -762,6 +766,17 @@ export const DriverDashboardPage: React.FC = () => {
               <span className="hidden md:inline">Ativar GPS</span>
             </button>
           )}
+
+          {/* Custom Pricing Trigger Button */}
+          <button
+            type="button"
+            onClick={() => setShowPricingModal(true)}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+            title="Configurar valor mínimo, valor por km e preços fixos por rota"
+          >
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <span className="hidden sm:inline">Minhas Tarifas</span>
+          </button>
 
           {/* Profile & Documents modal trigger button (Item 6 & 7) */}
           <button
@@ -2498,6 +2513,15 @@ export const DriverDashboardPage: React.FC = () => {
           </div>,
           document.body
         )}
+
+      {/* Driver Pricing Configuration Modal */}
+      <DriverPricingModal
+        isOpen={showPricingModal}
+        onClose={() => setShowPricingModal(false)}
+        onPricingUpdated={(newPricing) => {
+          setDriver((prev) => (prev ? { ...prev, customPricing: newPricing } : prev));
+        }}
+      />
     </div>
   );
 };

@@ -15,9 +15,18 @@ import {
   getReceipt,
   saveReceipt,
   getActiveRideForUser,
+  listOnlineDrivers,
 } from '../services/firestore.js';
 import { sendRideReceiptEmail } from '../services/email.js';
-import { Ride, RideStatus, Receipt, PaymentMethod, DriverProfile } from '../../../shared/src/types.js';
+import {
+  Ride,
+  RideStatus,
+  Receipt,
+  PaymentMethod,
+  DriverProfile,
+  DriverRideOption,
+  PlatformPricingSettings,
+} from '../../../shared/src/types.js';
 
 export const ridesRouter = Router();
 
@@ -36,8 +45,84 @@ function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
   return Math.round(R * c * 10) / 10;
 }
 
+function normalizeZoneStr(s: string): string {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
 /**
- * Estimate Fare
+ * Calculates fare configured by the specific driver (or fallback to platform floor)
+ */
+export function calculateFareForDriver(
+  driver: DriverProfile | null,
+  origin: { address: string; lat: number; lng: number },
+  destination: { address: string; lat: number; lng: number },
+  distanceKm: number,
+  durationMinutes: number,
+  platformPricing: PlatformPricingSettings
+): {
+  fare: number;
+  isFixedRoute: boolean;
+  fixedRouteName?: string;
+  customPricing?: { minimumFare: number; perKmRate: number; perMinuteRate?: number };
+} {
+  const normOrigin = normalizeZoneStr(origin.address);
+  const normDest = normalizeZoneStr(destination.address);
+
+  const cp = driver?.customPricing;
+
+  // 1. Check fixed routes if driver enabled them
+  if (cp?.allowFixedRoutes && Array.isArray(cp.fixedRoutes) && cp.fixedRoutes.length > 0) {
+    for (const r of cp.fixedRoutes) {
+      const rOrigin = normalizeZoneStr(r.originZone);
+      const rDest = normalizeZoneStr(r.destinationZone);
+      const rName = normalizeZoneStr(r.name);
+
+      const matchesForward = rOrigin && rDest && normOrigin.includes(rOrigin) && normDest.includes(rDest);
+      const matchesBackward = rOrigin && rDest && normOrigin.includes(rDest) && normDest.includes(rOrigin);
+      const nameParts = (r.name.includes('->') || r.name.includes('→')) ? r.name.split(/->|→/) : [];
+      const matchesName = nameParts.length === 2 &&
+        normOrigin.includes(normalizeZoneStr(nameParts[0])) &&
+        normDest.includes(normalizeZoneStr(nameParts[1]));
+
+      if (matchesForward || matchesBackward || matchesName) {
+        const fixedFare = Math.max(r.price, platformPricing.minimumFare);
+        return {
+          fare: Math.round(fixedFare * 100) / 100,
+          isFixedRoute: true,
+          fixedRouteName: r.name,
+          customPricing: {
+            minimumFare: cp.minimumFare,
+            perKmRate: cp.perKmRate,
+            perMinuteRate: cp.perMinuteRate,
+          },
+        };
+      }
+    }
+  }
+
+  // 2. Custom pricing rate calculation (with platform floor guarantee)
+  const minFare = cp?.minimumFare ? Math.max(cp.minimumFare, platformPricing.minimumFare) : platformPricing.minimumFare;
+  const kmRate = cp?.perKmRate ? Math.max(cp.perKmRate, platformPricing.perKmRate) : platformPricing.perKmRate;
+  const minRate = cp?.perMinuteRate !== undefined ? Math.max(0, cp.perMinuteRate) : (platformPricing.perMinuteRate || 0);
+
+  const baseFare = platformPricing.baseFare || 0;
+  let rawFare = baseFare + (distanceKm * kmRate) + (durationMinutes * minRate);
+  if (rawFare < minFare) rawFare = minFare;
+  if (rawFare < platformPricing.minimumFare) rawFare = platformPricing.minimumFare;
+
+  return {
+    fare: Math.round(rawFare * 100) / 100,
+    isFixedRoute: false,
+    customPricing: cp ? {
+      minimumFare: cp.minimumFare,
+      perKmRate: cp.perKmRate,
+      perMinuteRate: cp.perMinuteRate,
+    } : undefined,
+  };
+}
+
+/**
+ * Estimate Fare & Compare Available Drivers
  */
 ridesRouter.post('/estimate', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -47,15 +132,10 @@ ridesRouter.post('/estimate', async (req: Request, res: Response, next: NextFunc
     }
 
     const distanceKm = Math.max(0.5, calculateDistanceKm(origin.lat, origin.lng, destination.lat, destination.lng));
-    // Average urban speed 30km/h => ~2 min/km
+    // Average urban speed ~2.5 min/km
     const durationMinutes = Math.max(3, Math.round(distanceKm * 2.5));
 
     const pricing = await getPlatformPricing();
-    let fare = pricing.baseFare + pricing.perKmRate * distanceKm + pricing.perMinuteRate * durationMinutes;
-    if (fare < pricing.minimumFare) {
-      fare = pricing.minimumFare;
-    }
-    fare = Math.round(fare * 100) / 100;
 
     let hasDiscount = Boolean(req.body.hasCriminalRecordCheck);
     if (!hasDiscount && req.user) {
@@ -64,9 +144,54 @@ ridesRouter.post('/estimate', async (req: Request, res: Response, next: NextFunc
         hasDiscount = true;
       }
     }
-    const originalFare = fare;
-    const finalFare = hasDiscount ? Math.round(fare * 0.95 * 100) / 100 : fare;
-    const discountAmount = hasDiscount ? Math.round((originalFare - finalFare) * 100) / 100 : 0;
+
+    // Default platform base fare calculation (fallback when no specific driver selected)
+    let platformBaseFare = pricing.baseFare + pricing.perKmRate * distanceKm + pricing.perMinuteRate * durationMinutes;
+    if (platformBaseFare < pricing.minimumFare) {
+      platformBaseFare = pricing.minimumFare;
+    }
+    platformBaseFare = Math.round(platformBaseFare * 100) / 100;
+    const defaultFinalFare = hasDiscount ? Math.round(platformBaseFare * 0.95 * 100) / 100 : platformBaseFare;
+    const defaultDiscountAmount = hasDiscount ? Math.round((platformBaseFare - defaultFinalFare) * 100) / 100 : 0;
+
+    // Fetch online approved drivers and calculate each driver's individual fare
+    const onlineDrivers = await listOnlineDrivers();
+    const availableDrivers: DriverRideOption[] = [];
+
+    for (const driver of onlineDrivers) {
+      // Driver distance & ETA to passenger pickup
+      let distToPickup = 1.2;
+      if (driver.currentLocation?.lat && driver.currentLocation?.lng) {
+        distToPickup = calculateDistanceKm(driver.currentLocation.lat, driver.currentLocation.lng, origin.lat, origin.lng);
+      }
+      const etaMinutes = Math.max(2, Math.round(distToPickup * 2.5));
+
+      // Calculate fare configured by this specific driver
+      const calc = calculateFareForDriver(driver, origin, destination, distanceKm, durationMinutes, pricing);
+      const originalFare = calc.fare;
+      const finalFare = hasDiscount ? Math.round(originalFare * 0.95 * 100) / 100 : originalFare;
+
+      availableDrivers.push({
+        driverId: driver.uid,
+        name: driver.name,
+        photoUrl: driver.photoUrl,
+        rating: driver.rating || 5.0,
+        completedRidesCount: driver.completedRidesCount || 0,
+        vehicle: driver.vehicle,
+        isCourier: driver.isCourier,
+        distanceToPickupKm: distToPickup,
+        etaMinutes,
+        fareAmount: finalFare,
+        originalFareAmount: originalFare,
+        discountApplied: hasDiscount,
+        isFixedRoute: calc.isFixedRoute,
+        fixedRouteName: calc.fixedRouteName,
+        customPricing: calc.customPricing,
+      });
+    }
+
+    // Sort available drivers: lower fare first, then closer distance
+    availableDrivers.sort((a, b) => a.fareAmount - b.fareAmount || a.distanceToPickupKm - b.distanceToPickupKm);
 
     res.json({
       success: true,
@@ -74,12 +199,13 @@ ridesRouter.post('/estimate', async (req: Request, res: Response, next: NextFunc
       data: {
         distanceKm,
         durationMinutes,
-        fareAmount: finalFare,
-        originalFareAmount: originalFare,
-        discountAmount,
+        fareAmount: availableDrivers.length > 0 ? availableDrivers[0].fareAmount : defaultFinalFare,
+        originalFareAmount: availableDrivers.length > 0 ? availableDrivers[0].originalFareAmount : platformBaseFare,
+        discountAmount: defaultDiscountAmount,
         discountApplied: hasDiscount,
         discountPercentage: hasDiscount ? 5 : 0,
         pricing,
+        availableDrivers,
       },
     });
   } catch (error) {
@@ -144,9 +270,24 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
     const distanceKm = Math.max(0.5, calculateDistanceKm(origin.lat, origin.lng, destination.lat, destination.lng));
     const durationMinutes = Math.max(3, Math.round(distanceKm * 2.5));
     const pricing = await getPlatformPricing();
-    let fare = pricing.baseFare + pricing.perKmRate * distanceKm + pricing.perMinuteRate * durationMinutes;
-    if (fare < pricing.minimumFare) fare = pricing.minimumFare;
-    fare = Math.round(fare * 100) / 100;
+
+    let initialStatus: RideStatus = 'REQUESTED';
+    let chosenDriver: DriverProfile | null = null;
+    let isFixedRoute = false;
+    let fixedRouteName: string | undefined = undefined;
+
+    if (requestedDriverId) {
+      chosenDriver = await getDriverProfile(requestedDriverId);
+      if (chosenDriver) {
+        initialStatus = 'DRIVER_ARRIVING';
+      }
+    }
+
+    // Calculate fare: if specific driver was chosen by passenger, use that driver's configured pricing!
+    const calc = calculateFareForDriver(chosenDriver, origin, destination, distanceKm, durationMinutes, pricing);
+    const fare = calc.fare;
+    isFixedRoute = calc.isFixedRoute;
+    fixedRouteName = calc.fixedRouteName;
 
     const hasDiscount = Boolean(passenger.hasCriminalRecordCheck || passenger.criminalRecordStatus === 'VERIFIED');
     const originalFare = fare;
@@ -155,15 +296,6 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
 
     const rideId = `ride-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const now = new Date().toISOString();
-
-    let initialStatus: RideStatus = 'REQUESTED';
-    let chosenDriver: DriverProfile | null = null;
-    if (requestedDriverId) {
-      chosenDriver = await getDriverProfile(requestedDriverId);
-      if (chosenDriver) {
-        initialStatus = 'DRIVER_ARRIVING';
-      }
-    }
 
     const ride: Ride = {
       id: rideId,
@@ -192,6 +324,8 @@ ridesRouter.post('/request', async (req: Request, res: Response, next: NextFunct
       originalFareAmount: originalFare,
       discountAmount,
       discountApplied: hasDiscount,
+      fixedRouteApplied: isFixedRoute,
+      fixedRouteName: fixedRouteName,
       paymentMethod: method,
       paymentStatus: 'PENDING',
       status: initialStatus,

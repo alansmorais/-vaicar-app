@@ -1,5 +1,5 @@
 import { apiFetch } from './client.js';
-import { Ride, Receipt, PaymentMethod, PlatformPricingSettings } from '../../../shared/src/types.js';
+import { Ride, Receipt, PaymentMethod, PlatformPricingSettings, DriverRideOption } from '../../../shared/src/types.js';
 
 export interface EstimateRideInput {
   origin: { address: string; lat: number; lng: number };
@@ -15,6 +15,7 @@ export interface EstimateRideResult {
   discountApplied?: boolean;
   discountPercentage?: number;
   pricing: PlatformPricingSettings;
+  availableDrivers?: DriverRideOption[];
 }
 
 export interface RequestRideInput {
