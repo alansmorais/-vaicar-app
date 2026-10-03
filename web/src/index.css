@@ -39,3 +39,35 @@
 .animate-pulse-border {
   animation: pulseBorder 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* Leaflet DivIcon reset and marker styling */
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-marker-draggable {
+  cursor: grab !important;
+}
+
+.leaflet-marker-draggable:active {
+  cursor: grabbing !important;
+}
+
+@keyframes mapPinBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.pin-bounce {
+  animation: mapPinBounce 2s ease-in-out infinite;
+}
+
+@keyframes pinPulseRing {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.pin-pulse {
+  animation: pinPulseRing 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}

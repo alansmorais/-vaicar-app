@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { PublicDriverMarker } from '../api/drivers.js';
 import { mapsApi } from '../api/maps.js';
-import { Navigation, MapPin, Car, Crosshair, AlertCircle, LocateFixed } from 'lucide-react';
+import { Navigation, Crosshair, LocateFixed } from 'lucide-react';
 
 interface MapProps {
   pickup: { lat: number; lng: number; address?: string };
@@ -24,53 +24,95 @@ const DEFAULT_CENTER = {
   lng: -45.4011, // Centro de São Sebastião - SP
 };
 
-// Custom SVG Icons for Leaflet
+// Custom high-visibility SVG Teardrop Pins with Floating Badges
 function createCustomMarkerIcon(type: 'pickup' | 'destination' | 'driver' | 'assigned') {
   if (type === 'pickup') {
     return L.divIcon({
-      className: 'custom-pickup-marker',
+      className: 'custom-pickup-marker-icon',
       html: `
-        <div style="
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
-          background: #10b981;
-          border: 3px solid #ffffff;
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.6);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: grab;
-        ">
-          <div style="width: 10px; height: 10px; border-radius: 50%; background: #ffffff;"></div>
+        <div style="position:relative; display:flex; flex-direction:column; align-items:center; transform:translate(-50%, -100%); cursor:grab;">
+          <!-- Floating Pill Badge -->
+          <div style="
+            background: #064e3b;
+            color: #ecfdf5;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 9999px;
+            border: 1.5px solid #34d399;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+            white-space: nowrap;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            pointer-events: none;
+          ">
+            <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#34d399; box-shadow:0 0 6px #34d399;"></span>
+            Partida (Arraste)
+          </div>
+
+          <!-- Teardrop Pin with Needle pointing to exact GPS -->
+          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 0C8.05887 0 0 8.05887 0 18C0 29.5 18 44 18 44C18 44 36 29.5 36 18C36 8.05887 27.9411 0 18 0Z" fill="#10b981"/>
+              <path d="M18 2C9.16344 2 2 9.16344 2 18C2 28.5 18 41.5 18 41.5C18 41.5 34 28.5 34 18C34 9.16344 26.8366 2 18 2Z" fill="#059669"/>
+              <circle cx="18" cy="17" r="8" fill="#ffffff"/>
+              <circle cx="18" cy="17" r="4.5" fill="#10b981"/>
+            </svg>
+          </div>
+
+          <!-- Ground Contact Shadow -->
+          <div style="width:14px; height:4px; border-radius:50%; background:rgba(0,0,0,0.35); filter:blur(1px); margin-top:-2px;"></div>
         </div>
       `,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
     });
   }
 
   if (type === 'destination') {
     return L.divIcon({
-      className: 'custom-destination-marker',
+      className: 'custom-destination-marker-icon',
       html: `
-        <div style="
-          width: 30px;
-          height: 30px;
-          border-radius: 50%;
-          background: #ef4444;
-          border: 3px solid #ffffff;
-          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: grab;
-        ">
-          <div style="width: 10px; height: 10px; border-radius: 50%; background: #ffffff;"></div>
+        <div style="position:relative; display:flex; flex-direction:column; align-items:center; transform:translate(-50%, -100%); cursor:grab;">
+          <!-- Floating Pill Badge -->
+          <div style="
+            background: #881337;
+            color: #fff1f2;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 9999px;
+            border: 1.5px solid #fb7185;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+            white-space: nowrap;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            pointer-events: none;
+          ">
+            <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:#fb7185; box-shadow:0 0 6px #fb7185;"></span>
+            Destino (Arraste)
+          </div>
+
+          <!-- Teardrop Pin with Needle pointing to exact GPS -->
+          <div style="position:relative; width:36px; height:44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 0C8.05887 0 0 8.05887 0 18C0 29.5 18 44 18 44C18 44 36 29.5 36 18C36 8.05887 27.9411 0 18 0Z" fill="#f43f5e"/>
+              <path d="M18 2C9.16344 2 2 9.16344 2 18C2 28.5 18 41.5 18 41.5C18 41.5 34 28.5 34 18C34 9.16344 26.8366 2 18 2Z" fill="#e11d48"/>
+              <circle cx="18" cy="17" r="8" fill="#ffffff"/>
+              <circle cx="18" cy="17" r="4.5" fill="#f43f5e"/>
+            </svg>
+          </div>
+
+          <!-- Ground Contact Shadow -->
+          <div style="width:14px; height:4px; border-radius:50%; background:rgba(0,0,0,0.35); filter:blur(1px); margin-top:-2px;"></div>
         </div>
       `,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
     });
   }
 
@@ -146,8 +188,19 @@ export const MapDisplay: React.FC<MapProps> = ({
   const routePolylineRef = useRef<L.Polyline | null>(null);
   const routeShadowPolylineRef = useRef<L.Polyline | null>(null);
 
+  // Callbacks in refs to avoid rebuilding the map on re-renders
+  const onPickupChangeRef = useRef(onPickupChange);
+  onPickupChangeRef.current = onPickupChange;
+  const onDestinationChangeRef = useRef(onDestinationChange);
+  onDestinationChangeRef.current = onDestinationChange;
+  const onMapClickRef = useRef(onMapClick);
+  onMapClickRef.current = onMapClick;
+  const onDriverSelectRef = useRef(onDriverSelect);
+  onDriverSelectRef.current = onDriverSelect;
+
   const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMinutes: number } | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
+  const [locatingGps, setLocatingGps] = useState(false);
 
   // Reverse geocoding helper
   const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
@@ -159,7 +212,7 @@ export const MapDisplay: React.FC<MapProps> = ({
     }
   }, []);
 
-  // 1. Initialize Leaflet Map
+  // 1. Initialize Leaflet Map ONCE
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
@@ -173,7 +226,7 @@ export const MapDisplay: React.FC<MapProps> = ({
       zoomControl: false,
     });
 
-    // OpenStreetMap standard street tiles (100% open, reliable, no API key required)
+    // OpenStreetMap standard street tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
       maxZoom: 19,
@@ -185,25 +238,75 @@ export const MapDisplay: React.FC<MapProps> = ({
     // Create LayerGroup for drivers
     driversLayerRef.current = L.layerGroup().addTo(map);
 
-    // Click handler on map
+    // Interactive Map Click Handler: Opens quick selector popup
     map.on('click', async (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
       const address = await reverseGeocode(lat, lng);
-      if (onDestinationChange) {
-        onDestinationChange(lat, lng, address);
-      }
-      if (onMapClick) {
-        onMapClick(lat, lng, address);
-      }
+
+      const popupContainer = document.createElement('div');
+      popupContainer.style.fontFamily = 'inherit';
+      popupContainer.style.textAlign = 'center';
+      popupContainer.style.padding = '4px 2px';
+
+      popupContainer.innerHTML = `
+        <div style="font-weight:700; font-size:11px; color:#0f172a; margin-bottom:8px; line-height:1.3; max-width:200px;">
+          📍 ${address}
+        </div>
+        <div style="display:flex; gap:6px; justify-content:center;">
+          <button id="btn-click-pickup" style="background:#059669; color:#fff; font-size:10px; font-weight:800; border:none; border-radius:6px; padding:6px 9px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+            🟢 Definir Partida
+          </button>
+          <button id="btn-click-dest" style="background:#e11d48; color:#fff; font-size:10px; font-weight:800; border:none; border-radius:6px; padding:6px 9px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.3);">
+            🔴 Definir Destino
+          </button>
+        </div>
+      `;
+
+      const popup = L.popup({
+        closeButton: true,
+        className: 'custom-click-selector-popup',
+        offset: [0, -10],
+      })
+        .setLatLng([lat, lng])
+        .setContent(popupContainer)
+        .openOn(map);
+
+      setTimeout(() => {
+        popupContainer.querySelector('#btn-click-pickup')?.addEventListener('click', () => {
+          map.closePopup();
+          onPickupChangeRef.current?.(lat, lng, address);
+        });
+        popupContainer.querySelector('#btn-click-dest')?.addEventListener('click', () => {
+          map.closePopup();
+          onDestinationChangeRef.current?.(lat, lng, address);
+        });
+      }, 50);
+
+      onMapClickRef.current?.(lat, lng, address);
     });
 
     mapInstanceRef.current = map;
 
+    // ResizeObserver ensures map tile alignment on flex/grid resize
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    ro.observe(mapContainerRef.current);
+
+    setTimeout(() => map.invalidateSize(), 150);
+    setTimeout(() => map.invalidateSize(), 500);
+
     return () => {
+      ro.disconnect();
       map.remove();
       mapInstanceRef.current = null;
+      pickupMarkerRef.current = null;
+      destinationMarkerRef.current = null;
+      routePolylineRef.current = null;
+      routeShadowPolylineRef.current = null;
+      driversLayerRef.current = null;
     };
-  }, [reverseGeocode, onDestinationChange, onMapClick]);
+  }, [reverseGeocode]);
 
   // 2. Update Pickup Marker
   useEffect(() => {
@@ -223,21 +326,22 @@ export const MapDisplay: React.FC<MapProps> = ({
     if (!pickupMarkerRef.current) {
       const marker = L.marker(pos, {
         icon: createCustomMarkerIcon('pickup'),
-        draggable: !!onPickupChange,
-        title: 'Ponto de Partida',
+        draggable: true,
+        title: 'Ponto de Partida (Arraste para ajustar)',
+        zIndexOffset: 1000,
       }).addTo(map);
 
-      marker.bindTooltip(pickup.address || 'Ponto de Partida', {
+      marker.bindTooltip(pickup.address || 'Ponto de Partida (Arraste)', {
         permanent: false,
         direction: 'top',
-        className: 'bg-slate-900 text-white text-xs border border-emerald-500 rounded-lg px-2 py-1',
+        className: 'bg-slate-900 text-emerald-300 text-xs font-bold border border-emerald-500 rounded-lg px-2.5 py-1 shadow-xl',
       });
 
       marker.on('dragend', async () => {
         const newPos = marker.getLatLng();
         const address = await reverseGeocode(newPos.lat, newPos.lng);
         marker.setTooltipContent(address);
-        onPickupChange?.(newPos.lat, newPos.lng, address);
+        onPickupChangeRef.current?.(newPos.lat, newPos.lng, address);
       });
 
       pickupMarkerRef.current = marker;
@@ -247,7 +351,7 @@ export const MapDisplay: React.FC<MapProps> = ({
         pickupMarkerRef.current.setTooltipContent(pickup.address);
       }
     }
-  }, [pickup, onPickupChange, reverseGeocode]);
+  }, [pickup?.lat, pickup?.lng, pickup?.address, reverseGeocode]);
 
   // 3. Update Destination Marker
   useEffect(() => {
@@ -267,21 +371,22 @@ export const MapDisplay: React.FC<MapProps> = ({
     if (!destinationMarkerRef.current) {
       const marker = L.marker(pos, {
         icon: createCustomMarkerIcon('destination'),
-        draggable: !!onDestinationChange,
-        title: 'Destino da Corrida',
+        draggable: true,
+        title: 'Destino (Arraste para ajustar)',
+        zIndexOffset: 1000,
       }).addTo(map);
 
-      marker.bindTooltip(destination.address || 'Destino', {
+      marker.bindTooltip(destination.address || 'Destino (Arraste)', {
         permanent: false,
         direction: 'top',
-        className: 'bg-slate-900 text-white text-xs border border-rose-500 rounded-lg px-2 py-1',
+        className: 'bg-slate-900 text-rose-300 text-xs font-bold border border-rose-500 rounded-lg px-2.5 py-1 shadow-xl',
       });
 
       marker.on('dragend', async () => {
         const newPos = marker.getLatLng();
         const address = await reverseGeocode(newPos.lat, newPos.lng);
         marker.setTooltipContent(address);
-        onDestinationChange?.(newPos.lat, newPos.lng, address);
+        onDestinationChangeRef.current?.(newPos.lat, newPos.lng, address);
       });
 
       destinationMarkerRef.current = marker;
@@ -291,9 +396,9 @@ export const MapDisplay: React.FC<MapProps> = ({
         destinationMarkerRef.current.setTooltipContent(destination.address);
       }
     }
-  }, [destination, onDestinationChange, reverseGeocode]);
+  }, [destination?.lat, destination?.lng, destination?.address, reverseGeocode]);
 
-  // 4. Update Drivers Markers
+  // 4. Update Online Drivers Layer
   useEffect(() => {
     const map = mapInstanceRef.current;
     const layer = driversLayerRef.current;
@@ -301,7 +406,6 @@ export const MapDisplay: React.FC<MapProps> = ({
 
     layer.clearLayers();
 
-    // Online drivers
     drivers.forEach((d) => {
       if (d.currentLocation?.lat && d.currentLocation?.lng) {
         const isSelected = selectedDriverId === d.uid;
@@ -344,7 +448,7 @@ export const MapDisplay: React.FC<MapProps> = ({
         );
 
         marker.on('click', () => {
-          onDriverSelect?.(d);
+          onDriverSelectRef.current?.(d);
         });
 
         layer.addLayer(marker);
@@ -363,9 +467,27 @@ export const MapDisplay: React.FC<MapProps> = ({
       });
       layer.addLayer(assignedMarker);
     }
-  }, [drivers, driverLocation]);
+  }, [drivers, driverLocation, selectedDriverId]);
 
-  // 5. Calculate and Render Real Driving Route (OSRM with fallback)
+  // 5. Fit bounds to keep both pickup and destination fully visible
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (pickup?.lat && pickup?.lng && destination?.lat && destination?.lng) {
+      const bounds = L.latLngBounds(
+        [pickup.lat, pickup.lng],
+        [destination.lat, destination.lng]
+      );
+      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
+    } else if (pickup?.lat && pickup?.lng) {
+      map.setView([pickup.lat, pickup.lng], 15);
+    } else if (destination?.lat && destination?.lng) {
+      map.setView([destination.lat, destination.lng], 15);
+    }
+  }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng]);
+
+  // 6. Calculate and Render Real Driving Route (OSRM)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -389,7 +511,6 @@ export const MapDisplay: React.FC<MapProps> = ({
 
     const fetchRoute = async () => {
       try {
-        // Query OSRM driving service
         const url = `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
         const res = await fetch(url, { signal: AbortSignal.timeout(7000) });
         if (!res.ok) throw new Error('OSRM error');
@@ -401,7 +522,6 @@ export const MapDisplay: React.FC<MapProps> = ({
           const route = data.routes[0];
           const coords: [number, number][] = route.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
 
-          // Draw shadow and active polyline
           if (routeShadowPolylineRef.current) routeShadowPolylineRef.current.remove();
           if (routePolylineRef.current) routePolylineRef.current.remove();
 
@@ -426,12 +546,12 @@ export const MapDisplay: React.FC<MapProps> = ({
             durationMinutes: Math.max(3, Math.round(route.duration / 60)),
           });
 
-          // Fit bounds smoothly with padding
-          map.fitBounds(polyline.getBounds(), { padding: [50, 50], maxZoom: 16 });
+          // Fit route with padding
+          map.fitBounds(polyline.getBounds(), { padding: [60, 60], maxZoom: 15 });
           return;
         }
-      } catch (err) {
-        // Fallback: draw direct line connecting the points
+      } catch {
+        // Fallback: straight line
         if (isCancelled) return;
         const straightCoords: [number, number][] = [
           [pickup.lat, pickup.lng],
@@ -449,7 +569,7 @@ export const MapDisplay: React.FC<MapProps> = ({
         }).addTo(map);
 
         routePolylineRef.current = polyline;
-        map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+        map.fitBounds(polyline.getBounds(), { padding: [60, 60] });
       } finally {
         if (!isCancelled) setLoadingRoute(false);
       }
@@ -460,9 +580,7 @@ export const MapDisplay: React.FC<MapProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [pickup, destination]);
-
-  const [locatingGps, setLocatingGps] = useState(false);
+  }, [pickup?.lat, pickup?.lng, destination?.lat, destination?.lng]);
 
   const handleLocateGps = () => {
     if (!navigator.geolocation) return;
@@ -475,10 +593,8 @@ export const MapDisplay: React.FC<MapProps> = ({
         if (map) {
           map.setView([latitude, longitude], 16);
         }
-        if (onPickupChange) {
-          const address = await reverseGeocode(latitude, longitude);
-          onPickupChange(latitude, longitude, address);
-        }
+        const address = await reverseGeocode(latitude, longitude);
+        onPickupChangeRef.current?.(latitude, longitude, address);
       },
       (err) => {
         setLocatingGps(false);
@@ -493,9 +609,12 @@ export const MapDisplay: React.FC<MapProps> = ({
     if (!map) return;
 
     if (routePolylineRef.current) {
-      map.fitBounds(routePolylineRef.current.getBounds(), { padding: [50, 50] });
+      map.fitBounds(routePolylineRef.current.getBounds(), { padding: [60, 60] });
+    } else if (pickup?.lat && pickup?.lng && destination?.lat && destination?.lng) {
+      const bounds = L.latLngBounds([pickup.lat, pickup.lng], [destination.lat, destination.lng]);
+      map.fitBounds(bounds, { padding: [60, 60] });
     } else if (pickup?.lat && pickup?.lng) {
-      map.setView([pickup.lat, pickup.lng], 14);
+      map.setView([pickup.lat, pickup.lng], 15);
     } else {
       map.setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], 13);
     }
@@ -546,15 +665,15 @@ export const MapDisplay: React.FC<MapProps> = ({
 
       {/* Bottom HUD: Draggable markers guidance */}
       <div className="absolute bottom-3 left-3 right-3 z-[400] pointer-events-none flex justify-center">
-        <div className="bg-slate-950/90 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pointer-events-auto">
-          <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" />
-            Ponto de Partida (Arraste)
+        <div className="bg-slate-950/95 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pointer-events-auto">
+          <span className="flex items-center gap-1.5 font-bold text-emerald-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
+            Ponto de Partida (Arraste o pino verde)
           </span>
           <span className="text-slate-600 hidden sm:inline">|</span>
-          <span className="flex items-center gap-1.5 font-semibold text-rose-400">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
-            Destino (Arraste ou clique no mapa)
+          <span className="flex items-center gap-1.5 font-bold text-rose-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm animate-pulse" />
+            Destino (Arraste o pino vermelho ou clique no mapa)
           </span>
           {loadingRoute && (
             <span className="text-emerald-300 text-[10px] animate-pulse">

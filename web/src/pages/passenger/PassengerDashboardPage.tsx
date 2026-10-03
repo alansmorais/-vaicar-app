@@ -256,31 +256,31 @@ export const PassengerDashboardPage: React.FC = () => {
     }
   }, [pickup, destination]);
 
-  const handleSelectPickup = (place: { address: string; lat: number; lng: number }) => {
+  const handleSelectPickup = useCallback((place: { address: string; lat: number; lng: number }) => {
     setPickup(place);
     setPickupInput(place.address);
     setError(null);
-  };
+  }, []);
 
-  const handlePickupMarkerChange = (lat: number, lng: number, address?: string) => {
+  const handlePickupMarkerChange = useCallback((lat: number, lng: number, address?: string) => {
     const finalAddress = address || `Ponto ajustado (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
     setPickup({ lat, lng, address: finalAddress });
     setPickupInput(finalAddress);
     setError(null);
-  };
+  }, []);
 
-  const handleSelectDestination = (place: { address: string; lat: number; lng: number }) => {
+  const handleSelectDestination = useCallback((place: { address: string; lat: number; lng: number }) => {
     setDestination(place);
     setDestinationInput(place.address);
     setError(null);
-  };
+  }, []);
 
-  const handleDestinationMarkerChange = (lat: number, lng: number, address?: string) => {
+  const handleDestinationMarkerChange = useCallback((lat: number, lng: number, address?: string) => {
     const finalAddress = address || `Destino no mapa (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
     setDestination({ lat, lng, address: finalAddress });
     setDestinationInput(finalAddress);
     setError(null);
-  };
+  }, []);
 
   const handleSelectPopular = (place: KnownLocation) => {
     setDestination({
@@ -736,9 +736,30 @@ export const PassengerDashboardPage: React.FC = () => {
                 helperText={
                   hasUserGps
                     ? '📍 Localização exata obtida via GPS do dispositivo. Arraste o pino verde para ajustar.'
-                    : "Clique em 'Usar meu GPS' acima para preenchimento automático pelo satélite."
+                    : "Arraste o pino verde no mapa ou digite o endereço de partida."
                 }
               />
+              {!pickupInput.trim() && (
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPickup({ address: 'Av. Dr. Altino Arantes, Centro, São Sebastião - SP', lat: -23.8055, lng: -45.4011 });
+                      setPickupInput('Av. Dr. Altino Arantes, Centro, São Sebastião - SP');
+                    }}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-300 hover:text-emerald-300 transition-colors"
+                  >
+                    📍 Definir Centro Histórico
+                  </button>
+                  <button
+                    type="button"
+                    onClick={requestPassengerGps}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/50 hover:bg-emerald-900 text-emerald-300 font-semibold transition-colors flex items-center gap-1"
+                  >
+                    🎯 Usar Meu GPS
+                  </button>
+                </div>
+              )}
 
               {/* Destination PlaceAutocompleteInput */}
               <PlaceAutocompleteInput
@@ -1116,7 +1137,26 @@ export const PassengerDashboardPage: React.FC = () => {
         </div>
 
         {/* Right Map View */}
-        <div className="lg:col-span-7 flex flex-col space-y-4">
+        <div className="lg:col-span-7 flex flex-col space-y-3">
+          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-slate-200 shadow-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-base shrink-0">📍</span>
+              <span className="leading-snug">
+                <strong className="text-emerald-400">Pinos no Mapa:</strong> Você pode <strong>arrastar o pino verde (Partida)</strong> e o <strong>pino vermelho (Destino)</strong> para qualquer rua, ou clicar diretamente no mapa!
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPickup({ address: 'Av. Dr. Altino Arantes, Centro, São Sebastião - SP', lat: -23.8055, lng: -45.4011 });
+                setPickupInput('Av. Dr. Altino Arantes, Centro, São Sebastião - SP');
+              }}
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950 hover:bg-emerald-900 border border-emerald-600/50 text-emerald-300 font-bold shrink-0 transition-colors whitespace-nowrap"
+            >
+              Centralizar Centro
+            </button>
+          </div>
+
           <MapDisplay
             pickup={pickup}
             destination={destination}
