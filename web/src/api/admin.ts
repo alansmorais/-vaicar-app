@@ -80,6 +80,12 @@ export const adminApi = {
 
   getRides: () => apiFetch<Ride[]>('/admin/rides'),
 
+  cancelRide: (rideId: string, reason: string) =>
+    apiFetch<Ride>(`/admin/rides/${rideId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
   getPricing: () => apiFetch<PlatformPricingSettings>('/admin/pricing'),
 
   updatePricing: (settings: Partial<PlatformPricingSettings>) =>
@@ -95,4 +101,19 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ logId }),
     }),
+
+  getApkAnalytics: () =>
+    apiFetch<import('../../../shared/src/types.js').ApkDownloadAnalyticsResponse>('/admin/analytics/downloads'),
+
+  getDeliveryWaitlist: () =>
+    apiFetch<import('../../../shared/src/types.js').DeliveryWaitlistEntry[]>('/admin/deliveries/waitlist'),
+
+  getSubsidies: () =>
+    apiFetch<{ subsidies: Ride[]; totalSubsidyLiabilityBRL: number }>('/admin/subsidies'),
+
+  settleSubsidy: (rideId: string) =>
+    apiFetch<Ride>(`/admin/subsidies/${rideId}/settle`, {
+      method: 'POST',
+    }),
 };
+

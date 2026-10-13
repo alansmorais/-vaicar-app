@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
@@ -12,7 +12,7 @@ import { driversApi, PublicDriverMarker } from '../../api/drivers.js';
 import { passengersApi } from '../../api/passengers.js';
 import { storageApi } from '../../api/storage.js';
 import { processImageFile } from '../../utils/imageUtils.js';
-import { Ride, PaymentMethod, Receipt } from '../../../../shared/src/types.js';
+import { Ride, PaymentMethod, Receipt, ServiceType, PassengerReferralSummary } from '../../../../shared/src/types.js';
 import {
   MapPin,
   Navigation,
@@ -36,27 +36,27 @@ import {
   Upload,
   Crosshair,
   ExternalLink,
+  Package,
+  Gift,
+  Copy,
+  Check,
+  Share2,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
 
 export const PassengerDashboardPage: React.FC = () => {
-  const { user, profile, passenger, logout, devLogin } = useAuth();
+  const { user, profile, passenger, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Locations state
-  const [pickup, setPickup] = useState({
-    address: 'Av. Dr. Altino Arantes, Centro, São Sebastião - SP',
-    lat: -23.8055,
-    lng: -45.4011,
-  });
-  const [pickupInput, setPickupInput] = useState('Av. Dr. Altino Arantes, Centro, São Sebastião - SP');
-  const [destination, setDestination] = useState<{ address: string; lat: number; lng: number } | null>({
-    address: 'Av. Dr. Francisco Loup, Maresias, São Sebastião - SP',
-    lat: -23.7915,
-    lng: -45.5683,
-  });
-  const [destinationInput, setDestinationInput] = useState('Praia de Maresias (Entrada 8)');
+  // Locations state: clean initial state with zero preset/hardcoded coordinates
+  const [pickup, setPickup] = useState<{ address: string; lat: number; lng: number } | null>(null);
+  const [pickupInput, setPickupInput] = useState('');
+  const [destination, setDestination] = useState<{ address: string; lat: number; lng: number } | null>(null);
+  const [destinationInput, setDestinationInput] = useState('');
   const [popularPlaces, setPopularPlaces] = useState<KnownLocation[]>([]);
+
+  // State-change notification tracking (prevents duplicate notifications across polling cycles)
+  const lastNotifiedStatusRef = useRef<string | null>(null);
 
   // Real device GPS states
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -112,16 +112,19 @@ export const PassengerDashboardPage: React.FC = () => {
     );
   }, []);
 
-  // Request passenger GPS automatically on initial mount
-  useEffect(() => {
-    requestPassengerGps();
-  }, [requestPassengerGps]);
-
   // Drivers and estimate
   const [onlineDrivers, setOnlineDrivers] = useState<PublicDriverMarker[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<EstimateRideResult | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('PIX');
+
+  // Service mode state ('ride' by default, preserving existing passenger flow)
+  const [serviceType, setServiceType] = useState<ServiceType>('ride');
+
+  // Delivery details state
+  const [recipientName, setRecipientName] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+  const [packageNotes, setPackageNotes] = useState('');
 
   // Active ride state
   const [activeRide, setActiveRide] = useState<Ride | null>(null);
@@ -147,6 +150,26 @@ export const PassengerDashboardPage: React.FC = () => {
   const [emergencyDetails, setEmergencyDetails] = useState('');
   const [emergencySubmitting, setEmergencySubmitting] = useState(false);
 
+  // Referral system state
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [referralSummary, setReferralSummary] = useState<PassengerReferralSummary | null>(null);
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [useReferralCredit, setUseReferralCredit] = useState(false);
+
+  const loadReferralSummary = useCallback(async () => {
+    try {
+      setReferralLoading(true);
+      const res = await passengersApi.getReferralSummary();
+      setReferralSummary(res);
+    } catch (err) {
+      console.error('Falha ao carregar dados de indicação:', err);
+    } finally {
+      setReferralLoading(false);
+    }
+  }, []);
+
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,27 +187,88 @@ export const PassengerDashboardPage: React.FC = () => {
     return () => clearInterval(intervalDrivers);
   }, []);
 
-  // Sync profile details
+  // Sync profile details & referral summary
   useEffect(() => {
     if (passenger) {
       setEditName(passenger.name);
       setEditWhatsapp(passenger.whatsapp);
       setEditPhotoUrl(passenger.photoUrl || '');
+      loadReferralSummary();
     } else if (profile) {
       setEditName(profile.displayName);
       setEditWhatsapp(profile.whatsapp || '');
       setEditPhotoUrl(profile.photoUrl || '');
+      loadReferralSummary();
     }
-  }, [passenger, profile]);
+  }, [passenger, profile, loadReferralSummary]);
 
-  // Check active ride on load
+  // Check active ride on load and sync map points only if an authentic active ride exists
   const refreshActiveRide = useCallback(async () => {
-    if (!user) return;
+    // Purge any stale client-side storage keys
     try {
-      const active = await passengersApi.getActiveRide();
-      setActiveRide(active);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('vaicar_active_ride');
+        localStorage.removeItem('active_ride_id');
+        sessionStorage.removeItem('vaicar_active_ride');
+        sessionStorage.removeItem('active_ride_id');
+      }
     } catch {
       // Ignored
+    }
+
+    if (!user) {
+      setActiveRide(null);
+      setPickup(null);
+      setPickupInput('');
+      setDestination(null);
+      setDestinationInput('');
+      setEstimate(null);
+      return;
+    }
+
+    try {
+      const active = await passengersApi.getActiveRide();
+
+      // STRICT ACTIVE STATUSES ONLY:
+      // Only these active states may restore the active ride UI per production rules:
+      const genuineActiveStatuses: RideStatus[] = [
+        'REQUESTED',
+        'OFFERED',
+        'ACCEPTED',
+        'DRIVER_ARRIVING',
+        'ARRIVED',
+        'IN_PROGRESS',
+      ];
+
+      if (active && genuineActiveStatuses.includes(active.status)) {
+        setActiveRide(active);
+        if (active.origin) {
+          setPickup({ address: active.origin.address, lat: active.origin.lat, lng: active.origin.lng });
+          setPickupInput(active.origin.address);
+        }
+        if (active.destination) {
+          setDestination({ address: active.destination.address, lat: active.destination.lat, lng: active.destination.lng });
+          setDestinationInput(active.destination.address);
+        }
+        lastNotifiedStatusRef.current = active.status;
+      } else {
+        // If null or terminal state (COMPLETED, CANCELLED_*, etc.), ensure completely empty UI
+        setActiveRide(null);
+        setPickup(null);
+        setPickupInput('');
+        setDestination(null);
+        setDestinationInput('');
+        setEstimate(null);
+        lastNotifiedStatusRef.current = null;
+      }
+    } catch {
+      setActiveRide(null);
+      setPickup(null);
+      setPickupInput('');
+      setDestination(null);
+      setDestinationInput('');
+      setEstimate(null);
+      lastNotifiedStatusRef.current = null;
     }
   }, [user]);
 
@@ -192,14 +276,93 @@ export const PassengerDashboardPage: React.FC = () => {
     refreshActiveRide();
   }, [refreshActiveRide]);
 
-  // Polling active ride when present: continues polling until payment is approved by driver
+  // Browser state-change notification helper (only called upon status change)
+  const notifyRideStatusChange = useCallback((ride: Ride) => {
+    if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') {
+      return;
+    }
+
+    let title = 'VaiCar';
+    let body = '';
+
+    switch (ride.status) {
+      case 'ACCEPTED':
+        title = ride.serviceType === 'delivery' ? 'Entregador a caminho!' : 'Motorista a caminho!';
+        body = `${ride.driverName || 'O condutor parceiro'} aceitou seu pedido e está a caminho do ponto de embarque.`;
+        break;
+      case 'DRIVER_ARRIVING':
+        title = 'Condutor se aproximando!';
+        body = `${ride.driverName || 'O condutor'} está chegando ao local de embarque/coleta.`;
+        break;
+      case 'ARRIVED':
+        title = ride.serviceType === 'delivery' ? 'Entregador no local de coleta!' : 'Motorista no local de embarque!';
+        body = `${ride.driverName || 'O condutor'} chegou ao ponto de partida.`;
+        break;
+      case 'IN_PROGRESS':
+        title = ride.serviceType === 'delivery' ? 'Entrega em andamento' : 'Viagem iniciada';
+        body = 'Tenha uma excelente viagem!';
+        break;
+      case 'COMPLETED':
+        title = ride.serviceType === 'delivery' ? 'Entrega concluída!' : 'Viagem concluída!';
+        body = `Viagem finalizada no valor de R$ ${ride.fareAmount.toFixed(2)}.`;
+        break;
+      case 'CANCELLED_BY_DRIVER':
+        title = 'Motorista cancelou a corrida';
+        body = 'Buscando outro motorista parceiro disponível nas proximidades...';
+        break;
+      case 'CANCELLED_BY_ADMIN':
+        title = 'Corrida cancelada pela administração';
+        body = ride.cancelReason ? `Motivo: ${ride.cancelReason}` : 'A corrida foi cancelada pela central VaiCar.';
+        break;
+      case 'CANCELLED_BY_SYSTEM':
+        title = 'Nenhum condutor disponível';
+        body = 'Não encontramos motoristas disponíveis no momento. Tente novamente em alguns minutos.';
+        break;
+      default:
+        return;
+    }
+
+    try {
+      new Notification(title, {
+        body,
+        icon: '/favicon.svg',
+      });
+    } catch {
+      // Ignored
+    }
+  }, []);
+
+  // Polling active ride and driver GPS when ride is active (refreshes every 2.5s)
   useEffect(() => {
     if (!activeRide) return;
 
+    // Terminal statuses where polling should immediately halt
+    const terminalStatuses = ['CANCELLED_BY_PASSENGER', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_SYSTEM', 'CANCELLED_BY_ADMIN'];
+    if (terminalStatuses.includes(activeRide.status)) {
+      return;
+    }
+
     const interval = setInterval(async () => {
       try {
-        const updated = await ridesApi.getById(activeRide.id);
+        const [updated, drivers] = await Promise.all([
+          ridesApi.getById(activeRide.id),
+          driversApi.getOnlineDrivers(),
+        ]);
+
         setActiveRide(updated);
+        setOnlineDrivers(drivers);
+
+        // State-change notification trigger (fires once per state change, never duplicates on poll)
+        if (lastNotifiedStatusRef.current !== updated.status) {
+          lastNotifiedStatusRef.current = updated.status;
+          notifyRideStatusChange(updated);
+        }
+
+        // Terminal cancellation stops polling
+        if (terminalStatuses.includes(updated.status)) {
+          clearInterval(interval);
+          return;
+        }
 
         // Only stop polling when completed AND payment is approved by driver
         if (updated.status === 'COMPLETED') {
@@ -217,12 +380,84 @@ export const PassengerDashboardPage: React.FC = () => {
           }
         }
       } catch (err) {
-        console.error('Ride poll error:', err);
+        console.error('Ride/driver poll error:', err);
       }
-    }, 3000);
+    }, 2500);
 
     return () => clearInterval(interval);
-  }, [activeRide?.id, activeRide?.status, activeRide?.paymentStatus, activeRide?.paymentApprovedByDriver]);
+  }, [activeRide?.id, activeRide?.status, activeRide?.paymentStatus, activeRide?.paymentApprovedByDriver, notifyRideStatusChange]);
+
+  // Real-time SSE event listener for immediate ride status updates & instant cancellation broadcast
+  useEffect(() => {
+    if (typeof window === 'undefined' || !activeRide) return;
+
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    const sseUrl = `/api/v1/live/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource(sseUrl);
+
+      const handleRideEvent = (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          const rideData = payload.data || payload;
+          if (rideData && rideData.id === activeRide.id) {
+            setActiveRide(rideData);
+            if (lastNotifiedStatusRef.current !== rideData.status) {
+              lastNotifiedStatusRef.current = rideData.status;
+              notifyRideStatusChange(rideData);
+            }
+          }
+        } catch (err) {
+          console.debug('[SSE] Failed to parse ride event:', err);
+        }
+      };
+
+      es.addEventListener('RIDE_UPDATED', handleRideEvent);
+      es.addEventListener('RIDE_CANCELLED', handleRideEvent);
+      es.addEventListener('message', handleRideEvent);
+    } catch (err) {
+      console.warn('[SSE] EventSource init failed:', err);
+    }
+
+    return () => {
+      if (es) {
+        es.close();
+      }
+    };
+  }, [activeRide?.id, notifyRideStatusChange]);
+
+  // Assigned driver resolution and real-time GPS telemetry validation
+  const assignedDriver = useMemo(() => {
+    if (!activeRide?.driverId) return null;
+    return onlineDrivers.find((d) => d.uid === activeRide.driverId) || null;
+  }, [activeRide?.driverId, onlineDrivers]);
+
+  // Evaluates driver telemetry freshness: fresh if updatedAt is within the last 60 seconds
+  const isDriverGpsFresh = useMemo(() => {
+    if (!assignedDriver?.currentLocation?.updatedAt) return false;
+    const updatedTime = new Date(assignedDriver.currentLocation.updatedAt).getTime();
+    if (isNaN(updatedTime)) return false;
+    return (Date.now() - updatedTime) <= 60000;
+  }, [assignedDriver?.currentLocation?.updatedAt]);
+
+  // Live driver position: only supplied when fresh (never shows stale/frozen coordinates as live)
+  const liveDriverLocation = useMemo(() => {
+    if (!assignedDriver?.currentLocation) return null;
+    if (!isDriverGpsFresh) return null;
+    return assignedDriver.currentLocation;
+  }, [assignedDriver?.currentLocation, isDriverGpsFresh]);
+
+  // Dynamic tooltip for assigned driver marker based on real ride status (only approaching states show "a caminho")
+  const assignedTooltip = useMemo(() => {
+    if (!activeRide?.driverId) return undefined;
+    if (activeRide.status === 'DRIVER_ARRIVING') return 'Seu motorista está se aproximando!';
+    if (activeRide.status === 'ACCEPTED') return 'Seu motorista está a caminho!';
+    if (activeRide.status === 'ARRIVED') return 'Motorista no local de embarque!';
+    if (activeRide.status === 'IN_PROGRESS') return 'Viagem em andamento';
+    return undefined;
+  }, [activeRide?.driverId, activeRide?.status]);
 
   const handleCheckPaymentStatus = async () => {
     if (!activeRide) return;
@@ -247,20 +482,22 @@ export const PassengerDashboardPage: React.FC = () => {
     }
   };
 
-  // Recalculate estimate whenever pickup or destination changes
+  // Recalculate estimate only when both pickup and destination coordinates exist
   useEffect(() => {
-    if (pickup && destination) {
+    if (pickup?.lat && pickup?.lng && destination?.lat && destination?.lng) {
       ridesApi
         .estimate({
           origin: { address: pickup.address, lat: pickup.lat, lng: pickup.lng },
           destination: { address: destination.address, lat: destination.lat, lng: destination.lng },
+          serviceType,
+          applyReferralCredit: useReferralCredit && (referralSummary?.referralCreditBalance ?? 0) >= 5,
         })
         .then(setEstimate)
         .catch(console.error);
     } else {
       setEstimate(null);
     }
-  }, [pickup, destination]);
+  }, [pickup, destination, serviceType, useReferralCredit, referralSummary?.referralCreditBalance]);
 
   const handleSelectPickup = useCallback((place: { address: string; lat: number; lng: number }) => {
     setPickup(place);
@@ -299,8 +536,20 @@ export const PassengerDashboardPage: React.FC = () => {
   };
 
   const handleRequestRide = async () => {
+    if (!pickup) {
+      setError(
+        serviceType === 'delivery'
+          ? 'Selecione o local de retirada (coleta) da encomenda.'
+          : 'Selecione seu local de partida (embarque).'
+      );
+      return;
+    }
     if (!destination) {
-      setError('Selecione um destino para a corrida.');
+      setError(
+        serviceType === 'delivery'
+          ? 'Selecione o endereço de entrega da encomenda.'
+          : 'Selecione um destino para a corrida.'
+      );
       return;
     }
     if (!user) {
@@ -308,9 +557,21 @@ export const PassengerDashboardPage: React.FC = () => {
       return;
     }
 
+    if (serviceType === 'delivery') {
+      if (!recipientName.trim()) {
+        setError('Informe o nome de quem receberá a entrega.');
+        return;
+      }
+      if (!recipientPhone.trim()) {
+        setError('Informe o telefone ou WhatsApp de quem receberá a entrega.');
+        return;
+      }
+    }
+
     if (onlineDrivers.length === 0 && !selectedDriverId) {
+      const partnerText = serviceType === 'delivery' ? 'entregadores ou motoristas' : 'motoristas';
       const proceed = window.confirm(
-        'Atenção: Não há motoristas online no aplicativo neste momento em São Sebastião.\n\nClique em OK para registrar o pedido no sistema e aguardar um motorista conectar, ou Cancelar para acionar o grupo de motoristas no WhatsApp.'
+        `Atenção: Não há ${partnerText} online no aplicativo neste momento em São Sebastião.\n\nClique em OK para registrar o pedido no sistema e aguardar um profissional conectar, ou Cancelar para acionar o grupo no WhatsApp.`
       );
       if (!proceed) {
         window.open('https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3', '_blank');
@@ -327,10 +588,26 @@ export const PassengerDashboardPage: React.FC = () => {
         destination: { address: destination.address, lat: destination.lat, lng: destination.lng },
         paymentMethod,
         requestedDriverId: selectedDriverId || undefined,
+        serviceType,
+        applyReferralCredit: useReferralCredit && (referralSummary?.referralCreditBalance ?? 0) >= 5,
+        deliveryDetails:
+          serviceType === 'delivery'
+            ? {
+                recipientName: recipientName.trim(),
+                recipientPhone: recipientPhone.trim(),
+                packageNotes: packageNotes.trim() || undefined,
+              }
+            : undefined,
       });
       setActiveRide(ride);
+      setUseReferralCredit(false);
+      loadReferralSummary();
+      lastNotifiedStatusRef.current = ride.status;
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
     } catch (err: any) {
-      setError(err.message || 'Falha ao solicitar corrida.');
+      setError(err.message || (serviceType === 'delivery' ? 'Falha ao solicitar entrega.' : 'Falha ao solicitar corrida.'));
     } finally {
       setLoading(false);
     }
@@ -349,6 +626,12 @@ export const PassengerDashboardPage: React.FC = () => {
     try {
       await ridesApi.cancel(activeRide.id, 'Cancelado pelo passageiro');
       setActiveRide(null);
+      setPickup(null);
+      setPickupInput('');
+      setDestination(null);
+      setDestinationInput('');
+      setEstimate(null);
+      lastNotifiedStatusRef.current = null;
     } catch (err: any) {
       setError(err.message || 'Falha ao cancelar corrida.');
     }
@@ -370,6 +653,12 @@ export const PassengerDashboardPage: React.FC = () => {
       setShowEmergencyCancelModal(false);
       setEmergencyDetails('');
       setActiveRide(null);
+      setPickup(null);
+      setPickupInput('');
+      setDestination(null);
+      setDestinationInput('');
+      setEstimate(null);
+      lastNotifiedStatusRef.current = null;
       alert('Cancelamento emergencial registrado com sucesso. A equipe do VaiCar foi notificada da ocorrência.');
     } catch (err: any) {
       setError(err.message || 'Falha ao registrar cancelamento emergencial.');
@@ -384,6 +673,12 @@ export const PassengerDashboardPage: React.FC = () => {
       await ridesApi.rate(activeRide.id, ratingStars, ratingFeedback);
       setShowRatingModal(false);
       setActiveRide(null);
+      setPickup(null);
+      setPickupInput('');
+      setDestination(null);
+      setDestinationInput('');
+      setEstimate(null);
+      lastNotifiedStatusRef.current = null;
     } catch (err: any) {
       console.error(err);
     }
@@ -420,10 +715,36 @@ export const PassengerDashboardPage: React.FC = () => {
     }
   };
 
+  // Filter for valid GPS and strict telemetry freshness (<= 60 seconds)
+  const freshOnlineDrivers = useMemo(() => {
+    const now = Date.now();
+    return onlineDrivers.filter((d) => {
+      if (!d.currentLocation?.lat || !d.currentLocation?.lng || !d.currentLocation?.updatedAt) return false;
+      if (typeof d.currentLocation.lat !== 'number' || typeof d.currentLocation.lng !== 'number') return false;
+      if (isNaN(d.currentLocation.lat) || isNaN(d.currentLocation.lng)) return false;
+      if (d.currentLocation.lat === 0 && d.currentLocation.lng === 0) return false;
+      const t = new Date(d.currentLocation.updatedAt).getTime();
+      if (isNaN(t)) return false;
+      const age = now - t;
+      // Authoritative backend enforces 60s; client allows up to 75s for clock skew / poll interval
+      return age >= -10000 && age <= 75000;
+    });
+  }, [onlineDrivers]);
+
+  const displayOnlineDrivers = useMemo(() => {
+    return freshOnlineDrivers.filter((d) =>
+      d.servicesOffered ? d.servicesOffered.includes(serviceType) : true
+    );
+  }, [freshOnlineDrivers, serviceType]);
+
+  const displayDriversCount = estimate?.availableDrivers?.length ?? displayOnlineDrivers.length;
+
   const selectedDriver = estimate?.availableDrivers?.find((d) => d.driverId === selectedDriverId);
   const activeFareAmount = selectedDriver ? selectedDriver.fareAmount : (estimate?.fareAmount ?? 0);
   const activeOriginalFare = selectedDriver ? (selectedDriver.originalFareAmount ?? selectedDriver.fareAmount) : (estimate?.originalFareAmount ?? 0);
   const activeDiscountApplied = selectedDriver ? (selectedDriver.discountApplied ?? false) : (estimate?.discountApplied ?? false);
+  const activeDriverEntitlement = selectedDriver ? (selectedDriver.driverTotalEntitlement ?? selectedDriver.originalFareAmount ?? selectedDriver.fareAmount) : (estimate?.driverTotalEntitlement ?? estimate?.originalFareAmount ?? estimate?.fareAmount ?? 0);
+  const activePlatformSubsidy = selectedDriver ? (selectedDriver.platformSubsidyAmount ?? 0) : (estimate?.platformSubsidyAmount ?? 0);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -439,6 +760,21 @@ export const PassengerDashboardPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {user && (
+            <button
+              onClick={() => {
+                setShowReferralModal(true);
+                loadReferralSummary();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/50 hover:bg-emerald-900 text-xs font-semibold text-emerald-300 transition-colors shadow-sm"
+              title="Indique e Ganhe R$ 5,00 por amigo"
+            >
+              <Gift className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Indique e Ganhe</span>
+              <span className="sm:hidden">Ganhe R$ 5</span>
+            </button>
+          )}
+
           {user ? (
             <button
               onClick={() => setShowProfileModal(true)}
@@ -505,7 +841,9 @@ export const PassengerDashboardPage: React.FC = () => {
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-amber-400 animate-spin" />
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">Aguardando Motorista</span>
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      {activeRide.serviceType === 'delivery' ? 'Aguardando Entregador' : 'Aguardando Motorista'}
+                    </span>
                   </div>
                   <span className="text-xs font-black uppercase px-2.5 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-700">
                     Pagamento Pendente
@@ -515,10 +853,14 @@ export const PassengerDashboardPage: React.FC = () => {
                 <div className="p-4 rounded-xl bg-amber-950/70 border border-amber-600/60 text-xs text-amber-200 space-y-2">
                   <div className="font-extrabold text-sm text-white flex items-center gap-1.5">
                     <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Viagem/Entrega Concluída • Confirmação de Pagamento</span>
+                    <span>
+                      {activeRide.serviceType === 'delivery'
+                        ? 'Entrega Concluída • Confirmação de Pagamento'
+                        : 'Viagem Concluída • Confirmação de Pagamento'}
+                    </span>
                   </div>
                   <p className="leading-relaxed text-slate-300">
-                    O motorista/entregador parceiro precisa <strong>aprovar o recebimento do pagamento</strong> no aplicativo dele para que novas corridas ou entregas possam ser solicitadas.
+                    O {activeRide.serviceType === 'delivery' ? 'entregador parceiro' : 'motorista parceiro'} precisa <strong>aprovar o recebimento do pagamento</strong> no aplicativo dele para que novas {activeRide.serviceType === 'delivery' ? 'entregas' : 'corridas'} possam ser solicitadas.
                   </p>
                 </div>
 
@@ -540,7 +882,11 @@ export const PassengerDashboardPage: React.FC = () => {
                       <div>
                         <span className="text-sm font-bold text-white block">{activeRide.driverName}</span>
                         <span className="text-xs text-slate-400 block">
-                          {activeRide.vehicle?.brand} {activeRide.vehicle?.model} ({activeRide.vehicle?.plate})
+                          {activeRide.vehicle?.type === 'bicycle'
+                            ? '🚲 Bicicleta'
+                            : activeRide.vehicle?.type === 'motorcycle'
+                            ? `🛵 Moto • ${activeRide.vehicle?.brand || ''} ${activeRide.vehicle?.model || ''}`
+                            : `🚗 ${activeRide.vehicle?.brand || ''} ${activeRide.vehicle?.model || ''} (${activeRide.vehicle?.plate || ''})`}
                         </span>
                         <span className="text-xs text-emerald-400 font-mono block mt-0.5">{activeRide.driverPhone}</span>
                       </div>
@@ -572,7 +918,7 @@ export const PassengerDashboardPage: React.FC = () => {
 
                   {activeRide.paymentMethod === 'PIX' && (
                     <div className="pt-2 border-t border-slate-800 text-[11px] text-amber-300 leading-relaxed">
-                      💡 <strong>Pagamento via Pix:</strong> Efetue a transferência diretamente para a chave Pix informada pelo motorista e peça para ele clicar em <strong>"Confirmar Pagamento Recebido"</strong> no celular dele.
+                      💡 <strong>Pagamento via Pix:</strong> Efetue a transferência diretamente para a chave Pix informada pelo {activeRide.serviceType === 'delivery' ? 'entregador' : 'motorista'} e peça para ele clicar em <strong>"Confirmar Pagamento Recebido"</strong> no celular dele.
                     </div>
                   )}
                 </div>
@@ -581,7 +927,7 @@ export const PassengerDashboardPage: React.FC = () => {
                 <div className="space-y-2.5 pt-1">
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center text-[11px] text-slate-400 flex items-center justify-center gap-2">
                     <Clock className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
-                    <span>Verificando confirmação do motorista automaticamente em tempo real...</span>
+                    <span>Verificando confirmação do {activeRide.serviceType === 'delivery' ? 'entregador' : 'motorista'} automaticamente em tempo real...</span>
                   </div>
 
                   <button
@@ -609,9 +955,23 @@ export const PassengerDashboardPage: React.FC = () => {
             ) : (
               <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-2xl p-6 shadow-2xl space-y-5 animate-pulse-border">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Status da Viagem</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    {activeRide.serviceType === 'delivery' ? 'Status da Entrega' : 'Status da Viagem'}
+                  </span>
                   <span className="text-xs font-black uppercase px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700">
-                    {activeRide.status.replace(/_/g, ' ')}
+                    {activeRide.serviceType === 'delivery'
+                      ? activeRide.status === 'REQUESTED'
+                        ? 'Aguardando entregador...'
+                        : activeRide.status === 'DRIVER_ARRIVING' || activeRide.status === 'ACCEPTED'
+                        ? 'Entregador a caminho do ponto de coleta'
+                        : activeRide.status === 'ARRIVED'
+                        ? 'Entregador no local de coleta'
+                        : activeRide.status === 'IN_PROGRESS'
+                        ? 'Encomenda em trânsito'
+                        : activeRide.status === 'COMPLETED'
+                        ? 'Encomenda entregue'
+                        : activeRide.status.replace(/_/g, ' ')
+                      : activeRide.status.replace(/_/g, ' ')}
                   </span>
                 </div>
 
@@ -637,20 +997,56 @@ export const PassengerDashboardPage: React.FC = () => {
                     <div className="flex-1 text-xs">
                       <span className="text-sm font-extrabold text-white block">{activeRide.driverName}</span>
                       <span className="text-slate-300 block">
-                        {activeRide.vehicle?.brand} {activeRide.vehicle?.model} • {activeRide.vehicle?.color}
+                        {activeRide.vehicle?.type === 'bicycle'
+                          ? '🚲 Bicicleta'
+                          : activeRide.vehicle?.type === 'motorcycle'
+                          ? `🛵 Moto • ${activeRide.vehicle?.brand || ''} ${activeRide.vehicle?.model || ''}`
+                          : `🚗 ${activeRide.vehicle?.brand || ''} ${activeRide.vehicle?.model || ''} • ${activeRide.vehicle?.color || ''}`}
                       </span>
-                      <span className="text-emerald-400 font-mono font-bold block mt-0.5">
-                        Placa: {activeRide.vehicle?.plate}
-                      </span>
+                      {activeRide.vehicle?.plate && (
+                        <span className="text-emerald-400 font-mono font-bold block mt-0.5">
+                          Placa: {activeRide.vehicle.plate}
+                        </span>
+                      )}
+                      {!isDriverGpsFresh && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-amber-400 mt-1 font-semibold">
+                          <Clock className="w-3.5 h-3.5 animate-pulse" />
+                          <span>Aguardando sinal de GPS recente do condutor...</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center text-xs text-slate-400 space-y-1">
                     <div className="flex justify-center">
-                      <Car className="w-8 h-8 text-emerald-400 animate-bounce" />
+                      {activeRide.serviceType === 'delivery' ? (
+                        <Package className="w-8 h-8 text-emerald-400 animate-bounce" />
+                      ) : (
+                        <Car className="w-8 h-8 text-emerald-400 animate-bounce" />
+                      )}
                     </div>
-                    <p className="font-semibold text-white">Buscando motoristas parceiros próximos...</p>
-                    <p className="text-[11px]">Sua corrida está sendo enviada aos veículos na região.</p>
+                    <p className="font-semibold text-white">
+                      {activeRide.serviceType === 'delivery'
+                        ? 'Buscando entregadores parceiros próximos...'
+                        : 'Buscando motoristas parceiros próximos...'}
+                    </p>
+                    <p className="text-[11px]">
+                      {activeRide.serviceType === 'delivery'
+                        ? 'Sua encomenda está sendo enviada aos entregadores na região.'
+                        : 'Sua corrida está sendo enviada aos veículos na região.'}
+                    </p>
+
+                    {activeRide.lastDriverCancelledAt && (
+                      <div className="p-3 mt-2 bg-amber-950/70 border border-amber-500/60 rounded-xl text-amber-300 text-xs text-left space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-400">
+                          <AlertTriangle className="w-4 h-4 shrink-0" />
+                          <span>Motorista cancelou a corrida</span>
+                        </div>
+                        <p className="text-[11px] text-amber-200/80">
+                          Procurando outro motorista disponível nas proximidades...
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -658,24 +1054,53 @@ export const PassengerDashboardPage: React.FC = () => {
                 <div className="space-y-2 text-xs bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
                   <div className="flex items-start gap-2">
                     <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span className="text-slate-300">{activeRide.origin.address}</span>
+                    <span className="text-slate-300">
+                      {activeRide.serviceType === 'delivery' ? <strong className="text-emerald-400">Coleta: </strong> : null}
+                      {activeRide.origin.address}
+                    </span>
                   </div>
                   <div className="flex items-start gap-2 pt-2 border-t border-slate-800/80">
                     <Navigation className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                    <span className="text-slate-300">{activeRide.destination.address}</span>
+                    <span className="text-slate-300">
+                      {activeRide.serviceType === 'delivery' ? <strong className="text-rose-400">Entrega: </strong> : null}
+                      {activeRide.destination.address}
+                    </span>
                   </div>
+
+                  {activeRide.deliveryDetails && (
+                    <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-300 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Destinatário:</span>
+                        <span className="font-semibold text-white">{activeRide.deliveryDetails.recipientName}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">WhatsApp / Tel:</span>
+                        <span className="font-mono text-emerald-400">{activeRide.deliveryDetails.recipientPhone}</span>
+                      </div>
+                      {activeRide.deliveryDetails.packageNotes && (
+                        <div className="text-[10px] text-slate-400">
+                          <span className="text-slate-500">Pacote / Obs:</span> {activeRide.deliveryDetails.packageNotes}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex justify-between pt-2 border-t border-slate-800 text-emerald-400 font-bold">
                     <span>Valor: R$ {activeRide.fareAmount.toFixed(2)}</span>
                     <span>Forma: {activeRide.paymentMethod}</span>
                   </div>
                   {activeRide.discountApplied && (
                     <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                      <span>🏷️</span>
-                      <span>5% de Desconto de Passageiro Verificado incluso</span>
+                      <span>{activeRide.referralDiscountApplied ? '🎁' : '🏷️'}</span>
+                      <span>
+                        {activeRide.referralDiscountApplied
+                          ? 'R$ 5,00 de Desconto por Indicação incluso'
+                          : '5% de Desconto de Passageiro Verificado incluso'}
+                      </span>
                     </div>
                   )}
                   <div className="text-[11px] text-amber-300/90 pt-1.5 border-t border-slate-800/80">
-                    💵 <strong>Pagamento Direto:</strong> Pague diretamente ao motorista via Pix ou dinheiro.
+                    💵 <strong>Pagamento Direto:</strong> Pague diretamente ao {activeRide.serviceType === 'delivery' ? 'entregador' : 'motorista'} via Pix, cartão ou dinheiro.
                   </div>
                 </div>
 
@@ -712,7 +1137,7 @@ export const PassengerDashboardPage: React.FC = () => {
                 {/* Actions */}
                 <div className="space-y-2">
                   <div className="flex gap-2">
-                    {activeRide.status !== 'COMPLETED' && (
+                    {activeRide.status !== 'COMPLETED' && !activeRide.status.startsWith('CANCELLED') && (
                       activeRide.status === 'IN_PROGRESS' ? (
                         <button
                           type="button"
@@ -728,16 +1153,24 @@ export const PassengerDashboardPage: React.FC = () => {
                           onClick={handleCancelRide}
                           className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors"
                         >
-                          Cancelar Corrida
+                          {activeRide.serviceType === 'delivery' ? 'Cancelar Entrega' : 'Cancelar Corrida'}
                         </button>
                       )
                     )}
-                    {activeRide.status === 'COMPLETED' && (
+                    {(activeRide.status === 'COMPLETED' || activeRide.status.startsWith('CANCELLED')) && (
                       <button
-                        onClick={() => setActiveRide(null)}
+                        onClick={() => {
+                          setActiveRide(null);
+                          setPickup(null);
+                          setPickupInput('');
+                          setDestination(null);
+                          setDestinationInput('');
+                          setEstimate(null);
+                          lastNotifiedStatusRef.current = null;
+                        }}
                         className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors"
                       >
-                        Pedir Nova Corrida
+                        {activeRide.serviceType === 'delivery' ? 'Pedir Nova Entrega' : 'Pedir Nova Corrida'}
                       </button>
                     )}
                     {activeRide.receiptId && (
@@ -759,7 +1192,11 @@ export const PassengerDashboardPage: React.FC = () => {
                   {activeRide.status === 'IN_PROGRESS' && (
                     <div className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
                       <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Viagem em andamento. Cancelamento normal bloqueado pelo sistema por segurança, exceto em emergência.</span>
+                      <span>
+                        {activeRide.serviceType === 'delivery'
+                          ? 'Entrega em andamento. Cancelamento normal bloqueado pelo sistema por segurança, exceto em emergência.'
+                          : 'Viagem em andamento. Cancelamento normal bloqueado pelo sistema por segurança, exceto em emergência.'}
+                      </span>
                     </div>
                   )}
 
@@ -772,21 +1209,65 @@ export const PassengerDashboardPage: React.FC = () => {
                     className="w-full py-2 rounded-xl bg-slate-950 hover:bg-rose-950/60 hover:text-rose-300 border border-slate-800 text-slate-400 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                    Reportar Problema com o Motorista
+                    {activeRide.serviceType === 'delivery' ? 'Reportar Problema com o Entregador' : 'Reportar Problema com o Motorista'}
                   </button>
                 </div>
               </div>
             )
           ) : (
-            /* RIDE REQUEST FORM */
+            /* RIDE / DELIVERY REQUEST FORM */
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
               <div className="pb-3 border-b border-slate-800 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Car className="w-4 h-4 text-emerald-400" /> Nova Corrida em São Sebastião
+                  {serviceType === 'delivery' ? (
+                    <>
+                      <Package className="w-4 h-4 text-emerald-400" /> Nova Entrega em São Sebastião
+                    </>
+                  ) : (
+                    <>
+                      <Car className="w-4 h-4 text-emerald-400" /> Nova Corrida em São Sebastião
+                    </>
+                  )}
                 </h3>
-                <span className={`text-[11px] font-semibold ${onlineDrivers.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {onlineDrivers.length > 0 ? `${onlineDrivers.length} veículos online` : '0 online no momento'}
+                <span className={`text-[11px] font-semibold ${displayDriversCount > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {displayDriversCount > 0
+                    ? `${displayDriversCount} ${serviceType === 'delivery' ? 'entregadores/veículos' : 'veículos'} online`
+                    : '0 online no momento'}
                 </span>
+              </div>
+
+              {/* Service Mode Selector: Corrida vs Entrega */}
+              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setServiceType('ride');
+                    setSelectedDriverId(null);
+                  }}
+                  className={`py-2.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                    serviceType === 'ride'
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  <Car className="w-4 h-4" />
+                  <span>🚗 CORRIDA</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setServiceType('delivery');
+                    setSelectedDriverId(null);
+                  }}
+                  className={`py-2.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                    serviceType === 'delivery'
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  <Package className="w-4 h-4" />
+                  <span>📦 ENTREGA</span>
+                </button>
               </div>
 
               {/* GPS status / error alert if permission needed */}
@@ -810,8 +1291,8 @@ export const PassengerDashboardPage: React.FC = () => {
 
               {/* Pickup PlaceAutocompleteInput */}
               <PlaceAutocompleteInput
-                label="Ponto de Partida (Embarque)"
-                placeholder="Digite a rua, bairro ou qualquer cidade (ex: Caraguá, São Sebastião, Ilhabela...)..."
+                label={serviceType === 'delivery' ? 'De onde você vai enviar a encomenda?' : 'De onde você vai?'}
+                placeholder="Digite seu local de partida, rua ou ponto de referência..."
                 value={pickupInput}
                 onChange={setPickupInput}
                 onSelectPlace={handleSelectPickup}
@@ -820,25 +1301,16 @@ export const PassengerDashboardPage: React.FC = () => {
                 icon="pickup"
                 helperText={
                   hasUserGps
-                    ? '📍 Localização exata obtida via GPS do dispositivo. Arraste o pino verde para ajustar.'
-                    : "Digite qualquer endereço/cidade ou arraste o pino verde no mapa."
+                    ? '📍 Localização exata obtida via GPS do dispositivo.'
+                    : 'Digite o endereço ou use o GPS do dispositivo.'
                 }
               />
               {!pickupInput.trim() && (
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      setPickup({ address: 'Av. Dr. Altino Arantes, Centro, São Sebastião - SP', lat: -23.8055, lng: -45.4011 });
-                      setPickupInput('Av. Dr. Altino Arantes, Centro, São Sebastião - SP');
-                    }}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-300 hover:text-emerald-300 transition-colors"
-                  >
-                    📍 Definir Centro
-                  </button>
-                  <button
-                    type="button"
                     onClick={requestPassengerGps}
+                    disabled={gpsLoading}
                     className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/50 hover:bg-emerald-900 text-emerald-300 font-semibold transition-colors flex items-center gap-1"
                   >
                     🎯 Usar Meu GPS
@@ -848,14 +1320,70 @@ export const PassengerDashboardPage: React.FC = () => {
 
               {/* Destination PlaceAutocompleteInput */}
               <PlaceAutocompleteInput
-                label="Para onde vamos? (Destino)"
-                placeholder="Digite qualquer endereço, praia ou cidade vizinha..."
+                label={serviceType === 'delivery' ? 'Para onde você quer entregar?' : 'Para onde você vai?'}
+                placeholder="Digite seu destino, endereço, praia ou bairro..."
                 value={destinationInput}
                 onChange={setDestinationInput}
                 onSelectPlace={handleSelectDestination}
                 icon="destination"
-                helperText="Busca aberta para qualquer cidade ou região. Você também pode arrastar o pino vermelho ou clicar no mapa."
+                helperText={
+                  serviceType === 'delivery'
+                    ? 'Onde a encomenda deve ser entregue. Você também pode arrastar o pino vermelho ou clicar no mapa.'
+                    : 'Busca aberta para qualquer cidade ou região. Você também pode arrastar o pino vermelho ou clicar no mapa.'
+                }
               />
+
+              {/* Delivery Recipient Details (Only when serviceType === 'delivery') */}
+              {serviceType === 'delivery' && (
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-emerald-500/30 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 pb-1 border-b border-slate-800">
+                    <Package className="w-4 h-4" />
+                    <span>Informações de Entrega & Destinatário</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Nome de Quem Recebe <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Carlos Silva"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      WhatsApp / Telefone de Quem Recebe <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="Ex: (12) 99123-4567"
+                      value={recipientPhone}
+                      onChange={(e) => setRecipientPhone(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      O que será transportado? (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Documentos em envelope, caixa pequena, chaves..."
+                      value={packageNotes}
+                      onChange={(e) => setPackageNotes(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none"
+                    />
+                    <span className="text-[10px] text-slate-500 block mt-1">
+                      Dica: Ajuda o entregador a saber o tamanho do pacote antes de aceitar.
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Quick Popular Destinos (Shortcuts) */}
               <div>
@@ -879,23 +1407,31 @@ export const PassengerDashboardPage: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-semibold text-slate-300">
-                    Escolha o Motorista por Preço e Proximidade:
+                    {serviceType === 'delivery'
+                      ? 'Escolha o Entregador por Tarifa e Proximidade:'
+                      : 'Escolha o Motorista por Preço e Proximidade:'}
                   </label>
-                  <span className={`text-[11px] font-semibold ${(estimate?.availableDrivers?.length || onlineDrivers.length) > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {(estimate?.availableDrivers?.length || onlineDrivers.length) > 0
-                      ? `${estimate?.availableDrivers?.length || onlineDrivers.length} disponíveis na cidade`
+                  <span className={`text-[11px] font-semibold ${displayDriversCount > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {displayDriversCount > 0
+                      ? `${displayDriversCount} disponíveis na cidade`
                       : '0 online no momento'}
                   </span>
                 </div>
 
-                {onlineDrivers.length === 0 && (!estimate?.availableDrivers || estimate.availableDrivers.length === 0) ? (
+                {displayDriversCount === 0 ? (
                   <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-left space-y-2.5">
                     <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs">
                       <Clock className="w-4 h-4 shrink-0" />
-                      <span>Nenhum motorista ou entregador online agora</span>
+                      <span>
+                        {serviceType === 'delivery'
+                          ? 'Não há entregadores disponíveis no momento.'
+                          : 'Não há motoristas disponíveis no momento.'}
+                      </span>
                     </div>
                     <p className="text-[11px] text-slate-300 leading-relaxed">
-                      Nenhum profissional está com o aplicativo aberto neste instante em São Sebastião. O mapa e a lista exibem apenas motoristas reais cadastrados e aprovados quando estão online. Você pode acionar o grupo oficial no WhatsApp:
+                      {serviceType === 'delivery'
+                        ? 'Nenhum entregador parceiro credenciado disponível nesta área de atendimento no momento. O mapa exibe apenas parceiros reais credenciados e com sinal de GPS atualizado na região. Você pode acionar o grupo oficial no WhatsApp:'
+                        : 'Nenhum motorista parceiro credenciado disponível nesta área de atendimento no momento. O mapa exibe apenas motoristas reais credenciados e com sinal de GPS atualizado na região. Você pode acionar o grupo oficial no WhatsApp:'}
                     </p>
                     <a
                       href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
@@ -904,7 +1440,7 @@ export const PassengerDashboardPage: React.FC = () => {
                       className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-lg"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
-                      Pedir no Grupo WhatsApp dos Motoristas
+                      Pedir no Grupo WhatsApp dos Parceiros
                     </a>
                   </div>
                 ) : (
@@ -924,13 +1460,17 @@ export const PassengerDashboardPage: React.FC = () => {
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold block">Mais Rápido / Melhor Tarifa</span>
+                            <span className="text-xs font-bold block">
+                              {serviceType === 'delivery' ? 'Mais Rápido / Melhor Tarifa de Entrega' : 'Mais Rápido / Melhor Tarifa'}
+                            </span>
                             <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-900/80 text-emerald-300 font-bold uppercase">
                               Automático
                             </span>
                           </div>
                           <span className="text-[10px] text-slate-400">
-                            Chama o primeiro motorista disponível mais próximo
+                            {serviceType === 'delivery'
+                              ? 'Chama o primeiro entregador disponível mais próximo'
+                              : 'Chama o primeiro motorista disponível mais próximo'}
                           </span>
                         </div>
                       </div>
@@ -987,6 +1527,9 @@ export const PassengerDashboardPage: React.FC = () => {
                                   <span className="text-[10px] text-amber-400 font-semibold flex items-center">
                                     ⭐ {d.rating.toFixed(1)}
                                   </span>
+                                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-medium">
+                                    {isBike ? '🚲 Bicicleta' : isMoto ? '🛵 Moto' : '🚗 Carro'}
+                                  </span>
                                   {d.isFixedRoute && (
                                     <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold">
                                       🏷️ Rota Fixa
@@ -994,8 +1537,9 @@ export const PassengerDashboardPage: React.FC = () => {
                                   )}
                                 </div>
                                 <span className="text-[10px] text-slate-400 block truncate max-w-[180px]">
-                                  {d.vehicle?.brand} {d.vehicle?.model} ({d.vehicle?.color})
-                                  {d.vehicle?.plate ? ` • ${d.vehicle.plate}` : ''}
+                                  {isBike
+                                    ? 'Entrega de Bicicleta'
+                                    : `${d.vehicle?.brand || ''} ${d.vehicle?.model || ''} (${d.vehicle?.color || ''})${d.vehicle?.plate ? ` • ${d.vehicle.plate}` : ''}`}
                                 </span>
                                 <span className="text-[10px] text-emerald-400 font-medium block">
                                   📍 {d.distanceToPickupKm.toFixed(1)} km • ~{d.etaMinutes} min até você
@@ -1026,8 +1570,8 @@ export const PassengerDashboardPage: React.FC = () => {
                         );
                       })
                     ) : (
-                      /* When no destination selected yet, list online drivers */
-                      onlineDrivers.map((d) => {
+                      /* When no destination selected yet, list online drivers matching service */
+                      displayOnlineDrivers.map((d) => {
                         const isSelected = selectedDriverId === d.uid;
                         const isBike = d.vehicle?.type === 'bicycle';
                         const isMoto = d.vehicle?.type === 'motorcycle' || d.isCourier;
@@ -1059,13 +1603,16 @@ export const PassengerDashboardPage: React.FC = () => {
                                   <span className="text-[10px] text-amber-400 font-semibold flex items-center">
                                     ⭐ {d.rating.toFixed(1)}
                                   </span>
+                                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-medium">
+                                    {isBike ? '🚲 Bicicleta' : isMoto ? '🛵 Moto' : '🚗 Carro'}
+                                  </span>
                                 </div>
                                 <span className="text-[10px] text-slate-400 block truncate max-w-[200px]">
-                                  {d.vehicle.brand} {d.vehicle.model} ({d.vehicle.color})
+                                  {isBike ? 'Entrega de Bicicleta' : `${d.vehicle.brand} ${d.vehicle.model} (${d.vehicle.color})`}
                                   {d.vehicle.plate ? ` • ${d.vehicle.plate}` : ''}
                                 </span>
                                 <span className="text-[9px] text-slate-500 block">
-                                  Digite o destino para ver a tarifa deste motorista
+                                  Digite o destino para ver a tarifa deste profissional
                                 </span>
                               </div>
                             </div>
@@ -1092,7 +1639,9 @@ export const PassengerDashboardPage: React.FC = () => {
               {/* Payment Method Selector */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Forma de Pagamento (Direto no Carro)
+                  {serviceType === 'delivery'
+                    ? 'Forma de Pagamento (Direto ao Entregador)'
+                    : 'Forma de Pagamento (Direto no Carro)'}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
@@ -1131,13 +1680,37 @@ export const PassengerDashboardPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Referral Credit Redemption Box if user has balance */}
+              {referralSummary && referralSummary.referralCreditBalance >= 5 && (
+                <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={useReferralCredit}
+                      onChange={(e) => setUseReferralCredit(e.target.checked)}
+                      className="w-4 h-4 rounded text-emerald-500 bg-slate-900 border-slate-700 focus:ring-emerald-500"
+                    />
+                    <div>
+                      <span className="font-bold text-white block">Resgatar R$ 5,00 em créditos de indicação</span>
+                      <span className="text-[10px] text-emerald-300 block">
+                        Saldo disponível: R$ {referralSummary.referralCreditBalance.toFixed(2)} • O motorista recebe o valor integral!
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              )}
+
               {/* Fare Estimate Box */}
               {estimate && (
                 <div className="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                        {selectedDriver ? `Tarifa de ${selectedDriver.name}:` : 'Tarifa Estimada (A partir de):'}
+                        {selectedDriver
+                          ? `Tarifa de ${selectedDriver.name}:`
+                          : serviceType === 'delivery'
+                          ? 'Tarifa de Entrega (A partir de):'
+                          : 'Tarifa Estimada (A partir de):'}
                       </span>
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl font-extrabold text-emerald-400">
@@ -1151,22 +1724,53 @@ export const PassengerDashboardPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right text-xs text-slate-300 space-y-0.5">
-                      <span className="block font-semibold">~{estimate.durationMinutes} min de viagem</span>
+                      <span className="block font-semibold">
+                        ~{estimate.durationMinutes} min {serviceType === 'delivery' ? 'de percurso' : 'de viagem'}
+                      </span>
                       <span className="block text-[11px] text-slate-500">{estimate.distanceKm.toFixed(1)} km</span>
                     </div>
                   </div>
 
-                  {activeDiscountApplied ? (
+                  {estimate?.referralCreditApplied && (
                     <div className="pt-2 border-t border-slate-800 text-[11px] text-emerald-400 flex items-center justify-between font-semibold">
-                      <span>🏷️ 5% Desconto Passageiro Verificado incluso!</span>
+                      <span>🎟️ R$ 5,00 Crédito de Indicação resgatado!</span>
+                      <span>-R$ 5,00</span>
+                    </div>
+                  )}
+
+                  {activeDiscountApplied && (
+                    <div className="pt-2 border-t border-slate-800 text-[11px] text-emerald-400 flex items-center justify-between font-semibold">
+                      <span>
+                        {estimate?.referralDiscountApplied
+                          ? '🎁 R$ 5,00 Desconto por Indicação incluso!'
+                          : '🏷️ 5% Desconto Passageiro Verificado incluso!'}
+                      </span>
                       <span>-R$ {(activeOriginalFare - activeFareAmount).toFixed(2)}</span>
                     </div>
-                  ) : (
+                  )}
+
+                  {activePlatformSubsidy > 0 && (
+                    <div className="text-[10px] text-slate-400 flex items-center justify-between bg-emerald-950/20 px-2 py-1 rounded-lg border border-emerald-500/20">
+                      <span>Repasse integral ao motorista:</span>
+                      <span className="text-emerald-300 font-medium">
+                        R$ {activeDriverEntitlement.toFixed(2)} (R$ {activeFareAmount.toFixed(2)} pago por você + R$ {activePlatformSubsidy.toFixed(2)} financiado pela VaiCar)
+                      </span>
+                    </div>
+                  )}
+
+                  {!activeDiscountApplied && !estimate?.referralCreditApplied && (
                     <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-                      <span>💡 Ganhe 5% de desconto em todas as corridas</span>
-                      <Link to="/passenger/register" className="text-emerald-400 font-semibold hover:underline">
-                        Anexar Antecedentes
-                      </Link>
+                      <span>💡 Ganhe R$ 5 em créditos indicando amigos</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowReferralModal(true);
+                          loadReferralSummary();
+                        }}
+                        className="text-emerald-400 font-semibold hover:underline"
+                      >
+                        Indique e Ganhe
+                      </button>
                     </div>
                   )}
 
@@ -1177,12 +1781,20 @@ export const PassengerDashboardPage: React.FC = () => {
                         <span className="font-semibold text-emerald-400">
                           Preço Fixo da Rota ({selectedDriver.fixedRouteName})
                         </span>
+                      ) : serviceType === 'delivery' && selectedDriver.customDeliveryPricing ? (
+                        <span className="font-mono text-emerald-400 font-semibold">
+                          Mínimo R$ {selectedDriver.customDeliveryPricing.minimumDeliveryFee.toFixed(2)} + R$ {selectedDriver.customDeliveryPricing.perKmRate.toFixed(2)}/km
+                        </span>
                       ) : (
                         <span className="font-mono text-emerald-400 font-semibold">
                           Mínimo R$ {selectedDriver.customPricing?.minimumFare.toFixed(2)} + R$ {selectedDriver.customPricing?.perKmRate.toFixed(2)}/km
                           {selectedDriver.customPricing?.perMinuteRate ? ` + R$ ${selectedDriver.customPricing.perMinuteRate.toFixed(2)}/min` : ''}
                         </span>
                       )
+                    ) : serviceType === 'delivery' ? (
+                      <span className="font-mono text-emerald-400 font-semibold">
+                        Piso Entrega: R$ 8,00 mín + R$ 1,20/km (cada entregador define sua tarifa)
+                      </span>
                     ) : (
                       <span className="font-mono text-emerald-400 font-semibold">
                         Piso VaiCar: R$ 10,00 mín + R$ 1,00/km (cada motorista define sua tarifa)
@@ -1192,7 +1804,11 @@ export const PassengerDashboardPage: React.FC = () => {
 
                   <div className="pt-2 border-t border-slate-800/80 text-[11px] text-amber-300/90 flex items-center gap-1.5">
                     <span>💵</span>
-                    <span>Pagamento direto ao motorista (Pix, cartão ou dinheiro) no veículo.</span>
+                    <span>
+                      {serviceType === 'delivery'
+                        ? 'Pagamento direto ao entregador (Pix, cartão ou dinheiro).'
+                        : 'Pagamento direto ao motorista (Pix, cartão ou dinheiro) no veículo.'}
+                    </span>
                   </div>
                 </div>
               )}
@@ -1214,7 +1830,11 @@ export const PassengerDashboardPage: React.FC = () => {
                   : selectedDriver
                   ? `Chamar ${selectedDriver.name} • R$ ${selectedDriver.fareAmount.toFixed(2)}`
                   : estimate
-                  ? `Confirmar e Pedir VaiCar • R$ ${estimate.fareAmount.toFixed(2)}`
+                  ? serviceType === 'delivery'
+                    ? `Confirmar e Pedir Entrega • R$ ${estimate.fareAmount.toFixed(2)}`
+                    : `Confirmar e Pedir VaiCar • R$ ${estimate.fareAmount.toFixed(2)}`
+                  : serviceType === 'delivery'
+                  ? 'Confirmar e Pedir Entrega'
                   : 'Confirmar e Pedir VaiCar'}
               </button>
             </div>
@@ -1223,39 +1843,24 @@ export const PassengerDashboardPage: React.FC = () => {
 
         {/* Right Map View */}
         <div className="lg:col-span-7 flex flex-col space-y-3">
-          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-slate-200 shadow-lg">
-            <div className="flex items-center gap-2">
-              <span className="text-base shrink-0">📍</span>
-              <span className="leading-snug">
-                <strong className="text-emerald-400">Pinos no Mapa:</strong> Você pode <strong>arrastar o pino verde (Partida)</strong> e o <strong>pino vermelho (Destino)</strong> para qualquer rua, ou clicar diretamente no mapa!
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setPickup({ address: 'Av. Dr. Altino Arantes, Centro, São Sebastião - SP', lat: -23.8055, lng: -45.4011 });
-                setPickupInput('Av. Dr. Altino Arantes, Centro, São Sebastião - SP');
-              }}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950 hover:bg-emerald-900 border border-emerald-600/50 text-emerald-300 font-bold shrink-0 transition-colors whitespace-nowrap"
-            >
-              Centralizar Centro
-            </button>
-          </div>
-
           <MapDisplay
             pickup={pickup}
             destination={destination}
             onPickupChange={handlePickupMarkerChange}
             onDestinationChange={handleDestinationMarkerChange}
-            drivers={onlineDrivers}
+            drivers={activeRide ? [] : displayOnlineDrivers}
             selectedDriverId={selectedDriverId}
             onDriverSelect={(d) => setSelectedDriverId(d.uid)}
-            driverLocation={
-              activeRide?.driverId && onlineDrivers.find((d) => d.uid === activeRide.driverId)?.currentLocation
-                ? onlineDrivers.find((d) => d.uid === activeRide.driverId)!.currentLocation
-                : null
-            }
+            pickupLabel={serviceType === 'delivery' ? 'Coleta' : 'Embarque'}
+            destinationLabel={serviceType === 'delivery' ? 'Entrega' : 'Destino'}
+            driverLocation={activeRide?.driverId ? liveDriverLocation : null}
+            assignedDriverTooltip={assignedTooltip}
             height="560px"
+            hudTitle={
+              activeRide?.driverId && !isDriverGpsFresh
+                ? 'Aguardando atualização de GPS do condutor...'
+                : undefined
+            }
           />
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-300">
@@ -1283,8 +1888,14 @@ export const PassengerDashboardPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-sm w-full p-6 text-center space-y-4">
             <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto" />
-            <h3 className="text-lg font-bold text-white">Viagem Concluída!</h3>
-            <p className="text-xs text-slate-400">Como foi sua experiência com o motorista?</p>
+            <h3 className="text-lg font-bold text-white">
+              {activeRide?.serviceType === 'delivery' ? 'Entrega Concluída!' : 'Viagem Concluída!'}
+            </h3>
+            <p className="text-xs text-slate-400">
+              {activeRide?.serviceType === 'delivery'
+                ? 'Como foi sua experiência com o entregador?'
+                : 'Como foi sua experiência com o motorista?'}
+            </p>
 
             <div className="flex justify-center gap-2 py-2">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -1306,7 +1917,11 @@ export const PassengerDashboardPage: React.FC = () => {
             <textarea
               value={ratingFeedback}
               onChange={(e) => setRatingFeedback(e.target.value)}
-              placeholder="Comentário opcional sobre a corrida..."
+              placeholder={
+                activeRide?.serviceType === 'delivery'
+                  ? 'Comentário opcional sobre a entrega...'
+                  : 'Comentário opcional sobre a corrida...'
+              }
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 resize-none h-20"
             />
 
@@ -1462,7 +2077,7 @@ export const PassengerDashboardPage: React.FC = () => {
                       Cancelamento Emergencial
                     </h3>
                     <span className="text-[10px] font-semibold text-rose-400">
-                      Viagem já iniciada • Exclusivo para emergências
+                      {activeRide?.serviceType === 'delivery' ? 'Entrega já iniciada • Exclusivo para emergências' : 'Viagem já iniciada • Exclusivo para emergências'}
                     </span>
                   </div>
                 </div>
@@ -1479,10 +2094,10 @@ export const PassengerDashboardPage: React.FC = () => {
               <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-700/60 text-rose-200 text-xs space-y-1.5 leading-relaxed">
                 <div className="flex items-center gap-1.5 font-bold text-rose-300">
                   <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
-                  <span>Atenção: A corrida já está em andamento!</span>
+                  <span>{activeRide?.serviceType === 'delivery' ? 'Atenção: A entrega já está em andamento!' : 'Atenção: A corrida já está em andamento!'}</span>
                 </div>
                 <p className="text-[11px] text-slate-300">
-                  Para segurança mútua do passageiro e do motorista parceiro, cancelamentos com a viagem em curso são estritamente restritos a motivos de força maior ou emergência física/mecânica. Esta ocorrência será registrada e auditada pela administração do VaiCar.
+                  Para segurança mútua do cliente e do parceiro, cancelamentos com o percurso em curso são estritamente restritos a motivos de força maior ou emergência física/mecânica. Esta ocorrência será registrada e auditada pela administração do VaiCar.
                 </p>
               </div>
 
@@ -1525,7 +2140,7 @@ export const PassengerDashboardPage: React.FC = () => {
                     onClick={() => setShowEmergencyCancelModal(false)}
                     className="flex-1 py-2.5 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors"
                   >
-                    Voltar para a Viagem
+                    {activeRide?.serviceType === 'delivery' ? 'Voltar para a Entrega' : 'Voltar para a Viagem'}
                   </button>
                   <button
                     type="submit"
@@ -1536,6 +2151,184 @@ export const PassengerDashboardPage: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* REFERRAL / INDIQUE E GANHE MODAL */}
+      {showReferralModal &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-emerald-500/30 w-full max-w-lg rounded-2xl shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                    <Gift className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white leading-none">Indique e Ganhe</h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Programa de Indicação VaiCar São Sebastião</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowReferralModal(false)}
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {referralLoading ? (
+                <div className="py-8 text-center text-xs text-slate-400 animate-pulse">
+                  Carregando informações de indicação...
+                </div>
+              ) : (
+                <>
+                  {/* Hero Banner */}
+                  <div className="bg-gradient-to-br from-emerald-950/90 via-slate-900 to-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
+                        🎉 Ganhe R$ 5,00 por indicação
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Ativo
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-200 leading-relaxed">
+                      Seu amigo ganha <strong>R$ 5,00 de desconto</strong> na primeira corrida, e você recebe <strong>R$ 5,00 em créditos</strong> assim que ele concluir a primeira viagem!
+                    </p>
+                  </div>
+
+                  {/* Balance & Stats Cards */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-400 block font-medium">Disponível</span>
+                      <span className="text-xs sm:text-sm font-extrabold text-emerald-400 block mt-0.5">
+                        R$ {(referralSummary?.referralCreditBalance || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-400 block font-medium">Resgatado</span>
+                      <span className="text-xs sm:text-sm font-extrabold text-slate-300 block mt-0.5">
+                        R$ {(referralSummary?.referralCreditRedeemed || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-400 block font-medium">Indicados</span>
+                      <span className="text-xs sm:text-sm font-extrabold text-white block mt-0.5">
+                        {referralSummary?.totalReferrals || 0}
+                      </span>
+                    </div>
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-400 block font-medium">Concluídas</span>
+                      <span className="text-xs sm:text-sm font-extrabold text-emerald-400 block mt-0.5">
+                        {referralSummary?.completedReferrals || 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Referral Code Box */}
+                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                    <label className="block text-[11px] font-semibold text-slate-300">
+                      Seu Código de Indicação Exclusivo:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 py-2 px-3 rounded-lg bg-slate-900 border border-slate-700 text-center font-mono text-sm font-extrabold text-emerald-400 tracking-wider">
+                        {referralSummary?.referralCode || '...'}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (referralSummary?.referralCode) {
+                            navigator.clipboard.writeText(referralSummary.referralCode);
+                            setCopiedCode(true);
+                            setTimeout(() => setCopiedCode(false), 2000);
+                          }
+                        }}
+                        className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors flex items-center gap-1.5"
+                      >
+                        {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedCode ? 'Copiado!' : 'Copiar'}</span>
+                      </button>
+                    </div>
+
+                    {/* Share Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = referralSummary?.shareUrl || `https://vaicar.app/passenger/register?ref=${referralSummary?.referralCode || ''}`;
+                          navigator.clipboard.writeText(url);
+                          setCopiedLink(true);
+                          setTimeout(() => setCopiedLink(false), 2000);
+                        }}
+                        className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors flex items-center justify-center gap-1.5 border border-slate-700"
+                      >
+                        {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+                        <span>{copiedLink ? 'Link Copiado!' : 'Copiar Link'}</span>
+                      </button>
+
+                      <a
+                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                          `Olá! Use meu código ${referralSummary?.referralCode} no VaiCar São Sebastião e ganhe R$ 5,00 de desconto na sua primeira corrida: ${referralSummary?.shareUrl || `https://vaicar.app/passenger/register?ref=${referralSummary?.referralCode || ''}`}`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>WhatsApp</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* List of Referred Friends */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-300 block">
+                      Histórico de Amigos Indicados ({referralSummary?.referrals?.length || 0})
+                    </span>
+                    {!referralSummary?.referrals || referralSummary.referrals.length === 0 ? (
+                      <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center text-xs text-slate-400 space-y-1">
+                        <p>Nenhum amigo utilizou seu código ainda.</p>
+                        <p className="text-[10px] text-slate-500">
+                          Compartilhe seu link pelo WhatsApp para começar a acumular créditos!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {referralSummary.referrals.map((ref) => (
+                          <div
+                            key={ref.id}
+                            className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
+                          >
+                            <div>
+                              <span className="font-bold text-white block">
+                                {ref.referredName || 'Amigo Indicado'}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                {new Date(ref.createdAt).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                            <div>
+                              {ref.status === 'REWARDED' ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+                                  ✓ R$ {ref.rewardAmount.toFixed(2)} Recebido
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-600/30">
+                                  ⏳ Aguardando 1ª Corrida
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>,
           document.body

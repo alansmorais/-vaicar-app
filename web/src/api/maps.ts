@@ -38,4 +38,13 @@ export const mapsApi = {
       method: 'POST',
       body: JSON.stringify({ input }),
     }),
+
+  getDirections: (originLat: number, originLng: number, destLat: number, destLng: number) =>
+    apiFetch<{
+      distanceKm: number;
+      durationMin: number;
+      encodedPolyline: string;
+      summary?: string;
+      fallback?: boolean;
+    }>(`/maps/directions?originLat=${originLat}&originLng=${originLng}&destLat=${destLat}&destLng=${destLng}`),
 };

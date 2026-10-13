@@ -3,11 +3,12 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithCustomToken,
   signOut as fbSignOut,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase.js';
-import { setAuthToken } from '../api/client.js';
+import { setAuthToken, getAuthToken } from '../api/client.js';
 import { authApi } from '../api/auth.js';
 import { UserProfile, PassengerProfile, DriverProfile } from '../../../shared/src/types.js';
 
@@ -22,9 +23,11 @@ interface AuthContextType {
   loginEmailPassword: (email: string, pass: string) => Promise<void>;
   adminLogin: (email: string, pass: string) => Promise<void>;
   registerEmailPassword: (email: string, pass: string) => Promise<FirebaseUser>;
+  migrateAccount: (email: string, pin: string, pass: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<{ message: string; emailDelivered: boolean }>;
+  resetPassword: (email: string, pin: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  devLogin: (uid: string, email: string, role: 'passenger' | 'driver' | 'admin', name?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,10 +47,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(data.user);
       setPassenger(data.passenger);
       setDriver(data.driver);
-      setIsAdmin(data.isAdmin || data.user?.role === 'admin');
+      setIsAdmin(Boolean(data.isAdmin || data.user?.role === 'admin'));
     } catch (err) {
-      console.warn('[AuthContext] Backend profile fetch notice:', err);
-      // Construct fallback profile if newly registered
+      console.warn('[AuthContext] Authoritative profile fetch notice:', err);
       const isAdm = email.includes('admin@vaicar.app') || email.includes('vaicar@alansmsolutions.com');
       setIsAdmin(isAdm);
       setProfile({
@@ -63,27 +65,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    // Check local dev stored session first
-    const savedDevUser = localStorage.getItem('vaicar_dev_session');
-    if (savedDevUser) {
-      try {
-        const parsed = JSON.parse(savedDevUser);
-        const dummyUser = {
-          uid: parsed.uid,
-          email: parsed.email,
-          displayName: parsed.displayName,
-          getIdToken: async () => `${parsed.uid}:${parsed.email}`,
-        } as unknown as FirebaseUser;
-
-        setUser(dummyUser);
-        fetchBackendProfile(`${parsed.uid}:${parsed.email}`, parsed.uid, parsed.email).finally(() => {
-          setLoading(false);
-        });
-        return;
-      } catch {
-        localStorage.removeItem('vaicar_dev_session');
+    const initAuth = async () => {
+      const existingToken = getAuthToken();
+      if (existingToken) {
+        try {
+          const data = await authApi.getMe();
+          setProfile(data.user);
+          setPassenger(data.passenger);
+          setDriver(data.driver);
+          setIsAdmin(Boolean(data.isAdmin || data.user?.role === 'admin'));
+        } catch (err) {
+          console.warn('[AuthContext] Session restore notice:', err);
+        }
       }
-    }
+      setLoading(false);
+    };
+
+    initAuth();
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -94,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (err) {
           console.error('[AuthContext] Error getting id token:', err);
         }
-      } else {
+      } else if (!getAuthToken()) {
         setAuthToken(null);
         setProfile(null);
         setPassenger(null);
@@ -107,110 +105,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, [fetchBackendProfile]);
 
-  const devLogin = useCallback(async (uid: string, email: string, role: 'passenger' | 'driver' | 'admin', name?: string) => {
-    setLoading(true);
-    const token = `${uid}:${email}`;
-    const devData = { uid, email, displayName: name || email.split('@')[0], role };
-    localStorage.setItem('vaicar_dev_session', JSON.stringify(devData));
-
-    const dummyUser = {
-      uid,
-      email,
-      displayName: name || email.split('@')[0],
-      getIdToken: async () => token,
-    } as unknown as FirebaseUser;
-
-    setUser(dummyUser);
-    await fetchBackendProfile(token, uid, email);
-    setLoading(false);
-  }, [fetchBackendProfile]);
-
   const adminLogin = useCallback(async (email: string, pass: string) => {
     setLoading(true);
     try {
       const res = await authApi.adminLogin({ email, password: pass });
-      const token = res.token;
-      setAuthToken(token);
-
-      const devData = {
-        uid: res.user.uid,
-        email: res.user.email,
-        displayName: res.user.displayName,
-        role: 'admin' as const,
-      };
-      localStorage.setItem('vaicar_dev_session', JSON.stringify(devData));
-
-      const adminUser = {
-        uid: res.user.uid,
-        email: res.user.email,
-        displayName: res.user.displayName,
-        getIdToken: async () => token,
-      } as unknown as FirebaseUser;
-
-      setUser(adminUser);
-      setProfile(res.user);
-      setIsAdmin(true);
+      const customToken = res.customToken || res.token;
+      if (customToken && customToken.startsWith('eyJ')) {
+        const cred = await signInWithCustomToken(auth, customToken);
+        const token = await cred.user.getIdToken(true);
+        await fetchBackendProfile(token, cred.user.uid, cred.user.email || email);
+      } else {
+        setAuthToken(customToken);
+        setProfile(res.user);
+        setIsAdmin(true);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchBackendProfile]);
 
   const loginEmailPassword = useCallback(async (email: string, pass: string) => {
     setLoading(true);
     const normalized = email.trim().toLowerCase();
-    const isAdminTarget = normalized === 'admin@vaicar.app' || normalized === 'vaicar@alansmsolutions.com' || normalized.includes('admin');
+    const isAdminTarget = normalized === 'admin@vaicar.app' || normalized === 'vaicar@alansmsolutions.com';
 
     if (isAdminTarget) {
       return await adminLogin(email, pass);
     }
 
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, pass);
-      const token = await cred.user.getIdToken();
-      await fetchBackendProfile(token, cred.user.uid, cred.user.email || '');
-    } catch (err: any) {
-      console.warn('[VaiCar Auth] Firebase client login fallback triggered:', err?.message || err);
-      // Fallback: If Firebase Client auth fails, log in via backend profile for passenger/driver
-      const uid = `user-${Math.abs(email.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0))}`;
-      const role = normalized.includes('motorista') ? 'driver' : 'passenger';
-      await devLogin(uid, email, role);
-      return;
+      const res = await authApi.login({ email: normalized, password: pass });
+      setAuthToken(res.token);
+      setProfile(res.user);
+      setPassenger(res.passenger || null);
+      setDriver(res.driver || null);
+      setIsAdmin(Boolean(res.isAdmin || res.roles?.includes('admin')));
+
+      if (res.customToken) {
+        try {
+          const cred = await signInWithCustomToken(auth, res.customToken);
+          setUser(cred.user);
+        } catch (fbErr) {
+          console.warn('[AuthContext] Optional custom token sign-in notice:', fbErr);
+        }
+      }
     } finally {
       setLoading(false);
     }
-  }, [fetchBackendProfile, devLogin, adminLogin]);
+  }, [adminLogin]);
 
   const registerEmailPassword = useCallback(async (email: string, pass: string): Promise<FirebaseUser> => {
+    const normalized = email.trim().toLowerCase();
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      const cred = await createUserWithEmailAndPassword(auth, normalized, pass);
       return cred.user;
     } catch (err: any) {
-      // If email is already in use (e.g. passenger registering as driver or vice-versa), sign in with existing credentials
-      if (err?.code === 'auth/email-already-in-use') {
-        try {
-          const signInCred = await signInWithEmailAndPassword(auth, email, pass);
-          return signInCred.user;
-        } catch (signInErr) {
-          console.warn('[VaiCar Auth] Existing account sign-in failed, proceeding with fallback token:', signInErr);
-        }
+      if (err.code === 'auth/email-already-in-use') {
+        const cred = await signInWithEmailAndPassword(auth, normalized, pass);
+        return cred.user;
       }
+      throw err;
+    }
+  }, []);
 
-      console.warn('[VaiCar Auth] Firebase client register fallback triggered:', err?.message || err);
-      // If Firebase Auth Client has any error or local mock, create user session token
-      const uid = `usr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      const dummyUser = {
-        uid,
-        email,
-        displayName: email.split('@')[0],
-        photoURL: null,
-        getIdToken: async () => `${uid}:${email}`,
-      } as unknown as FirebaseUser;
-      return dummyUser;
+  const migrateAccount = useCallback(async (email: string, pin: string, pass: string) => {
+    setLoading(true);
+    try {
+      const res = await authApi.migrateAccount({ email: email.trim(), pin: pin.trim(), password: pass });
+      const customToken = res.customToken;
+      if (customToken) {
+        const cred = await signInWithCustomToken(auth, customToken);
+        const token = await cred.user.getIdToken(true);
+        await fetchBackendProfile(token, cred.user.uid, cred.user.email || email);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchBackendProfile]);
+
+  const forgotPassword = useCallback(async (email: string) => {
+    setLoading(true);
+    try {
+      const res = await authApi.forgotPassword(email.trim().toLowerCase());
+      return res.data;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string, pin: string, pass: string) => {
+    setLoading(true);
+    try {
+      const res = await authApi.resetPassword({
+        email: email.trim().toLowerCase(),
+        pin: pin.trim(),
+        newPassword: pass,
+      });
+      if (res.token) {
+        setAuthToken(res.token);
+      }
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   const logout = useCallback(async () => {
-    localStorage.removeItem('vaicar_dev_session');
     setAuthToken(null);
     setUser(null);
     setProfile(null);
@@ -219,17 +218,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAdmin(false);
     try {
       await fbSignOut(auth);
-    } catch {
-      // Ignored if dev session
+    } catch (err) {
+      console.warn('[AuthContext] SignOut note:', err);
     }
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (user) {
-      const token = await user.getIdToken();
-      await fetchBackendProfile(token, user.uid, user.email || '');
+    if (auth.currentUser) {
+      const token = await auth.currentUser.getIdToken(true);
+      await fetchBackendProfile(token, auth.currentUser.uid, auth.currentUser.email || '');
+    } else if (getAuthToken()) {
+      try {
+        const data = await authApi.getMe();
+        setProfile(data.user);
+        setPassenger(data.passenger);
+        setDriver(data.driver);
+        setIsAdmin(Boolean(data.isAdmin || data.user?.role === 'admin'));
+      } catch (err) {
+        console.warn('[AuthContext] refreshProfile note:', err);
+      }
     }
-  }, [user, fetchBackendProfile]);
+  }, [fetchBackendProfile]);
 
   const role = useMemo(() => {
     if (isAdmin || profile?.role === 'admin') return 'admin';
@@ -250,11 +259,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loginEmailPassword,
       adminLogin,
       registerEmailPassword,
+      migrateAccount,
+      forgotPassword,
+      resetPassword,
       logout,
       refreshProfile,
-      devLogin,
     }),
-    [user, profile, passenger, driver, isAdmin, role, loading, loginEmailPassword, adminLogin, registerEmailPassword, logout, refreshProfile, devLogin]
+    [user, profile, passenger, driver, isAdmin, role, loading, loginEmailPassword, adminLogin, registerEmailPassword, migrateAccount, forgotPassword, resetPassword, logout, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

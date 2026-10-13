@@ -8,10 +8,12 @@ import { HomePage } from './pages/HomePage.js';
 import { PassengerDashboardPage } from './pages/passenger/PassengerDashboardPage.js';
 import { PassengerLoginPage } from './pages/passenger/PassengerLoginPage.js';
 import { PassengerRegisterPage } from './pages/passenger/PassengerRegisterPage.js';
+import { PassengerDownloadPage } from './pages/passenger/PassengerDownloadPage.js';
 
 import { DriverDashboardPage } from './pages/driver/DriverDashboardPage.js';
 import { DriverLoginPage } from './pages/driver/DriverLoginPage.js';
 import { DriverRegisterPage } from './pages/driver/DriverRegisterPage.js';
+import { DriverDownloadPage } from './pages/driver/DriverDownloadPage.js';
 
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage.js';
 import { AdminLoginPage } from './pages/admin/AdminLoginPage.js';
@@ -37,11 +39,17 @@ export const App: React.FC = () => {
               <Route path="/passenger" element={<PassengerDashboardPage />} />
               <Route path="/passenger/login" element={<PassengerLoginPage />} />
               <Route path="/passenger/register" element={<PassengerRegisterPage />} />
+              <Route path="/download/passenger" element={<PassengerDownloadPage />} />
+              <Route path="/baixar/passageiro" element={<PassengerDownloadPage />} />
 
               {/* Driver */}
               <Route path="/driver" element={<DriverDashboardPage />} />
               <Route path="/driver/login" element={<DriverLoginPage />} />
               <Route path="/driver/register" element={<DriverRegisterPage />} />
+              <Route path="/download/driver" element={<DriverDownloadPage />} />
+              <Route path="/download" element={<Navigate to="/download/passenger" replace />} />
+              <Route path="/baixar/motorista" element={<DriverDownloadPage />} />
+              <Route path="/baixar" element={<Navigate to="/download/passenger" replace />} />
 
               {/* Admin */}
               <Route path="/admin" element={<AdminDashboardPage />} />

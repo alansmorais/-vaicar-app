@@ -68,18 +68,46 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ receipt, onClose }) 
           </div>
         </div>
 
-        {receipt.discountApplied && (
+        {receipt.referralDiscountApplied && (
+          <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-lg p-2.5 text-center text-xs text-emerald-300 font-semibold mb-3">
+            🎁 Desconto 1ª Corrida Indique e Ganhe (-R$ {(receipt.referralDiscountAmount || 5.00).toFixed(2)})
+          </div>
+        )}
+
+        {receipt.referralCreditApplied && (
+          <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-lg p-2.5 text-center text-xs text-emerald-300 font-semibold mb-3">
+            🎁 Crédito de Indicação Resgatado (-R$ {(receipt.referralCreditAmount || 5.00).toFixed(2)})
+          </div>
+        )}
+
+        {receipt.discountApplied && !receipt.referralDiscountApplied && !receipt.referralCreditApplied && (
           <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-lg p-2.5 text-center text-xs text-emerald-300 font-semibold mb-4">
             🏷️ 5% Desconto Passageiro Verificado aplicado (-R$ {receipt.discountAmount?.toFixed(2)})
           </div>
         )}
 
+        {Boolean(receipt.platformSubsidyAmount && receipt.platformSubsidyAmount > 0) && (
+          <div className="bg-slate-900 border border-slate-700/60 rounded-lg p-2 text-center text-[11px] text-slate-300 mb-3">
+            🏛️ <strong>Subsídio VaiCar:</strong> R$ {receipt.platformSubsidyAmount!.toFixed(2)} repassado ao motorista ({receipt.platformSubsidyStatus === 'SETTLED' ? 'Liquidado' : 'Pendente'}). Tarifa integral garantida: R$ {(receipt.driverTotalEntitlement || receipt.originalFareAmount || receipt.fareAmount).toFixed(2)}.
+          </div>
+        )}
+
         <div className="text-[11px] text-slate-400 text-center mb-4">
-          💵 Pagamento realizado diretamente ao motorista via {receipt.paymentMethod}.
+          💵 Pagamento de R$ {receipt.fareAmount.toFixed(2)} realizado diretamente ao motorista via {receipt.paymentMethod}.
         </div>
 
         {/* Breakdown rows */}
         <div className="space-y-3 text-xs mb-6 divide-y divide-slate-800/80">
+          {receipt.originalFareAmount && receipt.originalFareAmount > receipt.fareAmount && (
+            <div className="flex justify-between pt-2">
+              <span className="text-slate-400">Tarifa Integral do Motorista:</span>
+              <span className="font-semibold text-slate-300">R$ {receipt.originalFareAmount.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between pt-2">
+            <span className="text-slate-400">Total Pago pelo Passageiro:</span>
+            <span className="font-semibold text-emerald-400">R$ {receipt.fareAmount.toFixed(2)}</span>
+          </div>
           <div className="flex justify-between pt-2">
             <span className="text-slate-400">Data e Hora:</span>
             <span className="font-semibold text-white">{new Date(receipt.dateTime).toLocaleString('pt-BR')}</span>

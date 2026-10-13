@@ -3,6 +3,7 @@ import { AppError } from './errorHandler.js';
 import { ErrorCode } from '../../../shared/src/errors.js';
 import { getFirebaseAdminAuth } from '../services/firebaseAdmin.js';
 import { getUserProfile, findUserByEmail, resolveDriverProfile } from '../services/firestore.js';
+import { verifyServerJwt } from '../services/jwt.js';
 
 export interface AuthenticatedUser {
   uid: string;
@@ -14,7 +15,7 @@ export interface AuthenticatedUser {
 }
 
 /**
- * Verifies the Firebase ID Token from Authorization header.
+ * Verifies either the server HMAC-SHA256 JWT or Firebase ID Token from Authorization header.
  * Attaches decoded user and authoritative Firestore profile role to req.user.
  */
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -34,45 +35,41 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     let decodedEmail: string;
     let isAdminClaim = false;
 
-    // Verify token with Firebase Admin if token is a standard JWT
-    if (authAdmin && token.startsWith('eyJ') && token.split('.').length === 3) {
+    const rawAllowedAdmins = process.env.ADMIN_EMAILS || 'admin@vaicar.app,vaicar@alansmsolutions.com';
+    const allowedAdminEmails = rawAllowedAdmins.toLowerCase().split(',').map((e: string) => e.trim()).filter(Boolean);
+
+    // 1. Authoritative verification of server-signed HMAC-SHA256 JWT
+    const serverPayload = verifyServerJwt(token);
+    if (serverPayload && serverPayload.uid) {
+      decodedUid = serverPayload.uid;
+      decodedEmail = (serverPayload.email || '').toLowerCase();
+      isAdminClaim = Boolean(serverPayload.isAdmin || serverPayload.role === 'admin' || (Boolean(decodedEmail) && allowedAdminEmails.includes(decodedEmail)));
+    } else if (authAdmin) {
+      // 2. Cryptographic verification with Firebase Admin
       try {
         const decoded = await authAdmin.verifyIdToken(token);
         decodedUid = decoded.uid;
-        decodedEmail = decoded.email || '';
-        isAdminClaim = !!decoded.admin;
+        decodedEmail = (decoded.email || '').toLowerCase();
+        isAdminClaim = Boolean(decoded.admin) || (Boolean(decodedEmail) && allowedAdminEmails.includes(decodedEmail));
       } catch (err: any) {
         if (err.code === 'auth/id-token-expired') {
           return next(new AppError(ErrorCode.AUTH_EXPIRED, 'Sessão expirada. Faça login novamente.', 401));
         }
-        // If token fails verification in admin
-        return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Token de autenticação inválido.', 401));
+        return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Token de autenticação inválido ou não autorizado.', 401));
+      }
+    } else if (process.env.NODE_ENV === 'test' && !process.env.K_SERVICE) {
+      // STRICT TEST HARNESS ONLY: Active solely during unit tests running without Google Cloud credentials
+      if (token.includes(':')) {
+        const colonIdx = token.indexOf(':');
+        decodedUid = token.slice(0, colonIdx);
+        decodedEmail = token.slice(colonIdx + 1).toLowerCase();
+        isAdminClaim = allowedAdminEmails.includes(decodedEmail);
+      } else {
+        return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Token de teste inválido.', 401));
       }
     } else {
-      const rawAllowedAdmins = process.env.ADMIN_EMAILS || 'admin@vaicar.app,vaicar@alansmsolutions.com';
-      const allowedAdminEmails = rawAllowedAdmins.toLowerCase().split(',').map((e: string) => e.trim()).filter(Boolean);
-
-      try {
-        const parts = token.split('.');
-        if (parts.length === 3 && parts[0].startsWith('eyJ')) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-          decodedUid = payload.user_id || payload.sub || payload.uid;
-          decodedEmail = (payload.email || '').toLowerCase();
-          isAdminClaim = !!payload.admin || allowedAdminEmails.includes(decodedEmail) || decodedUid.startsWith('admin-');
-        } else if (token.includes(':')) {
-          // simple token format: uid:email
-          const colonIdx = token.indexOf(':');
-          decodedUid = token.slice(0, colonIdx);
-          decodedEmail = token.slice(colonIdx + 1).toLowerCase();
-          isAdminClaim = allowedAdminEmails.includes(decodedEmail) || decodedUid.startsWith('admin-');
-        } else {
-          decodedUid = token;
-          decodedEmail = '';
-          isAdminClaim = decodedUid.startsWith('admin-');
-        }
-      } catch {
-        return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Token inválido.', 401));
-      }
+      // Fail closed: No unverified token is ever accepted
+      return next(new AppError(ErrorCode.AUTH_REQUIRED, 'Token de autenticação inválido ou não autorizado.', 401));
     }
 
     // Load authoritative role from Firestore to prevent client tampering
@@ -83,8 +80,8 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const effectiveEmail = (decodedEmail || userProfile?.email || '').trim().toLowerCase();
     const driverProfile = await resolveDriverProfile(decodedUid, effectiveEmail);
     const isDriver = Boolean(userProfile?.isDriver || driverProfile);
-    const role = userProfile?.role || (isAdminClaim ? 'admin' : isDriver ? 'driver' : undefined);
-    const isAdmin = isAdminClaim || userProfile?.isAdmin || role === 'admin';
+    const role = isAdminClaim ? 'admin' : isDriver ? 'driver' : 'passenger';
+    const isAdmin = Boolean(isAdminClaim || (userProfile?.isAdmin && allowedAdminEmails.includes(effectiveEmail)));
     const isPassenger = userProfile?.isPassenger ?? (role === 'passenger' || !role);
 
     req.user = {

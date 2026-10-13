@@ -11,6 +11,8 @@ export const ErrorCode = {
   EMAIL_DELIVERY_FAILED: 'EMAIL_DELIVERY_FAILED',
   NOT_FOUND: 'NOT_FOUND',
   INVALID_RIDE_STATE: 'INVALID_RIDE_STATE',
+  CONFLICT: 'CONFLICT',
+  GONE: 'GONE',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 
@@ -50,6 +52,10 @@ export function getFriendlyErrorMessage(code: ErrorCodeType, fallback?: string):
       return 'Recurso não encontrado.';
     case ErrorCode.INVALID_RIDE_STATE:
       return 'Transição de corrida inválida para o estado atual.';
+    case ErrorCode.CONFLICT:
+      return 'Esta oferta já foi processada ou a corrida já foi aceita.';
+    case ErrorCode.GONE:
+      return 'Tempo esgotado para aceitar a oferta (limite de 20s).';
     case ErrorCode.INTERNAL_ERROR:
       return 'Erro interno do servidor. Tente novamente em instantes.';
     default:
