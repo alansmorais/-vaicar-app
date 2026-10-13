@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { authApi } from '../../api/auth.js';
 import { storageApi } from '../../api/storage.js';
 import { isValidEmail, isValidWhatsApp } from '../../../../shared/src/validation.js';
 import { processImageFile } from '../../utils/imageUtils.js';
-import { User, Phone, Mail, Camera, ShieldCheck, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
+import { User, Phone, Mail, Camera, ShieldCheck, AlertCircle, CheckCircle2, ArrowRight, Gift } from 'lucide-react';
 
 export const PassengerRegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const { registerEmailPassword, devLogin } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { registerEmailPassword, refreshProfile } = useAuth();
 
   const [name, setName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
@@ -17,6 +18,9 @@ export const PassengerRegisterPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [photoData, setPhotoData] = useState<string>('');
   const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [referralCode, setReferralCode] = useState(
+    (searchParams.get('ref') || searchParams.get('referral') || '').toUpperCase()
+  );
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [wantDiscount, setWantDiscount] = useState(false);
   const [criminalRecordData, setCriminalRecordData] = useState<string>('');
@@ -147,10 +151,11 @@ export const PassengerRegisterPage: React.FC = () => {
         termsAccepted: true,
         hasCriminalRecordCheck: Boolean(wantDiscount && finalCriminalUrl),
         criminalRecordUrl: finalCriminalUrl || undefined,
+        referralCode: referralCode.trim() ? referralCode.trim().toUpperCase() : undefined,
       });
 
       // 5. Authenticate session
-      await devLogin(fbUser.uid, email.trim(), 'passenger', name.trim());
+      await refreshProfile();
 
       setSuccess('Cadastro concluído com sucesso! Redirecionando...');
       setTimeout(() => {
@@ -371,6 +376,32 @@ export const PassengerRegisterPage: React.FC = () => {
                 className="hidden"
               />
               <span className="text-[10px] text-slate-400">Formatos aceitos: JPG, PNG ou PDF</span>
+            </div>
+          </div>
+
+          {/* Código de Indicação (Opcional) */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Gift className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-bold text-white">Código de Indicação</span>
+              </div>
+              <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40">
+                R$ 5,00 OFF na 1ª corrida
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Foi convidado por outro passageiro? Insira o código de indicação para receber R$ 5,00 de desconto na sua primeira corrida.
+            </p>
+            <div className="pt-1">
+              <input
+                type="text"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                placeholder="Ex: ALAN7X4B (opcional)"
+                maxLength={16}
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs font-mono uppercase tracking-wider focus:outline-none focus:border-emerald-500 transition-colors"
+              />
             </div>
           </div>
 

@@ -45,6 +45,8 @@ import {
   Settings,
   Wallet,
   Sparkles,
+  Package,
+  MessageCircle,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
 
@@ -277,6 +279,11 @@ export const DriverDashboardPage: React.FC = () => {
     const interval = setInterval(async () => {
       try {
         const updated = await ridesApi.getById(activeRide.id);
+        if (updated.status.startsWith('CANCELLED')) {
+          setActiveRide(null);
+          clearInterval(interval);
+          return;
+        }
         setActiveRide(updated);
         if (updated.status === 'COMPLETED' && updated.receiptId) {
           import('../../api/receipts.js').then(({ receiptsApi }) => {
@@ -310,6 +317,10 @@ export const DriverDashboardPage: React.FC = () => {
           setAvailableRides([]);
           return;
         }
+        // If active ride was cancelled elsewhere, return driver to search cockpit
+        if (activeRide && activeRide.status.startsWith('CANCELLED')) {
+          setActiveRide(null);
+        }
         setAvailableRides(rides);
       } catch (err) {
         console.error('Available rides error:', err);
@@ -319,7 +330,54 @@ export const DriverDashboardPage: React.FC = () => {
     fetchUpdates();
     const interval = setInterval(fetchUpdates, 2500);
     return () => clearInterval(interval);
-  }, [isOnline]);
+  }, [isOnline, activeRide?.status]);
+
+  // Real-time SSE event listener for immediate driver ride updates & cancellations
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    const sseUrl = `/api/v1/live/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource(sseUrl);
+
+      const handleLiveEvent = (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          const rideData = payload.data || payload;
+          if (!rideData) return;
+
+          if (rideData.status && typeof rideData.status === 'string' && rideData.status.startsWith('CANCELLED')) {
+            if (activeRide && activeRide.id === rideData.id) {
+              setActiveRide(null);
+            }
+            setAvailableRides((prev) => prev.filter((r) => r.id !== rideData.id));
+          } else if (payload.type === 'RIDE_CREATED' || payload.type === 'OFFER_CREATED') {
+            if (isOnline && !activeRide) {
+              driversApi.getAvailableRides().then(setAvailableRides).catch(console.error);
+            }
+          } else if (activeRide && activeRide.id === rideData.id) {
+            setActiveRide(rideData);
+          }
+        } catch (err) {
+          console.debug('[SSE] Driver live event error:', err);
+        }
+      };
+
+      es.addEventListener('RIDE_UPDATED', handleLiveEvent);
+      es.addEventListener('RIDE_CANCELLED', handleLiveEvent);
+      es.addEventListener('RIDE_CREATED', handleLiveEvent);
+      es.addEventListener('message', handleLiveEvent);
+    } catch (err) {
+      console.warn('[SSE] Driver EventSource init error:', err);
+    }
+
+    return () => {
+      if (es) es.close();
+    };
+  }, [isOnline, activeRide?.id]);
 
   // Find current incoming ride alert (first available ride not dismissed)
   const incomingRide = useMemo(() => {
@@ -937,8 +995,8 @@ export const DriverDashboardPage: React.FC = () => {
             destination={incomingRide.destination}
             driverLocation={effectiveDriverLocation}
             mode="planning"
-            pickupLabel={`Embarque: ${incomingRide.passengerName}`}
-            destinationLabel="Destino da Corrida"
+            pickupLabel={incomingRide.serviceType === 'delivery' ? `Coleta: ${incomingRide.passengerName}` : `Embarque: ${incomingRide.passengerName}`}
+            destinationLabel={incomingRide.serviceType === 'delivery' ? `Entrega: ${incomingRide.deliveryDetails?.recipientName || 'Destinatário'}` : 'Destino da Corrida'}
             draggable={false}
             showHud={false}
             height="100%"
@@ -949,8 +1007,8 @@ export const DriverDashboardPage: React.FC = () => {
             pickup={effectiveDriverLocation ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização' } : activeRide.origin}
             destination={activeRide.destination}
             mode="driver_to_destination"
-            pickupLabel="Você + Passageiro"
-            destinationLabel="Destino Final"
+            pickupLabel={activeRide.serviceType === 'delivery' ? 'Em Trânsito' : 'Você + Passageiro'}
+            destinationLabel={activeRide.serviceType === 'delivery' ? `Entrega: ${activeRide.deliveryDetails?.recipientName || 'Destinatário'}` : 'Destino Final'}
             draggable={false}
             showHud={false}
             height="100%"
@@ -962,8 +1020,8 @@ export const DriverDashboardPage: React.FC = () => {
               pickup={activeRide.origin}
               destination={activeRide.destination}
               mode="planning"
-              pickupLabel={`Embarque: ${activeRide.passengerName}`}
-              destinationLabel="Destino Final"
+              pickupLabel={activeRide.serviceType === 'delivery' ? `Coleta: ${activeRide.passengerName}` : `Embarque: ${activeRide.passengerName}`}
+              destinationLabel={activeRide.serviceType === 'delivery' ? `Entrega: ${activeRide.deliveryDetails?.recipientName || 'Destinatário'}` : 'Destino Final'}
               draggable={false}
               showHud={false}
               height="100%"
@@ -975,7 +1033,7 @@ export const DriverDashboardPage: React.FC = () => {
               destination={activeRide.origin}
               mode="driver_to_pickup"
               pickupLabel="Você (Sua Localização)"
-              destinationLabel={`Passageiro: ${activeRide.passengerName}`}
+              destinationLabel={activeRide.serviceType === 'delivery' ? `Coleta: ${activeRide.passengerName}` : `Passageiro: ${activeRide.passengerName}`}
               draggable={false}
               showHud={false}
               height="100%"
@@ -1126,17 +1184,21 @@ export const DriverDashboardPage: React.FC = () => {
             <div className="space-y-3.5 animate-in slide-in-from-bottom-4 duration-200">
               {/* Progress bar countdown */}
               <div className="flex items-center justify-between text-xs">
-                <span className="text-emerald-400 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
-                  <Volume2 className="w-4 h-4 animate-pulse" />
+                <span className={`font-extrabold uppercase tracking-wider flex items-center gap-1.5 ${incomingRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
+                  {incomingRide.serviceType === 'delivery' ? (
+                    <Package className="w-4 h-4 animate-pulse text-cyan-400" />
+                  ) : (
+                    <Car className="w-4 h-4 animate-pulse text-emerald-400" />
+                  )}
                   {incomingRide.serviceType === 'delivery' ? 'Nova Entrega' : 'Nova Corrida'}
                 </span>
-                <span className="font-mono font-black text-white bg-slate-950 px-2 py-0.5 rounded-lg border border-emerald-500/40">
+                <span className="font-mono font-black text-white bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-700">
                   {incomingCountdown}s
                 </span>
               </div>
               <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
                 <div
-                  className="bg-emerald-500 h-full transition-all duration-1000 ease-linear rounded-full"
+                  className={`h-full transition-all duration-1000 ease-linear rounded-full ${incomingRide.serviceType === 'delivery' ? 'bg-cyan-500' : 'bg-emerald-500'}`}
                   style={{ width: `${(incomingCountdown / 30) * 100}%` }}
                 />
               </div>
@@ -1144,10 +1206,17 @@ export const DriverDashboardPage: React.FC = () => {
               {/* Big Fare Display */}
               <div className="flex items-baseline justify-between pt-0.5">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Valor da Corrida</span>
-                  <span className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight">
-                    R$ {incomingRide.fareAmount.toFixed(2)}
+                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                    {incomingRide.serviceType === 'delivery' ? 'Valor da Entrega' : 'Valor Total do Motorista'}
                   </span>
+                  <span className={`text-3xl sm:text-4xl font-black tracking-tight ${incomingRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
+                    R$ {(incomingRide.driverTotalEntitlement || incomingRide.originalFareAmount || incomingRide.fareAmount).toFixed(2)}
+                  </span>
+                  {Boolean(incomingRide.platformSubsidyAmount && incomingRide.platformSubsidyAmount > 0) && (
+                    <div className="text-[11px] text-amber-300 font-semibold mt-0.5">
+                      R$ {incomingRide.fareAmount.toFixed(2)} (Passageiro) + R$ {incomingRide.platformSubsidyAmount!.toFixed(2)} (Subsídio VaiCar)
+                    </div>
+                  )}
                 </div>
                 <div className="text-right">
                   <span className="text-xs font-bold text-white block">{incomingRide.paymentMethod}</span>
@@ -1155,18 +1224,20 @@ export const DriverDashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Distance to passenger & Route summary */}
+              {/* Distance to pickup & Route summary */}
               <div className="bg-slate-950/90 rounded-2xl p-3 border border-slate-800/80 space-y-2 text-xs">
                 <div className="flex items-center gap-2 font-bold text-white">
-                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <MapPin className={`w-4 h-4 shrink-0 ${incomingRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`} />
                   <span>
-                    {distToPickupKm !== null ? `${distToPickupKm} km • ~${etaToPickupMin} min` : 'Poucos minutos'} até o passageiro
+                    {distToPickupKm !== null ? `${distToPickupKm} km • ~${etaToPickupMin} min` : 'Poucos minutos'} até {incomingRide.serviceType === 'delivery' ? 'o local de coleta' : 'o passageiro'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300 pt-1.5 border-t border-slate-800/80 font-medium">
                   <Navigation className="w-4 h-4 text-rose-400 shrink-0" />
                   <span className="truncate">
-                    {formatRouteSummary(incomingRide.origin.address, incomingRide.destination.address)}
+                    {incomingRide.serviceType === 'delivery'
+                      ? `Coleta: ${incomingRide.origin.address.split(',')[0]} → Entrega: ${incomingRide.destination.address.split(',')[0]}`
+                      : formatRouteSummary(incomingRide.origin.address, incomingRide.destination.address)}
                   </span>
                 </div>
               </div>
@@ -1198,7 +1269,11 @@ export const DriverDashboardPage: React.FC = () => {
             <div className="space-y-3 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {activeRide.passengerPhotoUrl ? (
+                  {activeRide.serviceType === 'delivery' ? (
+                    <div className="w-12 h-12 rounded-full bg-cyan-950/80 border-2 border-cyan-500 flex items-center justify-center text-cyan-400 shadow-md">
+                      <Package className="w-6 h-6" />
+                    </div>
+                  ) : activeRide.passengerPhotoUrl ? (
                     <img
                       src={activeRide.passengerPhotoUrl}
                       alt={activeRide.passengerName}
@@ -1210,22 +1285,24 @@ export const DriverDashboardPage: React.FC = () => {
                     </div>
                   )}
                   <div>
-                    <span className="text-base font-extrabold text-white block">{activeRide.passengerName}</span>
-                    <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                    <span className="text-base font-extrabold text-white block">
+                      {activeRide.serviceType === 'delivery' ? `Remetente: ${activeRide.passengerName}` : activeRide.passengerName}
+                    </span>
+                    <span className={`text-xs font-bold flex items-center gap-1 ${activeRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
                       <MapPin className="w-3.5 h-3.5" />
-                      {distToPickupKm !== null ? `${distToPickupKm} km • ~${etaToPickupMin} min` : 'A caminho do embarque'}
+                      {distToPickupKm !== null ? `${distToPickupKm} km • ~${etaToPickupMin} min` : 'A caminho'} até {activeRide.serviceType === 'delivery' ? 'a coleta' : 'o embarque'}
                     </span>
                   </div>
                 </div>
 
-                {/* Quick External Navigation */}
+                {/* Quick External Navigation to Pickup / Coleta */}
                 <div className="flex items-center gap-1.5">
                   <a
                     href={`https://waze.com/ul?ll=${activeRide.origin.lat},${activeRide.origin.lng}&navigate=yes`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2.5 rounded-xl bg-cyan-600/90 hover:bg-cyan-500 text-white transition-colors shadow"
-                    title="Navegar no Waze até o passageiro"
+                    title={activeRide.serviceType === 'delivery' ? 'Navegar no Waze até a coleta' : 'Navegar no Waze até o passageiro'}
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
@@ -1234,25 +1311,33 @@ export const DriverDashboardPage: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2.5 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-white transition-colors shadow"
-                    title="Navegar no Google Maps até o passageiro"
+                    title={activeRide.serviceType === 'delivery' ? 'Navegar no Google Maps até a coleta' : 'Navegar no Google Maps até o passageiro'}
                   >
                     <Navigation className="w-4 h-4" />
                   </a>
                 </div>
               </div>
 
-              {/* Route Mode Switcher (To passenger vs Full trip preview) */}
+              {/* Route Mode Switcher */}
               <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-[11px] font-bold gap-1 shadow-inner">
                 <button
                   type="button"
                   onClick={() => setDriverRouteMode('to_passenger')}
                   className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 transition-all ${
                     driverRouteMode === 'to_passenger'
-                      ? 'bg-emerald-600 text-white shadow-md'
+                      ? activeRide.serviceType === 'delivery' ? 'bg-cyan-600 text-white shadow-md' : 'bg-emerald-600 text-white shadow-md'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <Car className="w-3 h-3" /> Rota até Passageiro
+                  {activeRide.serviceType === 'delivery' ? (
+                    <>
+                      <Package className="w-3 h-3" /> Rota até Coleta
+                    </>
+                  ) : (
+                    <>
+                      <Car className="w-3 h-3" /> Rota até Passageiro
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -1263,7 +1348,7 @@ export const DriverDashboardPage: React.FC = () => {
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <Navigation className="w-3 h-3" /> Trajeto da Viagem
+                  <Navigation className="w-3 h-3" /> {activeRide.serviceType === 'delivery' ? 'Trajeto da Entrega' : 'Trajeto da Viagem'}
                 </button>
               </div>
 
@@ -1272,10 +1357,21 @@ export const DriverDashboardPage: React.FC = () => {
                 type="button"
                 onClick={handleMarkArrived}
                 disabled={actionLoading}
-                className="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-amber-950 transition-all hover:scale-[1.01]"
+                className={`w-full py-4 rounded-2xl text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.01] ${
+                  activeRide.serviceType === 'delivery' ? 'bg-cyan-400 hover:bg-cyan-300 shadow-cyan-950' : 'bg-amber-500 hover:bg-amber-400 shadow-amber-950'
+                }`}
               >
-                <Car className="w-5 h-5 text-slate-950" />
-                Cheguei no Embarque
+                {activeRide.serviceType === 'delivery' ? (
+                  <>
+                    <Package className="w-5 h-5 text-slate-950" />
+                    Cheguei na Coleta
+                  </>
+                ) : (
+                  <>
+                    <Car className="w-5 h-5 text-slate-950" />
+                    Cheguei no Embarque
+                  </>
+                )}
               </button>
 
               <button
@@ -1284,7 +1380,7 @@ export const DriverDashboardPage: React.FC = () => {
                 disabled={actionLoading}
                 className="w-full py-1 text-center text-[11px] text-slate-500 hover:text-rose-400 transition-colors"
               >
-                Cancelar Corrida
+                {activeRide.serviceType === 'delivery' ? 'Cancelar Entrega' : 'Cancelar Corrida'}
               </button>
             </div>
           ) : activeRide?.status === 'ARRIVED' ? (
@@ -1292,7 +1388,11 @@ export const DriverDashboardPage: React.FC = () => {
             <div className="space-y-3 text-center animate-in fade-in duration-150">
               <div className="flex items-center justify-between text-left pb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2.5">
-                  {activeRide.passengerPhotoUrl ? (
+                  {activeRide.serviceType === 'delivery' ? (
+                    <div className="w-9 h-9 rounded-full bg-cyan-950/80 border border-cyan-500 flex items-center justify-center text-cyan-400">
+                      <Package className="w-4 h-4" />
+                    </div>
+                  ) : activeRide.passengerPhotoUrl ? (
                     <img
                       src={activeRide.passengerPhotoUrl}
                       alt={activeRide.passengerName}
@@ -1304,19 +1404,37 @@ export const DriverDashboardPage: React.FC = () => {
                     </div>
                   )}
                   <div>
-                    <span className="text-xs font-bold text-white block">{activeRide.passengerName}</span>
-                    <span className="text-[10px] text-emerald-400 font-semibold">No ponto de embarque</span>
+                    <span className="text-xs font-bold text-white block">
+                      {activeRide.serviceType === 'delivery' ? `Remetente: ${activeRide.passengerName}` : activeRide.passengerName}
+                    </span>
+                    <span className={`text-[10px] font-semibold ${activeRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
+                      {activeRide.serviceType === 'delivery' ? 'No ponto de coleta' : 'No ponto de embarque'}
+                    </span>
                   </div>
                 </div>
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-500/40">
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${activeRide.serviceType === 'delivery' ? 'text-cyan-400 bg-cyan-950/80 border-cyan-500/40' : 'text-emerald-400 bg-emerald-950/80 border-emerald-500/40'}`}>
                   R$ {activeRide.fareAmount.toFixed(2)}
                 </span>
               </div>
 
+              {/* Delivery Details Preview if Available */}
+              {activeRide.serviceType === 'delivery' && activeRide.deliveryDetails && (
+                <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-left text-xs space-y-1">
+                  <div className="text-[11px] text-slate-300">
+                    <span className="text-slate-400 font-semibold">Destinatário:</span> {activeRide.deliveryDetails.recipientName || 'A definir'}
+                  </div>
+                  {activeRide.deliveryDetails.packageNotes && (
+                    <div className="text-[10px] text-slate-400 truncate">
+                      <span className="font-semibold text-slate-300">Pacote:</span> {activeRide.deliveryDetails.packageNotes}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 4-Minute Countdown Clock */}
               <div className="py-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-                  Passageiro Chegando
+                  {activeRide.serviceType === 'delivery' ? 'Aguardando Encomenda' : 'Passageiro Chegando'}
                 </span>
                 <span
                   className={`text-4xl sm:text-5xl font-black font-mono tracking-tight my-1 block ${
@@ -1324,6 +1442,8 @@ export const DriverDashboardPage: React.FC = () => {
                       ? 'text-rose-400'
                       : arrivedSecondsRemaining <= 60
                       ? 'text-amber-400'
+                      : activeRide.serviceType === 'delivery'
+                      ? 'text-cyan-400'
                       : 'text-emerald-400'
                   }`}
                 >
@@ -1332,19 +1452,34 @@ export const DriverDashboardPage: React.FC = () => {
                 <span className="text-[11px] text-slate-400">
                   {arrivedSecondsRemaining === 0
                     ? '⚠️ Prazo de 4 minutos expirado. Pode cancelar se não comparecer.'
+                    : activeRide.serviceType === 'delivery'
+                    ? 'Aguarde o remetente entregar o pacote (tolerância 4 min)'
                     : 'Aguarde o passageiro no veículo (tolerância 4 min)'}
                 </span>
               </div>
 
-              {/* Primary Button: [ INICIAR CORRIDA ] */}
+              {/* Primary Button: [ INICIAR CORRIDA / INICIAR ROTA DE ENTREGA ] */}
               <button
                 type="button"
                 onClick={handleStartRide}
                 disabled={actionLoading}
-                className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 transition-all hover:scale-[1.01]"
+                className={`w-full py-4 rounded-2xl text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.01] ${
+                  activeRide.serviceType === 'delivery'
+                    ? 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-950'
+                    : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950'
+                }`}
               >
-                <Check className="w-5 h-5 text-white" />
-                Iniciar Corrida
+                {activeRide.serviceType === 'delivery' ? (
+                  <>
+                    <Package className="w-5 h-5 text-white" />
+                    Coletar Pacote / Iniciar Rota
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5 text-white" />
+                    Iniciar Corrida
+                  </>
+                )}
               </button>
 
               <button
@@ -1353,7 +1488,9 @@ export const DriverDashboardPage: React.FC = () => {
                 disabled={actionLoading}
                 className="w-full py-1 text-center text-[11px] text-slate-500 hover:text-rose-400 transition-colors"
               >
-                Passageiro não compareceu • Cancelar
+                {activeRide.serviceType === 'delivery'
+                  ? 'Remetente não compareceu • Cancelar Entrega'
+                  : 'Passageiro não compareceu • Cancelar'}
               </button>
             </div>
           ) : activeRide?.status === 'IN_PROGRESS' ? (
@@ -1361,8 +1498,10 @@ export const DriverDashboardPage: React.FC = () => {
             <div className="space-y-3 animate-in fade-in duration-150">
               <div className="flex items-baseline justify-between">
                 <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Valor a Receber</span>
-                  <span className="text-3xl sm:text-4xl font-black text-emerald-400 tracking-tight">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
+                    {activeRide.serviceType === 'delivery' ? 'Valor da Entrega' : 'Valor a Receber'}
+                  </span>
+                  <span className={`text-3xl sm:text-4xl font-black tracking-tight ${activeRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
                     R$ {activeRide.fareAmount.toFixed(2)}
                   </span>
                 </div>
@@ -1379,7 +1518,9 @@ export const DriverDashboardPage: React.FC = () => {
               <div className="bg-slate-950/90 rounded-2xl p-3 border border-slate-800/80 flex items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2 text-slate-200 truncate font-medium">
                   <Navigation className="w-4 h-4 text-rose-400 shrink-0" />
-                  <span className="truncate">{activeRide.destination.address}</span>
+                  <span className="truncate">
+                    {activeRide.serviceType === 'delivery' ? `Entrega: ${activeRide.destination.address}` : activeRide.destination.address}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <a
@@ -1387,7 +1528,7 @@ export const DriverDashboardPage: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 rounded-xl bg-cyan-600/90 hover:bg-cyan-500 text-white transition-colors"
-                    title="Navegar no Waze até o destino"
+                    title={activeRide.serviceType === 'delivery' ? 'Navegar no Waze até o destino da entrega' : 'Navegar no Waze até o destino'}
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
@@ -1396,22 +1537,70 @@ export const DriverDashboardPage: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-white transition-colors"
-                    title="Navegar no Google Maps até o destino"
+                    title={activeRide.serviceType === 'delivery' ? 'Navegar no Google Maps até o destino da entrega' : 'Navegar no Google Maps até o destino'}
                   >
                     <Navigation className="w-3.5 h-3.5" />
                   </a>
                 </div>
               </div>
 
-              {/* Primary Button: [ FINALIZAR CORRIDA ] */}
+              {/* Delivery Recipient Contact Details */}
+              {activeRide.serviceType === 'delivery' && activeRide.deliveryDetails && (
+                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Destinatário:</span>
+                      <span className="text-sm font-bold text-white">
+                        {activeRide.deliveryDetails.recipientName || 'Não especificado'}
+                      </span>
+                    </div>
+                    {activeRide.deliveryDetails.recipientPhone && (
+                      <a
+                        href={`https://wa.me/${activeRide.deliveryDetails.recipientPhone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1.5 shadow transition-colors"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        Chamar no WhatsApp
+                      </a>
+                    )}
+                  </div>
+                  {activeRide.deliveryDetails.recipientPhone && (
+                    <div className="text-[11px] text-slate-400">
+                      Telefone: <strong className="text-slate-200">{activeRide.deliveryDetails.recipientPhone}</strong>
+                    </div>
+                  )}
+                  {activeRide.deliveryDetails.packageNotes && (
+                    <div className="pt-1.5 border-t border-slate-850 text-[11px] text-slate-300">
+                      📦 <strong>Instruções do Pacote:</strong> {activeRide.deliveryDetails.packageNotes}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Primary Button: [ FINALIZAR CORRIDA / ENCOMENDA ENTREGUE ] */}
               <button
                 type="button"
                 onClick={() => setShowPaymentCompletionModal(true)}
                 disabled={actionLoading}
-                className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 transition-all hover:scale-[1.01]"
+                className={`w-full py-4 rounded-2xl text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.01] ${
+                  activeRide.serviceType === 'delivery'
+                    ? 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-950'
+                    : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950'
+                }`}
               >
-                <CheckCircle className="w-5 h-5 text-white" />
-                Finalizar Corrida
+                {activeRide.serviceType === 'delivery' ? (
+                  <>
+                    <Package className="w-5 h-5 text-white" />
+                    Encomenda Entregue / Finalizar
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-white" />
+                    Finalizar Corrida
+                  </>
+                )}
               </button>
 
               <div className="flex items-center justify-between pt-1">
@@ -1446,10 +1635,17 @@ export const DriverDashboardPage: React.FC = () => {
                 <>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Pagamento Pendente</span>
-                    <span className="text-xl font-black text-emerald-400">R$ {activeRide.fareAmount.toFixed(2)}</span>
+                    <span className="text-xl font-black text-emerald-400">
+                      R$ {(activeRide.driverTotalEntitlement || activeRide.originalFareAmount || activeRide.fareAmount).toFixed(2)}
+                    </span>
                   </div>
                   <p className="text-xs text-slate-300">
-                    Confirme o recebimento de <strong>R$ {activeRide.fareAmount.toFixed(2)}</strong> via {activeRide.paymentMethod} de {activeRide.passengerName}.
+                    Confirme o recebimento de <strong>R$ {activeRide.fareAmount.toFixed(2)}</strong> via {activeRide.paymentMethod} pago pelo passageiro {activeRide.passengerName}.
+                    {Boolean(activeRide.platformSubsidyAmount && activeRide.platformSubsidyAmount > 0) && (
+                      <span className="block mt-1 text-amber-300 font-medium">
+                        🏛️ Subsídio VaiCar: R$ {activeRide.platformSubsidyAmount!.toFixed(2)} repassado pela plataforma ({activeRide.platformSubsidyStatus === 'SETTLED' ? 'Liquidado' : 'Pendente'}).
+                      </span>
+                    )}
                   </p>
                   <button
                     onClick={() => handleApprovePayment(activeRide.id)}
@@ -1464,7 +1660,9 @@ export const DriverDashboardPage: React.FC = () => {
                 <>
                   <div className="text-center py-2 space-y-1">
                     <CheckCircle className="w-9 h-9 text-emerald-400 mx-auto" />
-                    <span className="text-sm font-black text-white block">Viagem Finalizada com Sucesso!</span>
+                    <span className="text-sm font-black text-white block">
+                      {activeRide.serviceType === 'delivery' ? 'Entrega Finalizada com Sucesso!' : 'Viagem Finalizada com Sucesso!'}
+                    </span>
                     <span className="text-xs text-emerald-300 font-medium">Pagamento aprovado e recibo emitido.</span>
                   </div>
                   <button
@@ -1508,11 +1706,21 @@ export const DriverDashboardPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-emerald-400 relative">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute" />
-                    <Car className="w-5 h-5 z-10" />
+                    {driver?.vehicle?.type === 'bicycle' || (driver?.servicesOffered?.length === 1 && driver?.servicesOffered[0] === 'delivery') ? (
+                      <Package className="w-5 h-5 z-10 text-cyan-400" />
+                    ) : (
+                      <Car className="w-5 h-5 z-10" />
+                    )}
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Cockpit Ativo</span>
-                    <span className="text-sm sm:text-base font-extrabold text-white">Procurando passageiros...</span>
+                    <span className="text-sm sm:text-base font-extrabold text-white">
+                      {driver?.vehicle?.type === 'bicycle' || (driver?.servicesOffered?.length === 1 && driver?.servicesOffered[0] === 'delivery')
+                        ? 'Aguardando entregas...'
+                        : driver?.servicesOffered?.includes('delivery')
+                        ? 'Aguardando corridas e entregas...'
+                        : 'Procurando passageiros...'}
+                    </span>
                   </div>
                 </div>
 
@@ -2167,7 +2375,7 @@ export const DriverDashboardPage: React.FC = () => {
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-emerald-400" /> Finalizar Viagem & Pagamento
+                  <DollarSign className="w-5 h-5 text-emerald-400" /> {activeRide.serviceType === 'delivery' ? 'Finalizar Entrega & Pagamento' : 'Finalizar Viagem & Pagamento'}
                 </h3>
                 <button
                   type="button"
@@ -2182,22 +2390,35 @@ export const DriverDashboardPage: React.FC = () => {
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-[11px] text-slate-400 block font-medium">Passageiro:</span>
+                    <span className="text-[11px] text-slate-400 block font-medium">
+                      {activeRide.serviceType === 'delivery' ? 'Remetente / Solicitante:' : 'Passageiro:'}
+                    </span>
                     <span className="text-sm font-bold text-white">{activeRide.passengerName}</span>
                     <span className="text-xs text-slate-400 block">{activeRide.passengerPhone}</span>
+                    {activeRide.serviceType === 'delivery' && activeRide.deliveryDetails?.recipientName && (
+                      <span className="text-xs text-cyan-300 block mt-1 font-medium">
+                        Destinatário: <strong>{activeRide.deliveryDetails.recipientName}</strong>
+                      </span>
+                    )}
                   </div>
                   <div className="text-right">
-                    <span className="text-[11px] text-slate-400 block font-medium">Valor Total:</span>
+                    <span className="text-[11px] text-slate-400 block font-medium">Total do Motorista:</span>
                     <span className="text-2xl font-black text-emerald-400">
-                      R$ {activeRide.fareAmount.toFixed(2)}
+                      R$ {(activeRide.driverTotalEntitlement || activeRide.originalFareAmount || activeRide.fareAmount).toFixed(2)}
                     </span>
                     <span className="text-[11px] text-slate-400 block">Forma: {activeRide.paymentMethod}</span>
                   </div>
                 </div>
 
+                {Boolean(activeRide.platformSubsidyAmount && activeRide.platformSubsidyAmount > 0) && (
+                  <div className="p-2 rounded-lg bg-slate-900 border border-slate-700/60 text-slate-300 text-[11px]">
+                    🏛️ <strong>Subsídio Promocional VaiCar:</strong> R$ {activeRide.platformSubsidyAmount!.toFixed(2)} repassado pela plataforma ({activeRide.platformSubsidyStatus === 'SETTLED' ? 'Liquidado' : 'Pendente'}). O passageiro paga R$ {activeRide.fareAmount.toFixed(2)} diretamente.
+                  </div>
+                )}
+
                 <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
-                  <div>De: {activeRide.origin.address}</div>
-                  <div>Para: {activeRide.destination.address}</div>
+                  <div>{activeRide.serviceType === 'delivery' ? 'Coleta:' : 'De:'} {activeRide.origin.address}</div>
+                  <div>{activeRide.serviceType === 'delivery' ? 'Entrega:' : 'Para:'} {activeRide.destination.address}</div>
                 </div>
 
                 {activeRide.paymentMethod === 'PIX' && (
@@ -2219,7 +2440,9 @@ export const DriverDashboardPage: React.FC = () => {
                   {actionLoading ? 'Processando...' : `Confirmar Pagamento Recebido (R$ ${activeRide.fareAmount.toFixed(2)})`}
                 </button>
                 <p className="text-[11px] text-slate-400 text-center">
-                  ✓ Emite o recibo oficial e libera o passageiro imediatamente para novas corridas.
+                  {activeRide.serviceType === 'delivery'
+                    ? '✓ Emite o comprovante oficial e libera o cliente imediatamente para novas entregas.'
+                    : '✓ Emite o recibo oficial e libera o passageiro imediatamente para novas corridas.'}
                 </p>
 
                 <div className="pt-2 border-t border-slate-800/80 space-y-2">
@@ -2233,7 +2456,7 @@ export const DriverDashboardPage: React.FC = () => {
                     Finalizar com Pagamento Pendente
                   </button>
                   <p className="text-[10px] text-slate-400 text-center">
-                    ⏱️ Conclui a viagem, mas o passageiro fica <strong>bloqueado</strong> até você aprovar o recebimento.
+                    ⏱️ Conclui a viagem, mas o usuário fica <strong>bloqueado</strong> até você aprovar o recebimento.
                   </p>
                 </div>
 
@@ -2252,7 +2475,7 @@ export const DriverDashboardPage: React.FC = () => {
                     className="w-full py-2 px-3 rounded-xl bg-slate-950 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-600/60 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
                   >
                     <AlertTriangle className="w-4 h-4 text-rose-400" />
-                    Passageiro Recusou Pagamento (Relatar Calote)
+                    {activeRide.serviceType === 'delivery' ? 'Cliente Recusou Pagamento (Relatar Calote)' : 'Passageiro Recusou Pagamento (Relatar Calote)'}
                   </button>
                 </div>
               </div>
@@ -2266,24 +2489,24 @@ export const DriverDashboardPage: React.FC = () => {
         typeof document !== 'undefined' &&
         createPortal(
           <div className="fixed inset-0 z-[10000] overflow-y-auto bg-black/85 backdrop-blur-md p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200">
-            <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative my-auto animate-in zoom-in-95 duration-200 ring-4 ring-emerald-500/20">
+            <div className={`bg-slate-900 border-2 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative my-auto animate-in zoom-in-95 duration-200 ring-4 ${incomingRide.serviceType === 'delivery' ? 'border-cyan-500 ring-cyan-500/20' : 'border-emerald-500 ring-emerald-500/20'}`}>
               {/* Header with audio pulse & countdown badge */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-emerald-400 animate-pulse">
-                    <Volume2 className="w-6 h-6" />
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center animate-pulse border ${incomingRide.serviceType === 'delivery' ? 'bg-cyan-950 border-cyan-500/50 text-cyan-400' : 'bg-emerald-950 border-emerald-500/50 text-emerald-400'}`}>
+                    {incomingRide.serviceType === 'delivery' ? <Package className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-white tracking-tight">
                       {incomingRide.serviceType === 'delivery' ? 'NOVA ENTREGA DISPONÍVEL' : 'NOVA CORRIDA DISPONÍVEL'}
                     </h3>
-                    <span className="text-xs text-emerald-400 font-semibold">
+                    <span className={`text-xs font-semibold ${incomingRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
                       Toque para aceitar antes que o tempo expire!
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center w-12 h-12 rounded-2xl bg-slate-950 border-2 border-emerald-500 text-emerald-400">
+                <div className={`flex flex-col items-center justify-center w-12 h-12 rounded-2xl bg-slate-950 border-2 ${incomingRide.serviceType === 'delivery' ? 'border-cyan-500 text-cyan-400' : 'border-emerald-500 text-emerald-400'}`}>
                   <span className="text-lg font-black leading-none">{incomingCountdown}</span>
                   <span className="text-[9px] uppercase font-bold text-slate-400">seg</span>
                 </div>
@@ -2292,7 +2515,7 @@ export const DriverDashboardPage: React.FC = () => {
               {/* Progress bar countdown */}
               <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
                 <div
-                  className="bg-emerald-500 h-full transition-all duration-1000 ease-linear rounded-full"
+                  className={`h-full transition-all duration-1000 ease-linear rounded-full ${incomingRide.serviceType === 'delivery' ? 'bg-cyan-500' : 'bg-emerald-500'}`}
                   style={{ width: `${(incomingCountdown / 30) * 100}%` }}
                 />
               </div>
@@ -2304,11 +2527,11 @@ export const DriverDashboardPage: React.FC = () => {
                     <img
                       src={incomingRide.passengerPhotoUrl}
                       alt={incomingRide.passengerName}
-                      className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500"
+                      className={`w-14 h-14 rounded-2xl object-cover border-2 ${incomingRide.serviceType === 'delivery' ? 'border-cyan-500' : 'border-emerald-500'}`}
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center text-emerald-400 text-2xl font-bold">
-                      <User className="w-7 h-7" />
+                    <div className={`w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center text-2xl font-bold ${incomingRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
+                      {incomingRide.serviceType === 'delivery' ? <Package className="w-7 h-7" /> : <User className="w-7 h-7" />}
                     </div>
                   )}
                   <div>
@@ -2316,14 +2539,14 @@ export const DriverDashboardPage: React.FC = () => {
                       {incomingRide.passengerName}
                     </span>
                     <span className="text-xs text-slate-400">
-                      ⭐ Passageiro(a) Verificado(a)
+                      {incomingRide.serviceType === 'delivery' ? '⭐ Remetente Verificado' : '⭐ Passageiro(a) Verificado(a)'}
                     </span>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <span className="text-xs text-slate-400 block font-medium">Valor Estimado:</span>
-                  <span className="text-2xl sm:text-3xl font-black text-emerald-400 block">
+                  <span className="text-xs text-slate-400 block font-medium">Valor:</span>
+                  <span className={`text-2xl sm:text-3xl font-black block ${incomingRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
                     R$ {incomingRide.fareAmount.toFixed(2)}
                   </span>
                   <span className="text-[11px] text-slate-400 font-semibold">
@@ -2332,13 +2555,27 @@ export const DriverDashboardPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Delivery Specific Recipient Details */}
+              {incomingRide.serviceType === 'delivery' && incomingRide.deliveryDetails && (
+                <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-xs space-y-1">
+                  <div className="text-slate-300">
+                    <span className="text-slate-400 font-bold">Destinatário:</span> {incomingRide.deliveryDetails.recipientName || 'A definir'}
+                  </div>
+                  {incomingRide.deliveryDetails.packageNotes && (
+                    <div className="text-slate-400 text-[11px]">
+                      <span className="text-slate-300 font-bold">Pacote:</span> {incomingRide.deliveryDetails.packageNotes}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Route Origin & Destination */}
               <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3 text-xs">
                 <div className="flex items-start gap-2.5">
-                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <MapPin className={`w-4 h-4 shrink-0 mt-0.5 ${incomingRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`} />
                   <div>
-                    <span className="font-extrabold text-emerald-400 block uppercase tracking-wider text-[10px]">
-                      Embarque / Retirada:
+                    <span className={`font-extrabold block uppercase tracking-wider text-[10px] ${incomingRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
+                      {incomingRide.serviceType === 'delivery' ? 'Local de Coleta:' : 'Embarque:'}
                     </span>
                     <p className="text-slate-100 font-medium text-xs leading-relaxed">
                       {incomingRide.origin.address}
@@ -2350,7 +2587,7 @@ export const DriverDashboardPage: React.FC = () => {
                   <Navigation className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-extrabold text-rose-400 block uppercase tracking-wider text-[10px]">
-                      Destino / Entrega:
+                      {incomingRide.serviceType === 'delivery' ? 'Local de Entrega:' : 'Destino:'}
                     </span>
                     <p className="text-slate-100 font-medium text-xs leading-relaxed">
                       {incomingRide.destination.address}
@@ -2359,7 +2596,7 @@ export const DriverDashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Action Buttons: Green Accept, Red Reject */}
+              {/* Action Buttons: Green/Cyan Accept, Red Reject */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <button
                   type="button"
@@ -2368,14 +2605,18 @@ export const DriverDashboardPage: React.FC = () => {
                   className="w-full py-4 px-4 rounded-2xl bg-slate-950 hover:bg-rose-950/70 border-2 border-rose-600/50 hover:border-rose-500 text-rose-300 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
                 >
                   <X className="w-5 h-5" />
-                  Recusar Corrida
+                  {incomingRide.serviceType === 'delivery' ? 'Recusar Entrega' : 'Recusar Corrida'}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleAcceptRide(incomingRide.id)}
                   disabled={actionLoading}
-                  className="w-full py-4 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950 transition-all hover:scale-[1.02] animate-pulse"
+                  className={`w-full py-4 px-4 rounded-2xl text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.02] animate-pulse ${
+                    incomingRide.serviceType === 'delivery'
+                      ? 'bg-cyan-600 hover:bg-cyan-500 shadow-cyan-950'
+                      : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950'
+                  }`}
                 >
                   <Check className="w-5 h-5" />
                   {actionLoading ? 'Aceitando...' : `Aceitar (${incomingCountdown}s)`}
@@ -3084,9 +3325,19 @@ export const DriverDashboardPage: React.FC = () => {
       {/* Driver Pricing Configuration Modal */}
       <DriverPricingModal
         isOpen={showPricingModal}
+        vehicleType={driver?.vehicle?.type}
         onClose={() => setShowPricingModal(false)}
-        onPricingUpdated={(newPricing) => {
-          setDriver((prev) => (prev ? { ...prev, customPricing: newPricing } : prev));
+        onPricingUpdated={(newPricing, newDeliveryPricing, newServicesOffered) => {
+          setDriver((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  customPricing: newPricing,
+                  customDeliveryPricing: newDeliveryPricing || prev.customDeliveryPricing,
+                  servicesOffered: newServicesOffered || prev.servicesOffered,
+                }
+              : prev
+          );
         }}
       />
     </div>

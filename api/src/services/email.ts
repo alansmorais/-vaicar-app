@@ -2,6 +2,13 @@ import nodemailer from 'nodemailer';
 import { config } from '../config/index.js';
 import { Receipt } from '../../../shared/src/types.js';
 
+export interface EmailAttachment {
+  filename: string;
+  contentType?: string;
+  content?: Buffer | string;
+  contentBase64?: string;
+}
+
 export interface EmailLogEntry {
   id: string;
   to: string;
@@ -16,60 +23,86 @@ export interface EmailLogEntry {
 // In-memory diagnostic log for admin inspection
 export const emailLogs: EmailLogEntry[] = [];
 
-let transporter: nodemailer.Transporter | null = null;
-
-async function getTransporter(): Promise<nodemailer.Transporter> {
-  if (transporter) return transporter;
-
-  if (process.env.NODE_ENV === 'test') {
-    transporter = nodemailer.createTransport({
-      jsonTransport: true,
-    });
-    return transporter;
-  }
-
-  if (config.email.smtpHost && config.email.smtpUser) {
-    transporter = nodemailer.createTransport({
-      host: config.email.smtpHost,
-      port: config.email.smtpPort,
-      secure: config.email.smtpPort === 465,
-      auth: {
-        user: config.email.smtpUser,
-        pass: config.email.smtpPass,
-      },
-    });
-    return transporter;
-  }
-
-  // Development test transporter
-  try {
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    console.log('[Email] Created test SMTP account:', testAccount.user);
-    return transporter;
-  } catch (err) {
-    console.warn('[Email] Could not create Ethereal test account, using JSON/stream transport fallback:', err);
-    transporter = nodemailer.createTransport({
-      jsonTransport: true,
-    });
-    return transporter;
-  }
-}
-
-interface SendEmailParams {
+export interface SendEmailParams {
   to: string;
   subject: string;
   template: string;
   html: string;
   text?: string;
+  attachments?: EmailAttachment[];
+}
+
+/**
+ * Send email via Google Apps Script Web App (Primary Provider)
+ * Follows validated legacy protocol: POST text/plain;charset=utf-8 with manual redirect handling.
+ */
+export async function sendViaAppsScript(url: string, params: SendEmailParams): Promise<{
+  success: boolean;
+  messageId?: string;
+  provider: 'apps_script';
+}> {
+  const webhookBody: any = {
+    to: params.to,
+    subject: params.subject,
+    html: params.html,
+    text: params.text || params.subject,
+  };
+
+  if (Array.isArray(params.attachments) && params.attachments.length > 0) {
+    webhookBody.attachments = params.attachments.map((att) => {
+      let base64 = att.contentBase64 || '';
+      if (!base64 && att.content) {
+        base64 = Buffer.isBuffer(att.content)
+          ? att.content.toString('base64')
+          : Buffer.from(att.content).toString('base64');
+      }
+      return {
+        filename: att.filename,
+        contentType: att.contentType || 'application/pdf',
+        contentBase64: base64,
+      };
+    });
+  }
+
+  const response = await fetch(url.trim(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(webhookBody),
+    redirect: 'manual',
+    signal: AbortSignal.timeout(10000),
+  });
+
+  // In Google Apps Script Web Apps, returning ContentService output on POST triggers a 302 redirect.
+  // Status 200 or 302 confirms doPost executed on Google servers and MailApp.sendEmail() ran.
+  if (response.status === 200 || response.status === 302) {
+    const location = response.headers.get('location');
+    if (location) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4000);
+        const echoRes = await fetch(location, { method: 'GET', signal: controller.signal });
+        clearTimeout(timer);
+        if (echoRes.ok) {
+          const echoText = await echoRes.text();
+          try {
+            const echoJson = JSON.parse(echoText);
+            if (echoJson && (echoJson.status === 'error' || echoJson.success === false)) {
+              throw new Error(`[Google Apps Script Error] ${echoJson.message || echoJson.error || 'Erro reportado pelo script'}`);
+            }
+          } catch (parseErr: any) {
+            if (parseErr.message?.includes('[Google Apps Script Error]')) throw parseErr;
+          }
+        }
+      } catch (echoErr: any) {
+        if (echoErr.message?.includes('[Google Apps Script Error]')) throw echoErr;
+        // Echo proxy timeouts or 404s can be safely ignored because the 302 already confirms execution
+      }
+    }
+    return { success: true, messageId: `gas-${Date.now()}`, provider: 'apps_script' };
+  }
+
+  const text = await response.text().catch(() => '');
+  throw new Error(`Google Apps Script respondeu com status ${response.status}${text ? `: ${text}` : ''}`);
 }
 
 export async function sendTransactionalEmail(params: SendEmailParams): Promise<{
@@ -77,6 +110,7 @@ export async function sendTransactionalEmail(params: SendEmailParams): Promise<{
   messageId?: string;
   error?: string;
   previewUrl?: string;
+  provider?: string;
 }> {
   const logEntry: EmailLogEntry = {
     id: `email-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -88,26 +122,69 @@ export async function sendTransactionalEmail(params: SendEmailParams): Promise<{
   };
 
   try {
-    const mailer = await getTransporter();
-    const info = await mailer.sendMail({
-      from: config.email.from,
-      to: params.to,
-      subject: params.subject,
-      html: params.html,
-      text: params.text || params.subject,
-    });
+    const appsScriptUrl = process.env.APPS_SCRIPT_URL || config.email.appsScriptUrl;
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isTest = process.env.NODE_ENV === 'test';
 
-    logEntry.status = 'SENT';
-    logEntry.error = undefined;
-    const preview = nodemailer.getTestMessageUrl(info);
-    if (preview) {
-      logEntry.previewUrl = preview.toString();
+    // 1. Primary Provider: Google Apps Script Web App
+    if (appsScriptUrl && appsScriptUrl.trim().startsWith('http')) {
+      const res = await sendViaAppsScript(appsScriptUrl, params);
+      logEntry.status = 'SENT';
+      logEntry.error = undefined;
+      emailLogs.unshift(logEntry);
+      if (emailLogs.length > 200) emailLogs.pop();
+      console.log(`[Email Sent] [${params.template}] to: ${params.to} (Apps Script)`);
+      return { success: true, messageId: res.messageId, provider: 'apps_script' };
     }
-    emailLogs.unshift(logEntry);
-    if (emailLogs.length > 200) emailLogs.pop();
 
-    console.log(`[Email Sent] [${params.template}] to: ${params.to} messageId: ${info.messageId}`);
-    return { success: true, messageId: info.messageId, previewUrl: logEntry.previewUrl };
+    // 2. Production: FAIL CLOSED if APPS_SCRIPT_URL is missing
+    if (isProduction) {
+      throw new Error('Serviço de e-mail de produção indisponível (APPS_SCRIPT_URL não configurado).');
+    }
+
+    // 3. Automated Test Environment fallback
+    if (isTest) {
+      const mailer = nodemailer.createTransport({ jsonTransport: true });
+      const info = await mailer.sendMail({
+        from: config.email.from,
+        to: params.to,
+        subject: params.subject,
+        html: params.html,
+        text: params.text || params.subject,
+      });
+      logEntry.status = 'SENT';
+      logEntry.error = undefined;
+      emailLogs.unshift(logEntry);
+      if (emailLogs.length > 200) emailLogs.pop();
+      return { success: true, messageId: info.messageId, provider: 'test' };
+    }
+
+    // 4. Development mode fallback: use SMTP if explicitly provided, else fail closed
+    if (config.email.smtpHost && config.email.smtpUser) {
+      const mailer = nodemailer.createTransport({
+        host: config.email.smtpHost,
+        port: config.email.smtpPort,
+        secure: config.email.smtpPort === 465,
+        auth: {
+          user: config.email.smtpUser,
+          pass: config.email.smtpPass,
+        },
+      });
+      const info = await mailer.sendMail({
+        from: config.email.from,
+        to: params.to,
+        subject: params.subject,
+        html: params.html,
+        text: params.text || params.subject,
+      });
+      logEntry.status = 'SENT';
+      logEntry.error = undefined;
+      emailLogs.unshift(logEntry);
+      if (emailLogs.length > 200) emailLogs.pop();
+      return { success: true, messageId: info.messageId, provider: 'smtp' };
+    }
+
+    throw new Error('Serviço de e-mail não configurado para desenvolvimento (configure APPS_SCRIPT_URL ou SMTP).');
   } catch (error: any) {
     const errorMsg = error?.message || 'Falha ao enviar e-mail';
     logEntry.status = 'FAILED';
@@ -195,6 +272,28 @@ export async function sendDriverPinEmail(to: string, pin: string) {
     to,
     subject: `PIN de Verificação Motorista VaiCar: ${pin}`,
     template: 'DRIVER_PIN',
+    html,
+  });
+}
+
+export async function sendPasswordResetEmail(to: string, pin: string) {
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #10B981; border-radius: 12px; background: #0F172A; color: #F8FAFC;">
+      <h1 style="color: #10B981; margin-bottom: 8px;">Recuperação de Senha — VaiCar</h1>
+      <p style="font-size: 15px; color: #94A3B8;">Você solicitou a redefinição de senha para sua conta na plataforma VaiCar.</p>
+      <div style="background: #1E293B; padding: 20px; border-radius: 8px; text-align: center; margin: 24px 0; border: 1px dashed #10B981;">
+        <span style="font-size: 13px; color: #94A3B8; display: block; margin-bottom: 8px;">SEU CÓDIGO DE RECUPERAÇÃO (PIN):</span>
+        <span style="font-size: 36px; font-weight: bold; letter-spacing: 6px; color: #10B981;">${pin}</span>
+      </div>
+      <p style="font-size: 13px; color: #CBD5E1;">Este código é válido por <strong>15 minutos</strong> e pode ser utilizado apenas uma vez.</p>
+      <p style="font-size: 13px; color: #94A3B8;">Se você não solicitou esta redefinição, sua conta permanece segura e você pode ignorar esta mensagem.</p>
+      <p style="color: #64748B; font-size: 12px; margin-top: 24px;">Equipe VaiCar — Mobilidade Urbana no Litoral Norte</p>
+    </div>
+  `;
+  return sendTransactionalEmail({
+    to,
+    subject: `VaiCar - Código de Recuperação de Senha: ${pin}`,
+    template: 'PASSWORD_RESET',
     html,
   });
 }

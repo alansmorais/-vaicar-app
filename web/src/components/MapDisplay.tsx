@@ -6,13 +6,14 @@ import { mapsApi } from '../api/maps.js';
 import { Navigation, Crosshair, LocateFixed, ExternalLink } from 'lucide-react';
 
 export interface MapProps {
-  pickup: { lat: number; lng: number; address?: string };
+  pickup?: { lat: number; lng: number; address?: string } | null;
   destination?: { lat: number; lng: number; address?: string } | null;
   onPickupChange?: (lat: number, lng: number, address?: string) => void;
   onDestinationChange?: (lat: number, lng: number, address?: string) => void;
   onMapClick?: (lat: number, lng: number, address?: string) => void;
   drivers?: PublicDriverMarker[];
   driverLocation?: { lat: number; lng: number; heading?: number } | null;
+  assignedDriverTooltip?: string;
   selectedDriverId?: string | null;
   onDriverSelect?: (driver: PublicDriverMarker) => void;
   height?: string;
@@ -29,6 +30,41 @@ const DEFAULT_CENTER = {
   lat: -23.8055,
   lng: -45.4011, // Centro de São Sebastião - SP
 };
+
+function decodePolyline(encoded: string): [number, number][] {
+  if (!encoded) return [];
+  const points: [number, number][] = [];
+  let index = 0;
+  const len = encoded.length;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < len) {
+    let b: number;
+    let shift = 0;
+    let result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+  return points;
+}
 
 // Custom high-visibility SVG Teardrop Pins with Floating Badges
 function createCustomMarkerIcon(
@@ -92,7 +128,7 @@ function createCustomMarkerIcon(
   }
 
   if (type === 'pickup') {
-    const displayLabel = label || (isDraggable ? 'Partida (Arraste)' : 'Ponto de Partida');
+    const displayLabel = label || 'Ponto de Partida';
     return L.divIcon({
       className: 'custom-pickup-marker-icon',
       html: `
@@ -138,7 +174,7 @@ function createCustomMarkerIcon(
   }
 
   if (type === 'destination') {
-    const displayLabel = label || (isDraggable ? 'Destino (Arraste)' : 'Destino Final');
+    const displayLabel = label || 'Destino Final';
     return L.divIcon({
       className: 'custom-destination-marker-icon',
       html: `
@@ -240,6 +276,7 @@ export const MapDisplay: React.FC<MapProps> = ({
   onMapClick,
   drivers = [],
   driverLocation,
+  assignedDriverTooltip,
   selectedDriverId,
   onDriverSelect,
   height = '480px',
@@ -509,6 +546,13 @@ export const MapDisplay: React.FC<MapProps> = ({
 
     drivers.forEach((d) => {
       if (d.currentLocation?.lat && d.currentLocation?.lng) {
+        // Enforce GPS freshness: never render stale driver positions older than 60s
+        if (d.currentLocation.updatedAt) {
+          const t = new Date(d.currentLocation.updatedAt).getTime();
+          if (!isNaN(t) && (Date.now() - t > 60000 || Date.now() - t < -5000)) {
+            return;
+          }
+        }
         const isSelected = selectedDriverId === d.uid;
         const isBicycle = d.vehicle?.type === 'bicycle';
         const isMoto = d.vehicle?.type === 'motorcycle' || d.isCourier;
@@ -556,19 +600,20 @@ export const MapDisplay: React.FC<MapProps> = ({
       }
     });
 
-    // Live Assigned Driver
+    // Live Assigned Driver (rendered only when driverLocation is explicitly provided)
     if (driverLocation?.lat && driverLocation?.lng) {
       const assignedMarker = L.marker([driverLocation.lat, driverLocation.lng], {
         icon: createCustomMarkerIcon('assigned'),
       });
-      assignedMarker.bindTooltip('Seu Motorista está a caminho!', {
+      const tooltip = assignedDriverTooltip || 'Condutor Parceiro';
+      assignedMarker.bindTooltip(tooltip, {
         direction: 'top',
         permanent: true,
         className: 'bg-emerald-950 text-emerald-300 font-bold text-xs rounded-lg px-2 py-1 border border-emerald-500',
       });
       layer.addLayer(assignedMarker);
     }
-  }, [drivers, driverLocation, selectedDriverId]);
+  }, [drivers, driverLocation, selectedDriverId, assignedDriverTooltip]);
 
   // 5. Fit bounds to keep both pickup and destination fully visible
   useEffect(() => {
@@ -612,6 +657,45 @@ export const MapDisplay: React.FC<MapProps> = ({
 
     const fetchRoute = async () => {
       try {
+        // 1. Try server-side authoritative routing (Google Maps / OSRM proxy)
+        try {
+          const dirRes = await mapsApi.getDirections(pickup.lat, pickup.lng, destination.lat, destination.lng);
+          if (!isCancelled && dirRes && dirRes.encodedPolyline) {
+            const coords = decodePolyline(dirRes.encodedPolyline);
+            if (coords.length > 0) {
+              if (routeShadowPolylineRef.current) routeShadowPolylineRef.current.remove();
+              if (routePolylineRef.current) routePolylineRef.current.remove();
+
+              const shadow = L.polyline(coords, {
+                color: '#064e3b',
+                weight: 8,
+                opacity: 0.6,
+              }).addTo(map);
+
+              const polyline = L.polyline(coords, {
+                color: '#10b981',
+                weight: 5,
+                opacity: 0.95,
+                lineJoin: 'round',
+              }).addTo(map);
+
+              routeShadowPolylineRef.current = shadow;
+              routePolylineRef.current = polyline;
+
+              setRouteInfo({
+                distanceKm: dirRes.distanceKm,
+                durationMinutes: dirRes.durationMin,
+              });
+
+              map.fitBounds(polyline.getBounds(), { padding: [60, 60], maxZoom: 15 });
+              return;
+            }
+          }
+        } catch (serverErr) {
+          console.warn('[MapDisplay] Server directions error, attempting direct OSRM fallback:', serverErr);
+        }
+
+        // 2. Direct browser OSRM fallback
         const url = `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
         const res = await fetch(url, { signal: AbortSignal.timeout(7000) });
         if (!res.ok) throw new Error('OSRM error');
@@ -653,7 +737,7 @@ export const MapDisplay: React.FC<MapProps> = ({
         }
       } catch {
         // Fallback: straight line
-        if (isCancelled) return;
+        if (isCancelled || !pickup || !destination) return;
         const straightCoords: [number, number][] = [
           [pickup.lat, pickup.lng],
           [destination.lat, destination.lng],
@@ -828,24 +912,30 @@ export const MapDisplay: React.FC<MapProps> = ({
                 </span>
               )}
             </div>
-          ) : (
+          ) : (pickup?.lat || destination?.lat) ? (
             <div className="bg-slate-950/95 backdrop-blur-md border border-slate-700/80 rounded-xl px-3.5 py-2 shadow-2xl text-[11px] text-slate-200 flex flex-wrap items-center justify-center gap-2 sm:gap-4 pointer-events-auto">
-              <span className="flex items-center gap-1.5 font-bold text-emerald-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" />
-                {pickupLabel || 'Ponto de Partida'} {draggable && '(Arraste o pino verde)'}
-              </span>
-              <span className="text-slate-600 hidden sm:inline">|</span>
-              <span className="flex items-center gap-2.5 font-bold text-rose-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm animate-pulse" />
-                {destinationLabel || 'Destino'} {draggable && '(Arraste o pino vermelho ou clique no mapa)'}
-              </span>
+              {pickup?.lat && (
+                <span className="flex items-center gap-1.5 font-bold text-emerald-400">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm" />
+                  {pickupLabel || 'Ponto de Partida'}
+                </span>
+              )}
+              {pickup?.lat && destination?.lat && (
+                <span className="text-slate-600 hidden sm:inline">|</span>
+              )}
+              {destination?.lat && (
+                <span className="flex items-center gap-2.5 font-bold text-rose-400">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm" />
+                  {destinationLabel || 'Destino'}
+                </span>
+              )}
               {loadingRoute && (
                 <span className="text-emerald-300 text-[10px] animate-pulse">
                   Calculando melhor trajeto...
                 </span>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

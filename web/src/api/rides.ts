@@ -1,19 +1,39 @@
 import { apiFetch } from './client.js';
-import { Ride, Receipt, PaymentMethod, PlatformPricingSettings, DriverRideOption } from '../../../shared/src/types.js';
+import {
+  Ride,
+  Receipt,
+  PaymentMethod,
+  PlatformPricingSettings,
+  DriverRideOption,
+  ServiceType,
+  DeliveryDetails,
+} from '../../../shared/src/types.js';
 
 export interface EstimateRideInput {
   origin: { address: string; lat: number; lng: number };
   destination: { address: string; lat: number; lng: number };
+  serviceType?: ServiceType;
+  applyReferralCredit?: boolean;
 }
 
 export interface EstimateRideResult {
+  serviceType?: ServiceType;
   distanceKm: number;
   durationMinutes: number;
   fareAmount: number;
   originalFareAmount?: number;
+  passengerFareAmount?: number;
+  driverTotalEntitlement?: number;
+  platformSubsidyAmount?: number;
+  platformSubsidyStatus?: 'NONE' | 'PENDING_SETTLEMENT' | 'SETTLED' | 'CANCELLED';
   discountAmount?: number;
   discountApplied?: boolean;
   discountPercentage?: number;
+  referralDiscountApplied?: boolean;
+  referralDiscountAmount?: number;
+  referralCreditApplied?: boolean;
+  referralCreditAmount?: number;
+  availableReferralCreditBalance?: number;
   pricing: PlatformPricingSettings;
   availableDrivers?: DriverRideOption[];
 }
@@ -23,6 +43,9 @@ export interface RequestRideInput {
   destination: { address: string; lat: number; lng: number };
   paymentMethod: PaymentMethod;
   requestedDriverId?: string;
+  serviceType?: ServiceType;
+  deliveryDetails?: DeliveryDetails;
+  applyReferralCredit?: boolean;
 }
 
 export const ridesApi = {

@@ -1,5 +1,11 @@
 import { apiFetch } from './client.js';
-import { UserProfile, PassengerProfile, DriverProfile } from '../../../shared/src/types.js';
+import {
+  UserProfile,
+  PassengerProfile,
+  DriverProfile,
+  DriverSubscriptionPlan,
+  ServiceType,
+} from '../../../shared/src/types.js';
 
 export interface RegisterPassengerInput {
   uid: string;
@@ -11,6 +17,7 @@ export interface RegisterPassengerInput {
   termsAccepted: boolean;
   hasCriminalRecordCheck?: boolean;
   criminalRecordUrl?: string;
+  referralCode?: string;
 }
 
 export interface RegisterDriverInput {
@@ -27,7 +34,8 @@ export interface RegisterDriverInput {
   professionalCategory: string;
   cnhNumber: string;
   criminalRecordUrl?: string;
-  subscriptionPlan?: 'monthly_100' | 'weekly_percent_10';
+  subscriptionPlan?: DriverSubscriptionPlan;
+  servicesOffered?: ServiceType[];
   vehicle: {
     type?: 'car' | 'motorcycle' | 'van' | 'bicycle';
     brand: string;
@@ -79,8 +87,90 @@ export const authApi = {
     }),
 
   adminLogin: (credentials: { email: string; password: string }) =>
-    apiFetch<{ token: string; user: UserProfile }>('/auth/admin-login', {
+    apiFetch<{ token: string; customToken?: string; user: UserProfile }>('/auth/admin-login', {
       method: 'POST',
       body: JSON.stringify(credentials),
+    }),
+
+  checkAccount: (email: string) =>
+    apiFetch<{
+      email: string;
+      existsInFirestore: boolean;
+      hasFirebaseAuth: boolean;
+      role: 'admin' | 'driver' | 'passenger' | null;
+      name: string | null;
+      needsMigration: boolean;
+    }>('/auth/check-account', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  migrateAccount: (data: { email: string; pin: string; password: string }) =>
+    apiFetch<{
+      message: string;
+      uid: string;
+      email: string;
+      customToken: string;
+      role: 'driver' | 'passenger' | 'admin';
+    }>('/auth/migrate-account', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  login: (credentials: { email: string; password: string }) =>
+    apiFetch<{
+      success: boolean;
+      token: string;
+      customToken?: string;
+      user: UserProfile;
+      passenger?: PassengerProfile;
+      driver?: DriverProfile;
+      roles: string[];
+      isAdmin: boolean;
+      message: string;
+    }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    }),
+
+  passengerAuth: (credentials: { email?: string; phone?: string; password?: string; verificationCode?: string }) =>
+    apiFetch<{
+      success: boolean;
+      token: string;
+      passenger: PassengerProfile;
+      message: string;
+    }>('/passengers/auth', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    }),
+
+  driverAuth: (credentials: { email?: string; phone?: string; password?: string; verificationCode?: string }) =>
+    apiFetch<{
+      success: boolean;
+      token: string;
+      driver: DriverProfile;
+      message: string;
+    }>('/drivers/auth', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    }),
+
+  forgotPassword: (email: string) =>
+    apiFetch<{
+      success: boolean;
+      data: { message: string; emailDelivered: boolean };
+    }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (data: { email: string; pin: string; newPassword: string }) =>
+    apiFetch<{
+      success: boolean;
+      token?: string;
+      message: string;
+    }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 };

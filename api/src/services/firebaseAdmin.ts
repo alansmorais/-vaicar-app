@@ -5,6 +5,7 @@ let initialized = false;
 let authInstance: admin.auth.Auth | null = null;
 let firestoreInstance: admin.firestore.Firestore | null = null;
 let storageInstance: admin.storage.Storage | null = null;
+let messagingInstance: admin.messaging.Messaging | null = null;
 
 function setupFirestore(): admin.firestore.Firestore {
   const fs = admin.firestore();
@@ -25,6 +26,11 @@ export function initFirebaseAdmin(): boolean {
       authInstance = admin.auth();
       firestoreInstance = setupFirestore();
       storageInstance = admin.storage();
+      try {
+        messagingInstance = admin.messaging();
+      } catch {
+        // messaging optional in local test env
+      }
       return true;
     }
 
@@ -44,6 +50,11 @@ export function initFirebaseAdmin(): boolean {
       authInstance = admin.auth();
       firestoreInstance = setupFirestore();
       storageInstance = admin.storage();
+      try {
+        messagingInstance = admin.messaging();
+      } catch {
+        // messaging optional
+      }
       console.log(`[Firebase Admin] Initialized with Service Account for project: ${projectId}`);
       return true;
     }
@@ -59,6 +70,11 @@ export function initFirebaseAdmin(): boolean {
       authInstance = admin.auth();
       firestoreInstance = setupFirestore();
       storageInstance = admin.storage();
+      try {
+        messagingInstance = admin.messaging();
+      } catch {
+        // messaging optional
+      }
       console.log(`[Firebase Admin] Initialized with Application Default Credentials for: ${projectId}`);
       return true;
     }
@@ -71,6 +87,11 @@ export function initFirebaseAdmin(): boolean {
       initialized = true;
       authInstance = admin.auth();
       firestoreInstance = setupFirestore();
+      try {
+        messagingInstance = admin.messaging();
+      } catch {
+        // messaging optional
+      }
       console.log('[Firebase Admin] Initialized with Firebase Emulators');
       return true;
     }
@@ -100,3 +121,9 @@ export function getFirebaseAdminStorage(): admin.storage.Storage | null {
   if (!initialized) initFirebaseAdmin();
   return storageInstance;
 }
+
+export function getFirebaseAdminMessaging(): admin.messaging.Messaging | null {
+  if (!initialized) initFirebaseAdmin();
+  return messagingInstance;
+}
+

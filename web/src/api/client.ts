@@ -1,4 +1,4 @@
-import { ApiResponse, ErrorCode, ErrorCodeType, getFriendlyErrorMessage } from '../../../shared/src/errors.js';
+import { type ApiResponse, ErrorCode, type ErrorCodeType, getFriendlyErrorMessage } from '../../../shared/src/errors.js';
 
 let currentAuthToken: string | null = null;
 

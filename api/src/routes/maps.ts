@@ -365,3 +365,116 @@ mapsRouter.post('/reverse-geocode', async (req: Request, res: Response, next: Ne
     next(error);
   }
 });
+
+/**
+ * GET /api/v1/maps/directions
+ * Calculates driving route directions, polyline and ETA
+ */
+mapsRouter.get('/directions', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const originLat = parseFloat(req.query.originLat as string);
+    const originLng = parseFloat(req.query.originLng as string);
+    const destLat = parseFloat(req.query.destLat as string);
+    const destLng = parseFloat(req.query.destLng as string);
+
+    if (isNaN(originLat) || isNaN(originLng) || isNaN(destLat) || isNaN(destLng)) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Parâmetros originLat, originLng, destLat e destLng são obrigatórios.' },
+      });
+    }
+
+    // 1. If Google Maps API key is configured, query official Google Maps Directions API
+    if (config.googleMaps.apiKey) {
+      try {
+        const gUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${originLat},${originLng}&destination=${destLat},${destLng}&mode=driving&language=pt-BR&key=${config.googleMaps.apiKey}`;
+        const gRes = await fetch(gUrl, { signal: AbortSignal.timeout(6000) });
+        if (gRes.ok) {
+          const gData = (await gRes.json()) as any;
+          if (gData.status === 'OK' && gData.routes && gData.routes[0]) {
+            const route = gData.routes[0];
+            const leg = route.legs?.[0];
+            const distanceKm = Math.round(((leg?.distance?.value || 0) / 1000) * 10) / 10;
+            const durationMin = Math.max(1, Math.round((leg?.duration?.value || 0) / 60));
+            const encodedPolyline = route.overview_polyline?.points || '';
+            const steps = (leg?.steps || []).map((s: any) => ({
+              instruction: s.html_instructions ? s.html_instructions.replace(/<[^>]*>/g, '') : (s.maneuver || 'Siga em frente'),
+              distanceMeters: s.distance?.value || 0,
+              durationSeconds: s.duration?.value || 0,
+              maneuver: s.maneuver || 'straight',
+              startLat: s.start_location?.lat || originLat,
+              startLng: s.start_location?.lng || originLng,
+              endLat: s.end_location?.lat || destLat,
+              endLng: s.end_location?.lng || destLng,
+            }));
+
+            return res.json({
+              distanceKm,
+              durationMin,
+              encodedPolyline,
+              summary: route.summary || '',
+              steps,
+            });
+          }
+        }
+      } catch (gErr) {
+        console.warn('[Maps Directions] Google Directions API warning:', gErr);
+      }
+    }
+
+    // 2. Try OSRM driving service fallback
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=full&geometries=polyline&steps=true`;
+      const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      if (response.ok) {
+        const data = (await response.json()) as any;
+        if (data.routes && data.routes[0]) {
+          const route = data.routes[0];
+          const distanceKm = Math.round((route.distance / 1000) * 10) / 10;
+          const durationMin = Math.max(1, Math.round(route.duration / 60));
+          const encodedPolyline = route.geometry;
+          const steps = (route.legs?.[0]?.steps || []).map((s: any) => ({
+            instruction: s.maneuver?.instruction || s.name || 'Siga em frente',
+            distanceMeters: s.distance || 0,
+            durationSeconds: s.duration || 0,
+            maneuver: s.maneuver?.type || 'straight',
+            startLat: s.maneuver?.location?.[1] || originLat,
+            startLng: s.maneuver?.location?.[0] || originLng,
+            endLat: s.maneuver?.location?.[1] || destLat,
+            endLng: s.maneuver?.location?.[0] || destLng,
+          }));
+
+          return res.json({
+            distanceKm,
+            durationMin,
+            encodedPolyline,
+            summary: route.legs?.[0]?.summary || '',
+            steps,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('[Maps Directions] OSRM router warning:', e);
+    }
+
+    // Fallback: straight-line distance
+    const R = 6371;
+    const dLat = (destLat - originLat) * Math.PI / 180;
+    const dLon = (destLng - originLng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(originLat * Math.PI / 180) * Math.cos(destLat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    const straightKm = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+    const roadKm = Math.round(straightKm * 1.25 * 10) / 10;
+    const durationMin = Math.max(3, Math.round(roadKm * 2.5));
+
+    res.json({
+      distanceKm: roadKm,
+      durationMin,
+      encodedPolyline: '',
+      fallback: true,
+      steps: [],
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+

@@ -1,5 +1,5 @@
 import { apiFetch } from './client.js';
-import { PassengerProfile, Ride } from '../../../shared/src/types.js';
+import { PassengerProfile, Ride, PassengerReferralSummary } from '../../../shared/src/types.js';
 
 export const passengersApi = {
   getMe: () => apiFetch<PassengerProfile>('/passengers/me'),
@@ -13,4 +13,7 @@ export const passengersApi = {
   getRides: () => apiFetch<Ride[]>('/passengers/rides'),
 
   getActiveRide: () => apiFetch<Ride | null>('/passengers/active-ride'),
+
+  getReferralSummary: () => apiFetch<PassengerReferralSummary>('/passengers/referral'),
 };
+

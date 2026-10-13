@@ -46,11 +46,20 @@ export const DriverRegisterPage: React.FC = () => {
       ? 'bicycle'
       : 'car';
 
-  const { registerEmailPassword, devLogin } = useAuth();
+  const { registerEmailPassword, refreshProfile } = useAuth();
 
   // Activity Mode & Vehicle Type
   const [activityMode, setActivityMode] = useState<'driver' | 'delivery'>(isInitDelivery ? 'delivery' : 'driver');
   const [vehicleType, setVehicleType] = useState<'car' | 'motorcycle' | 'van' | 'bicycle'>(initialVehicleType);
+
+  // Services Offered: ride, delivery, or both
+  const [servicesOffered, setServicesOffered] = useState<('ride' | 'delivery')[]>(
+    initialVehicleType === 'bicycle'
+      ? ['delivery']
+      : isInitDelivery
+      ? ['delivery', 'ride']
+      : ['ride', 'delivery']
+  );
 
   // Partnership Subscription Plan
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly_100' | 'weekly_percent_10'>('monthly_100');
@@ -108,21 +117,37 @@ export const DriverRegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const toggleService = (srv: 'ride' | 'delivery') => {
+    if (vehicleType === 'bicycle' && srv === 'ride') return;
+    setServicesOffered((prev) => {
+      const has = prev.includes(srv);
+      if (has) {
+        if (prev.length === 1) return prev;
+        return prev.filter((s) => s !== srv);
+      } else {
+        return [...prev, srv];
+      }
+    });
+  };
+
   const handleSelectActivity = (mode: 'driver' | 'delivery', vType?: 'car' | 'motorcycle' | 'van' | 'bicycle') => {
     setActivityMode(mode);
     const targetType = vType || (mode === 'delivery' ? 'motorcycle' : 'car');
     setVehicleType(targetType);
     if (targetType === 'bicycle') {
+      setServicesOffered(['delivery']);
       setProfessionalCategory('Entregador / Ciclista (Bike e Encomendas)');
       if (!brand || brand === 'Chevrolet' || brand === 'Honda') setBrand('Caloi');
       if (!model || model === 'Onix' || model === 'CG 160 Fan') setModel('Aro 29');
       setPlate('BIKE');
     } else if (targetType === 'motorcycle') {
+      setServicesOffered((prev) => (prev.length === 0 ? ['ride', 'delivery'] : prev));
       setProfessionalCategory('Entregador / Motoboy (Delivery e Encomendas)');
       if (!brand || brand === 'Chevrolet' || brand === 'Caloi') setBrand('Honda');
       if (!model || model === 'Onix' || model === 'Aro 29') setModel('CG 160 Fan');
       if (plate === 'BIKE') setPlate('');
     } else {
+      setServicesOffered((prev) => (prev.length === 0 ? ['ride', 'delivery'] : prev));
       setProfessionalCategory('Motorista com EAR / Autônomo');
       if (brand === 'Honda' || brand === 'Caloi') setBrand('');
       if (model === 'CG 160 Fan' || model === 'Aro 29') setModel('');
@@ -338,6 +363,7 @@ export const DriverRegisterPage: React.FC = () => {
         cnhNumber: isBicycle ? (cnhNumber || 'ISENTO_BIKE') : cnhNumber.trim(),
         criminalRecordUrl: finalCriminalUrl,
         subscriptionPlan,
+        servicesOffered: isBicycle ? ['delivery'] : servicesOffered,
         vehicle: {
           type: vehicleType,
           brand: brand.trim(),
@@ -349,8 +375,8 @@ export const DriverRegisterPage: React.FC = () => {
         operatingZones: selectedZones,
       });
 
-      // 5. Set session
-      await devLogin(fbUser.uid, email.trim(), 'driver', name.trim());
+      // 5. Refresh authoritative session profile
+      await refreshProfile();
 
       setSuccess('Cadastro enviado com sucesso! Seus dados estão em análise pela equipe administrativa.');
       setTimeout(() => {
@@ -426,6 +452,69 @@ export const DriverRegisterPage: React.FC = () => {
             <Bike className="w-4 h-4" />
             <span>Entregador (Bike)</span>
           </button>
+        </div>
+
+        {/* Serviços que Deseja Prestar */}
+        <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block">
+              Serviços que Você Deseja Prestar
+            </span>
+            <span className="text-[10px] text-slate-400 font-medium">Você decide o que atender</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <label
+              className={`flex items-start gap-2.5 p-3 rounded-xl border transition-all cursor-pointer ${
+                vehicleType === 'bicycle'
+                  ? 'bg-slate-900/40 border-slate-800/60 opacity-50 cursor-not-allowed'
+                  : servicesOffered.includes('ride')
+                  ? 'bg-emerald-950/50 border-emerald-500/70 text-white'
+                  : 'bg-slate-900/70 border-slate-800 text-slate-400'
+              }`}
+            >
+              <input
+                type="checkbox"
+                disabled={vehicleType === 'bicycle'}
+                checked={vehicleType !== 'bicycle' && servicesOffered.includes('ride')}
+                onChange={() => toggleService('ride')}
+                className="mt-0.5 w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 bg-slate-950 border-slate-700"
+              />
+              <div>
+                <div className="text-xs font-bold flex items-center gap-1.5 text-white">
+                  <Car className="w-3.5 h-3.5 text-emerald-400" /> Corridas de Passageiros
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {vehicleType === 'bicycle'
+                    ? 'Bicicletas operam exclusivamente com entregas'
+                    : 'Transporte de passageiros em viagens urbanas'}
+                </p>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-start gap-2.5 p-3 rounded-xl border transition-all cursor-pointer ${
+                servicesOffered.includes('delivery')
+                  ? 'bg-emerald-950/50 border-emerald-500/70 text-white'
+                  : 'bg-slate-900/70 border-slate-800 text-slate-400'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={servicesOffered.includes('delivery')}
+                onChange={() => toggleService('delivery')}
+                className="mt-0.5 w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 bg-slate-950 border-slate-700"
+              />
+              <div>
+                <div className="text-xs font-bold flex items-center gap-1.5 text-white">
+                  <Package className="w-3.5 h-3.5 text-cyan-400" /> Entregas e Encomendas
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Delivery de encomendas, pacotes e compras
+                </p>
+              </div>
+            </label>
+          </div>
         </div>
 
         {/* Escolha do Plano de Parceria */}

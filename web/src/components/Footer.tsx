@@ -109,7 +109,7 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Bottom copyright */}
+        {/* Bottom copyright & photo credits */}
         <div className="pt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
           <div className="flex flex-wrap items-center gap-3 text-slate-500">
             <span>© {new Date().getFullYear()} VaiCar — Tecnologia de Mobilidade Local.</span>
@@ -125,6 +125,9 @@ export const Footer: React.FC = () => {
             Feito com <Heart className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500 inline" /> para São Sebastião - SP
           </p>
         </div>
+        <p className="text-[10px] text-slate-600 text-center sm:text-left mt-3">
+          Fotografias autênticas de São Sebastião sob licenças Creative Commons / Domínio Público (MTur Destinos, colaboradores Wikimedia Commons).
+        </p>
       </div>
     </footer>
   );

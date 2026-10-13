@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
             <button
               onClick={() => {
-                localStorage.removeItem('vaicar_dev_session');
+                localStorage.removeItem('vaicar_fb_token');
                 window.location.reload();
               }}
               className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-sm transition-all"

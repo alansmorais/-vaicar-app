@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { ErrorCode, ErrorCodeType, getFriendlyErrorMessage } from '../../../shared/src/errors.js';
+import { ErrorCode, type ErrorCodeType, getFriendlyErrorMessage } from '../../../shared/src/errors.js';
+export { ErrorCode, type ErrorCodeType };
 
 export class AppError extends Error {
   public code: ErrorCodeType;
