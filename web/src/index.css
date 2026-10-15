@@ -4,12 +4,208 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* ========================================================
+     VAICAR LIGHT THEME PALETTE (Default when .dark is absent)
+     Main Background:   #F5F7FB (245 247 251)
+     Cards & Surfaces:  #FFFFFF (255 255 255)
+     Borders & Dividers:#E2E8F0 (226 232 240)
+     Secondary Borders: #CBD5E1 (203 213 225)
+     Main Text:         #111827 (17 24 39)
+     Secondary Text:    #64748B (100 116 139)
+     Primary Blue:      #155DFC
+     Hover Blue:        #2563EB
+     Success Status:    #059669
+     Error Status:      #DC2626
+     ======================================================== */
+  --slate-950: 245 247 251; /* Main background #F5F7FB */
+  --slate-900: 255 255 255; /* Cards, surfaces, modals #FFFFFF */
+  --slate-800: 226 232 240; /* Primary borders, dividers #E2E8F0 */
+  --slate-700: 203 213 225; /* Secondary borders #CBD5E1 */
+  --slate-600: 148 163 184; /* Muted borders, placeholders #94A3B8 */
+  --slate-500: 100 116 139; /* Muted text #64748B */
+  --slate-400: 100 116 139; /* Secondary text #64748B */
+  --slate-300: 71 85 105;   /* Secondary text #475569 */
+  --slate-200: 31 41 55;    /* High contrast text #1F2937 */
+  --slate-100: 17 24 39;    /* Main text #111827 */
+  --slate-50: 15 23 42;     /* Darkest text #0F172A */
+
+  --color-primary-blue: #155DFC;
+  --color-hover-blue: #2563EB;
+  --color-success: #059669;
+  --color-error: #DC2626;
+
+  color-scheme: light;
+}
+
+html.dark {
+  /* ========================================================
+     VAICAR DARK THEME PALETTE (Preserves original appearance)
+     Main Background:   #020617 (2 6 23)
+     Cards & Surfaces:  #0F172A (15 23 42)
+     Borders & Dividers:#1E293B (30 41 59)
+     Secondary Borders: #334155 (51 65 85)
+     Main Text:         #F8FAFC / #F1F5F9
+     Secondary Text:    #CBD5E1 (203 213 225)
+     ======================================================== */
+  --slate-950: 2 6 23;      /* #020617 */
+  --slate-900: 15 23 42;    /* #0F172A */
+  --slate-800: 30 41 59;    /* #1E293B */
+  --slate-700: 51 65 85;    /* #334155 */
+  --slate-600: 71 85 105;   /* #475569 */
+  --slate-500: 100 116 139; /* #64748B */
+  --slate-400: 148 163 184; /* #94A3B8 */
+  --slate-300: 203 213 225; /* #CBD5E1 */
+  --slate-200: 226 232 240; /* #E2E8F0 */
+  --slate-100: 241 245 249; /* #F1F5F9 */
+  --slate-50: 248 250 252;  /* #F8FAFC */
+
+  --color-primary-blue: #38BDF8;
+  --color-hover-blue: #0284C7;
+  --color-success: #10B981;
+  --color-error: #EF4444;
+
+  color-scheme: dark;
+}
+
 @layer base {
   body {
-    background-color: #020617;
-    color: #f8fafc;
+    background-color: rgb(var(--slate-950));
+    color: rgb(var(--slate-100));
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
+}
+
+/* ========================================================
+   LIGHT MODE TYPOGRAPHY, INPUTS & ELEVATION ENHANCEMENTS
+   ======================================================== */
+html:not(.dark) h1.text-white,
+html:not(.dark) h2.text-white,
+html:not(.dark) h3.text-white,
+html:not(.dark) h4.text-white,
+html:not(.dark) h5.text-white,
+html:not(.dark) h6.text-white {
+  color: #111827;
+}
+
+html:not(.dark) input.text-white,
+html:not(.dark) textarea.text-white,
+html:not(.dark) select.text-white {
+  color: #111827;
+}
+
+html:not(.dark) strong.text-white,
+html:not(.dark) b.text-white {
+  color: #111827;
+}
+
+html:not(.dark) p.text-white:not([class*="bg-"]):not(button *):not(a *) {
+  color: #111827;
+}
+
+/* Inputs placeholder in light mode */
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Select options cross-platform styling */
+html:not(.dark) select option {
+  background-color: #FFFFFF;
+  color: #111827;
+}
+
+html.dark select option {
+  background-color: #0F172A;
+  color: #F8FAFC;
+}
+
+/* Light mode card elevation */
+html:not(.dark) .shadow-xl,
+html:not(.dark) .shadow-2xl,
+html:not(.dark) .shadow-lg {
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+}
+
+/* Light mode soft badges across all opacity variants */
+html:not(.dark) [class*="bg-emerald-950"] {
+  background-color: #ECFDF5 !important;
+  color: #065F46 !important;
+  border-color: #A7F3D0 !important;
+}
+
+html:not(.dark) [class*="bg-amber-950"] {
+  background-color: #FFFBEB !important;
+  color: #92400E !important;
+  border-color: #FDE68A !important;
+}
+
+html:not(.dark) [class*="bg-blue-950"],
+html:not(.dark) [class*="bg-sky-950"] {
+  background-color: #EFF6FF !important;
+  color: #1E40AF !important;
+  border-color: #BFDBFE !important;
+}
+
+html:not(.dark) [class*="bg-rose-950"] {
+  background-color: #FEF2F2 !important;
+  color: #991B1B !important;
+  border-color: #FECACA !important;
+}
+
+/* Light mode secondary buttons with text-white */
+html:not(.dark) a.bg-slate-900.text-white,
+html:not(.dark) button.bg-slate-900.text-white,
+html:not(.dark) a.bg-slate-800.text-white,
+html:not(.dark) button.bg-slate-800.text-white {
+  color: #111827;
+  background-color: #FFFFFF;
+  border-color: #CBD5E1;
+}
+
+html:not(.dark) a.bg-slate-900.text-white:hover,
+html:not(.dark) button.bg-slate-900.text-white:hover,
+html:not(.dark) a.bg-slate-800.text-white:hover,
+html:not(.dark) button.bg-slate-800.text-white:hover {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+}
+
+/* Maintain crisp white text on primary/action buttons across both modes */
+button.bg-emerald-600,
+button.bg-emerald-500,
+button.bg-blue-600,
+button.bg-rose-600,
+a.bg-emerald-600,
+a.bg-emerald-500,
+a.bg-blue-600,
+a.bg-rose-600,
+button.bg-emerald-600 *,
+button.bg-emerald-500 *,
+button.bg-blue-600 *,
+button.bg-rose-600 *,
+a.bg-emerald-600 *,
+a.bg-emerald-500 *,
+a.bg-blue-600 *,
+a.bg-rose-600 * {
+  color: #FFFFFF !important;
+}
+
+/* Ensure hover:text-white becomes dark text on hover in light mode, except on colored action buttons */
+html:not(.dark) .hover\:text-white:hover:not([class*="bg-emerald-"]):not([class*="bg-blue-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]):not(button.bg-emerald-600 *):not(button.bg-blue-600 *) {
+  color: #0F172A !important;
+}
+
+/* Leaflet controls in light mode */
+html:not(.dark) .leaflet-control-zoom a {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  border-color: #E2E8F0 !important;
+}
+
+html:not(.dark) .leaflet-control-zoom a:hover {
+  background-color: #F1F5F9 !important;
 }
 
 /* Custom scrollbars */
@@ -19,11 +215,11 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: rgb(var(--slate-950));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: rgb(var(--slate-700));
   border-radius: 9999px;
 }
 

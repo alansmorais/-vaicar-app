@@ -300,27 +300,27 @@ export const HomePage: React.FC = () => {
               to="/passenger"
               className="p-3 rounded-2xl bg-emerald-950/90 border border-emerald-500/40 text-center flex flex-col items-center justify-center space-y-1 shadow-lg active:scale-95 transition-all"
             >
-              <Car className="w-5 h-5 text-emerald-400" />
-              <span className="text-[11px] font-extrabold text-white leading-tight">Pedir Corrida</span>
-              <span className="text-[9px] font-bold text-emerald-400 uppercase">5% OFF</span>
+              <Car className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+              <span className="text-[11px] font-extrabold text-slate-100 dark:text-white leading-tight">Pedir Corrida</span>
+              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">5% OFF</span>
             </Link>
 
             <Link
               to="/como-funciona/motorista"
               className="p-3 rounded-2xl bg-slate-900/90 border border-slate-700 text-center flex flex-col items-center justify-center space-y-1 shadow-lg active:scale-95 transition-all"
             >
-              <DollarSign className="w-5 h-5 text-emerald-400" />
-              <span className="text-[11px] font-extrabold text-white leading-tight">Quero Dirigir</span>
-              <span className="text-[9px] font-bold text-slate-300">R$ 100 ou 10%</span>
+              <DollarSign className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+              <span className="text-[11px] font-extrabold text-slate-100 dark:text-white leading-tight">Quero Dirigir</span>
+              <span className="text-[9px] font-bold text-slate-500 dark:text-slate-300">R$ 100 ou 10%</span>
             </Link>
 
             <Link
               to="/parcerias"
               className="p-3 rounded-2xl bg-slate-900/90 border border-amber-500/30 text-center flex flex-col items-center justify-center space-y-1 shadow-lg active:scale-95 transition-all"
             >
-              <Store className="w-5 h-5 text-amber-400" />
-              <span className="text-[11px] font-extrabold text-white leading-tight">Empresas</span>
-              <span className="text-[9px] font-bold text-amber-400 uppercase">Parcerias</span>
+              <Store className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+              <span className="text-[11px] font-extrabold text-slate-100 dark:text-white leading-tight">Empresas</span>
+              <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase">Parcerias</span>
             </Link>
           </div>
 
