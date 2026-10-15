@@ -21,6 +21,9 @@ import { AdminLoginPage } from './pages/admin/AdminLoginPage.js';
 import { TermsPage } from './pages/TermsPage.js';
 import { PrivacyPage } from './pages/PrivacyPage.js';
 import { LoginPage } from './pages/LoginPage.js';
+import { BusinessPartnershipsPage } from './pages/BusinessPartnershipsPage.js';
+import { PassengerInfoPage } from './pages/PassengerInfoPage.js';
+import { DriverRequirementsPage } from './pages/DriverRequirementsPage.js';
 
 export const App: React.FC = () => {
   return (
@@ -41,8 +44,11 @@ export const App: React.FC = () => {
               <Route path="/passenger/register" element={<PassengerRegisterPage />} />
               <Route path="/download/passenger" element={<PassengerDownloadPage />} />
               <Route path="/baixar/passageiro" element={<PassengerDownloadPage />} />
+              <Route path="/como-funciona/passageiro" element={<PassengerInfoPage />} />
+              <Route path="/passageiro/info" element={<PassengerInfoPage />} />
+              <Route path="/como-funciona" element={<PassengerInfoPage />} />
 
-              {/* Driver */}
+              {/* Driver & Couriers */}
               <Route path="/driver" element={<DriverDashboardPage />} />
               <Route path="/driver/login" element={<DriverLoginPage />} />
               <Route path="/driver/register" element={<DriverRegisterPage />} />
@@ -50,6 +56,13 @@ export const App: React.FC = () => {
               <Route path="/download" element={<Navigate to="/download/passenger" replace />} />
               <Route path="/baixar/motorista" element={<DriverDownloadPage />} />
               <Route path="/baixar" element={<Navigate to="/download/passenger" replace />} />
+              <Route path="/como-funciona/motorista" element={<DriverRequirementsPage />} />
+              <Route path="/motorista/requisitos" element={<DriverRequirementsPage />} />
+
+              {/* Local Business Partnerships */}
+              <Route path="/parcerias" element={<BusinessPartnershipsPage />} />
+              <Route path="/empresas" element={<BusinessPartnershipsPage />} />
+              <Route path="/comercio" element={<BusinessPartnershipsPage />} />
 
               {/* Admin */}
               <Route path="/admin" element={<AdminDashboardPage />} />

@@ -279,5 +279,45 @@ describe('VaiCar — APK Download Analytics & Delivery Waitlist Suite', () => {
       expect(Array.isArray(res.body.data)).toBe(true);
       expect(res.body.data.some((e: any) => e.name === 'Restaurante Sabor da Ilha')).toBe(true);
     });
+
+    it('POST /api/v1/deliveries/waitlist registers restaurant and pousada commercial partnership leads with business details', async () => {
+      const res = await request(app)
+        .post('/api/v1/deliveries/waitlist')
+        .send({
+          name: 'Pizzaria Maresias (Carlos Silva)',
+          phone: '(12) 99123-4567',
+          email: 'contato@pizzariamaresias.com.br',
+          role: 'merchant',
+          neighborhood: 'Maresias',
+          vehicleDetails: 'Restaurante / Bar / Gastronomia',
+          notes: 'Responsável: Carlos Silva | Interesse: Entregas Rápidas de Moto/Bike | Observações: Entregas no jantar',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('id');
+      expect(res.body.data.name).toBe('Pizzaria Maresias (Carlos Silva)');
+      expect(res.body.data.role).toBe('merchant');
+
+      // Verify lead is stored in the list
+      const saved = localWaitlistStore.find((e) => e.id === res.body.data.id);
+      expect(saved).toBeDefined();
+      expect(saved?.vehicleDetails).toBe('Restaurante / Bar / Gastronomia');
+      expect(saved?.neighborhood).toBe('Maresias');
+    });
+
+    it('POST /api/v1/deliveries/waitlist rejects invalid phone number (< 10 digits)', async () => {
+      const res = await request(app)
+        .post('/api/v1/deliveries/waitlist')
+        .send({
+          name: 'Pousada Canto Verde',
+          phone: '12345',
+          role: 'merchant',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.message).toContain('Telefone/WhatsApp');
+    });
   });
 });

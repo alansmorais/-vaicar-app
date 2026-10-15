@@ -66,7 +66,7 @@ export const Navbar: React.FC = () => {
             <Link
               to="/passenger"
               className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                location.pathname.startsWith('/passenger')
+                location.pathname.startsWith('/passenger') || location.pathname.startsWith('/como-funciona/passageiro')
                   ? 'text-emerald-400 bg-slate-900'
                   : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
               }`}
@@ -76,12 +76,22 @@ export const Navbar: React.FC = () => {
             <Link
               to="/driver"
               className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                location.pathname.startsWith('/driver')
+                location.pathname.startsWith('/driver') || location.pathname.startsWith('/como-funciona/motorista')
                   ? 'text-emerald-400 bg-slate-900'
                   : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
               }`}
             >
               Motorista & Entregador
+            </Link>
+            <Link
+              to="/parcerias"
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                location.pathname.startsWith('/parcerias') || location.pathname.startsWith('/empresas')
+                  ? 'text-amber-400 bg-slate-900'
+                  : 'text-slate-300 hover:text-amber-300 hover:bg-slate-900/60'
+              }`}
+            >
+              Parcerias Comerciais
             </Link>
             <Link
               to="/admin"
@@ -91,7 +101,7 @@ export const Navbar: React.FC = () => {
                   : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
               }`}
             >
-              Painel Admin
+              Admin
             </Link>
             <a
               href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
@@ -99,7 +109,7 @@ export const Navbar: React.FC = () => {
               rel="noopener noreferrer"
               className="px-3 py-2 rounded-lg text-xs font-bold text-emerald-400 hover:text-emerald-300 hover:bg-slate-900/60 transition-colors flex items-center gap-1 border border-emerald-500/20"
             >
-              <span>Grupo WhatsApp</span>
+              <span>WhatsApp</span>
               <span className="text-[10px]">↗</span>
             </a>
           </div>
@@ -190,39 +200,91 @@ export const Navbar: React.FC = () => {
           <Link
             to="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"
+            className="block px-3 py-2.5 rounded-xl text-base font-semibold text-slate-100 hover:bg-slate-800"
           >
             Início
           </Link>
+
+          {/* Passageiro Mobile Group */}
+          <div className="space-y-1 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+            <Link
+              to="/passenger"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-bold text-emerald-400 hover:bg-slate-800"
+            >
+              <span className="flex items-center gap-2">🚗 Pedir Corrida (Passageiro)</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-500/30">Ativo</span>
+            </Link>
+            <Link
+              to="/como-funciona/passageiro"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800"
+            >
+              → Como Funciona, 5% OFF e Indique & Ganhe
+            </Link>
+          </div>
+
+          {/* Motorista & Entregador Mobile Group */}
+          <div className="space-y-1 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+            <Link
+              to="/driver"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-bold text-white hover:bg-slate-800"
+            >
+              <span className="flex items-center gap-2">💼 Portal do Motorista & Entregador</span>
+              <span className="text-[10px] text-slate-400">Cockpit</span>
+            </Link>
+            <Link
+              to="/como-funciona/motorista"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800"
+            >
+              → Requisitos & Planos (R$ 100/mês ou 10%)
+            </Link>
+            <Link
+              to="/driver/register"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 hover:bg-slate-800"
+            >
+              → Cadastro para Carro, Moto e Bike
+            </Link>
+          </div>
+
+          {/* Parcerias Comerciais Mobile Group */}
           <Link
-            to="/passenger"
+            to="/parcerias"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"
+            className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-slate-950/80 border border-amber-500/30 text-amber-300 text-sm font-bold hover:bg-slate-800"
           >
-            Passageiro
+            <span className="flex items-center gap-2">🏪 Parcerias para Restaurantes & Pousadas</span>
+            <span className="text-[10px] uppercase font-bold text-amber-400">Novo</span>
           </Link>
+
+          {/* Downloads Mobile */}
           <Link
-            to="/driver"
+            to="/download/passenger"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"
+            className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800"
           >
-            Motorista & Entregador
+            📥 Baixar Aplicativos Oficiais (APKs)
           </Link>
+
           <Link
             to="/admin"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"
+            className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800"
           >
-            Painel Admin
+            ⚙️ Painel de Gestão Administrativa
           </Link>
+
           <a
             href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-base font-bold text-emerald-400 hover:bg-slate-800"
+            className="block px-3 py-2.5 rounded-xl text-sm font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 hover:bg-slate-800 text-center"
           >
-            Grupo Oficial WhatsApp ↗
+            💬 Grupo Oficial no WhatsApp ↗
           </a>
 
           {user ? (
