@@ -53,8 +53,8 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/passenger/register" className="hover:text-emerald-400 transition-colors">
-                  Cadastro de Passageiro
+                <Link to="/como-funciona/passageiro" className="hover:text-emerald-400 transition-colors">
+                  Como Funciona, 5% OFF & Indique
                 </Link>
               </li>
               <li>
@@ -63,8 +63,13 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/driver/register" className="hover:text-emerald-400 transition-colors">
-                  Cadastro de Motorista ou Entregador (Planos Justos)
+                <Link to="/como-funciona/motorista" className="hover:text-emerald-400 transition-colors">
+                  Requisitos & Planos de Condutores
+                </Link>
+              </li>
+              <li>
+                <Link to="/parcerias" className="text-amber-400 hover:text-amber-300 transition-colors font-medium">
+                  Parcerias para Restaurantes & Pousadas
                 </Link>
               </li>
               <li>
