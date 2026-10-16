@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext.js';
 import { AuthProvider } from './context/AuthContext.js';
 import { Navbar } from './components/Navbar.js';
 import { Footer } from './components/Footer.js';
@@ -27,12 +28,13 @@ import { DriverRequirementsPage } from './pages/DriverRequirementsPage.js';
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
-          <Navbar />
-          <div className="flex-1">
-            <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 transition-colors duration-200">
+            <Navbar />
+            <div className="flex-1">
+              <Routes>
               {/* Home */}
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
@@ -82,6 +84,7 @@ export const App: React.FC = () => {
         </div>
       </BrowserRouter>
     </AuthProvider>
+    </ThemeProvider>
   );
 };
 
