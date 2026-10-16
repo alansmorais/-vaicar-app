@@ -7,7 +7,7 @@
 :root {
   /* ========================================================
      VAICAR LIGHT THEME PALETTE (Default when .dark is absent)
-     Main Background:   #F5F7FB (245 247 251)
+     Main Background:   #FAF9F6 (250 249 246) — Warm subtle cream
      Cards & Surfaces:  #FFFFFF (255 255 255)
      Borders & Dividers:#E2E8F0 (226 232 240)
      Secondary Borders: #CBD5E1 (203 213 225)
@@ -18,7 +18,7 @@
      Success Status:    #059669
      Error Status:      #DC2626
      ======================================================== */
-  --slate-950: 245 247 251; /* Main background #F5F7FB */
+  --slate-950: 250 249 246; /* Warm white/subtle cream #FAF9F6 */
   --slate-900: 255 255 255; /* Cards, surfaces, modals #FFFFFF */
   --slate-800: 226 232 240; /* Primary borders, dividers #E2E8F0 */
   --slate-700: 203 213 225; /* Secondary borders #CBD5E1 */
@@ -104,6 +104,29 @@ html:not(.dark) p.text-white:not([class*="bg-"]):not(button *):not(a *) {
   color: #111827;
 }
 
+/* Light mode text contrast for inverted slate scale */
+html:not(.dark) .text-slate-900 {
+  color: #111827 !important;
+}
+
+html:not(.dark) .text-slate-800 {
+  color: #1F2937 !important;
+}
+
+html:not(.dark) .text-slate-700 {
+  color: #334155 !important;
+}
+
+/* Light mode background overrides for inverted slate utility classes */
+html:not(.dark) .bg-slate-50 {
+  background-color: #F8FAFC !important;
+}
+
+html:not(.dark) .bg-slate-100 {
+  background-color: #F1F5F9 !important;
+}
+
+
 /* Inputs placeholder in light mode */
 html:not(.dark) input::placeholder,
 html:not(.dark) textarea::placeholder {
@@ -121,11 +144,19 @@ html.dark select option {
   color: #F8FAFC;
 }
 
-/* Light mode card elevation */
-html:not(.dark) .shadow-xl,
-html:not(.dark) .shadow-2xl,
+/* Light mode restrained elevation & shadows */
+html:not(.dark) .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+}
+html:not(.dark) .shadow-md {
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+}
 html:not(.dark) .shadow-lg {
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.06), 0 4px 8px -3px rgba(15, 23, 42, 0.03);
+}
+html:not(.dark) .shadow-xl,
+html:not(.dark) .shadow-2xl {
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.07), 0 6px 12px -4px rgba(15, 23, 42, 0.03);
 }
 
 /* Light mode soft badges across all opacity variants */

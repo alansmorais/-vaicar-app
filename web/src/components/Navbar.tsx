@@ -45,10 +45,10 @@ export const Navbar: React.FC = () => {
               className="h-11 w-auto rounded-lg object-contain transition-transform group-hover:scale-105"
             />
             <div className="flex flex-col">
-              <span className="text-2xl font-extrabold tracking-tight text-slate-100 dark:text-white flex items-center transition-colors">
-                VAI<span className="text-emerald-500">CAR</span>
+              <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center transition-colors">
+                VAI<span className="text-blue-600 dark:text-emerald-400">CAR</span>
               </span>
-              <span className="text-[10px] font-medium text-emerald-500 dark:text-emerald-400 tracking-wider flex items-center gap-1 uppercase">
+              <span className="text-[10px] font-semibold text-blue-600 dark:text-emerald-400 tracking-wider flex items-center gap-1 uppercase">
                 <MapPin className="w-2.5 h-2.5" /> São Sebastião • SP
               </span>
             </div>
@@ -58,50 +58,50 @@ export const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center gap-1">
             <Link
               to="/"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
                 isActive('/')
-                  ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-slate-800 border border-emerald-500/30 font-bold'
-                  : 'text-slate-200 hover:text-slate-50 hover:bg-slate-800'
+                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-slate-800/80 border border-blue-200/50 dark:border-slate-700/60 font-bold'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               Início
             </Link>
             <Link
               to="/passenger"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
                 location.pathname.startsWith('/passenger') || location.pathname.startsWith('/como-funciona/passageiro')
-                  ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-slate-800 border border-emerald-500/30 font-bold'
-                  : 'text-slate-200 hover:text-slate-50 hover:bg-slate-800'
+                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-slate-800/80 border border-blue-200/50 dark:border-slate-700/60 font-bold'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               Passageiro
             </Link>
             <Link
               to="/driver"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
                 location.pathname.startsWith('/driver') || location.pathname.startsWith('/como-funciona/motorista')
-                  ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-slate-800 border border-emerald-500/30 font-bold'
-                  : 'text-slate-200 hover:text-slate-50 hover:bg-slate-800'
+                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-slate-800/80 border border-blue-200/50 dark:border-slate-700/60 font-bold'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               Motorista & Entregador
             </Link>
             <Link
               to="/parcerias"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
                 location.pathname.startsWith('/parcerias') || location.pathname.startsWith('/empresas')
                   ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-slate-800 border border-amber-500/30 font-bold'
-                  : 'text-slate-200 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-slate-800'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
-              Parcerias Comerciais
+              Parcerias
             </Link>
             <Link
               to="/admin"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
                 location.pathname.startsWith('/admin')
-                  ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-slate-800 border border-emerald-500/30 font-bold'
-                  : 'text-slate-200 hover:text-slate-50 hover:bg-slate-800'
+                  ? 'text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               Admin
@@ -110,7 +110,7 @@ export const Navbar: React.FC = () => {
               href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-2 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 border border-emerald-500/20"
+              className="px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 border border-emerald-500/20"
             >
               <span>WhatsApp</span>
               <span className="text-[10px]">↗</span>
@@ -165,20 +165,20 @@ export const Navbar: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Link
                   to="/driver/register"
-                  className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-slate-900 hover:bg-emerald-100 dark:hover:bg-slate-800 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1.5 shadow-sm"
+                  className="px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition-all flex items-center gap-1.5"
                 >
-                  <Car className="w-3.5 h-3.5" /> Seja Motorista / Entregador
+                  <Car className="w-3.5 h-3.5" /> Seja Motorista
                 </Link>
                 <button
                   type="button"
                   onClick={() => setLoginModalOpen(true)}
-                  className="px-3 py-2 text-xs font-medium text-slate-200 hover:text-slate-50 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                  className="px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
                 >
                   Entrar
                 </button>
                 <Link
                   to="/passenger/register"
-                  className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/30 transition-all hover:scale-[1.02] flex items-center gap-1.5"
+                  className="px-4 py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-1.5"
                 >
                   Pedir Corrida
                 </Link>
@@ -191,7 +191,7 @@ export const Navbar: React.FC = () => {
             <ThemeToggle variant="icon" />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-300 hover:text-white hover:bg-slate-900"
+              className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               aria-label="Menu de navegação"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
