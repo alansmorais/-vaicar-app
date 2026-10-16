@@ -128,9 +128,9 @@ const FAQ_ITEMS: FaqItem[] = [
   },
   {
     category: 'Passageiros',
-    question: 'Como funciona o desconto de 5% para passageiros verificados?',
+    question: 'Como funciona a tarifa regulamentada e transparente do VaiCar?',
     answer:
-      'Passageiros que realizam a verificação de segurança completa (anexando o Atestado de Antecedentes Criminais gratuito) ganham automaticamente 5% de desconto em todas as corridas solicitadas. O atestado pode ser emitido gratuitamente online no portal da Polícia Civil de SP ou da Polícia Federal.',
+      'As tarifas são calculadas de forma clara e previsível com base na tabela regulamentada de São Sebastião (tarifa base + km rodado e tempo estimado), sem cobrança de tarifa dinâmica abusiva em horários de pico, chuva ou alta temporada.',
   },
   {
     category: 'Passageiros',
@@ -273,11 +273,11 @@ export const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Centralized sub-header banner */}
-      <div className="bg-slate-100/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800/80 py-2.5 px-4 text-center">
+      <div className="bg-blue-50/70 dark:bg-slate-900/90 border-b border-blue-200/60 dark:border-slate-800/80 py-2.5 px-4 text-center">
         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 max-w-4xl mx-auto flex items-center justify-center gap-2 flex-wrap">
           <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-emerald-500 inline-block animate-pulse shrink-0" />
           <span>
-            Mobilidade justa em São Sebastião: <strong className="text-blue-700 dark:text-emerald-400">Corridas ativas</strong> com pagamento direto • <span className="text-blue-700 dark:text-emerald-400 font-semibold">5% OFF</span> verificado • <span className="text-amber-700 dark:text-amber-400 font-semibold">Entregas em breve!</span>
+            Mobilidade justa em São Sebastião: <strong className="text-blue-700 dark:text-emerald-400">Corridas ativas</strong> com pagamento direto • <span className="text-blue-700 dark:text-emerald-400 font-semibold">Sem tarifa dinâmica</span> • <span className="text-amber-700 dark:text-amber-400 font-semibold">Entregas em breve!</span>
           </span>
         </p>
       </div>
@@ -300,15 +300,15 @@ export const HomePage: React.FC = () => {
           <div className="grid grid-cols-3 gap-2.5 pb-6 lg:hidden">
             <Link
               to="/passenger"
-              className="p-3 rounded-2xl bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95 transition-all"
+              className="p-3 rounded-2xl bg-blue-600 text-white text-center flex flex-col items-center justify-center space-y-1 shadow-md shadow-blue-500/25 active:scale-95 transition-all"
             >
-              <Car className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">Pedir Corrida</span>
-              <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase">5% OFF</span>
+              <Car className="w-5 h-5 text-white" />
+              <span className="text-[11px] font-extrabold text-white leading-tight">Pedir Corrida</span>
+              <span className="text-[9px] font-bold text-blue-100 uppercase">Tarifa Justa</span>
             </Link>
 
             <Link
-              to="/como-funciona/motorista"
+              to="/driver/register"
               className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95 transition-all"
             >
               <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -335,43 +335,58 @@ export const HomePage: React.FC = () => {
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.15]">
-                Seu aplicativo de corridas locais no <span className="text-blue-600 dark:text-emerald-400">Litoral Norte</span>.
+                Sua corrida, do seu jeito, <span className="text-blue-600 dark:text-emerald-400">aqui em São Sebastião.</span>
               </h1>
 
               <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                Transporte de passageiros ativo em São Sebastião com tarifas oficiais transparentes. Condutores contam com dois planos alternativos: <strong>Plano Comissão de 10%</strong> (com acerto semanal) ou <strong>Plano Mensalidade de R$ 100/mês</strong> (sem comissão por corrida). Passageiros totalmente verificados têm <strong>5% de desconto automático</strong>. Pagamento 100% direto ao condutor via Pix ou dinheiro.
+                Mobilidade prática de Boracéia à Enseada com tarifas oficiais transparentes. Peça sua corrida em instantes, viaje com motoristas parceiros locais verificados e pague direto via Pix ou dinheiro.
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-2">
-                <Link
-                  to="/passenger"
-                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <Car className="w-4 h-4" />
-                  Pedir Corrida (Passageiro)
-                </Link>
-                <Link
-                  to="/driver/register"
-                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 font-bold text-sm transition-all hover:scale-[1.02] flex items-center justify-center gap-2 shadow-sm"
-                >
-                  <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  Quero Dirigir / Entregar
-                </Link>
-                <Link
-                  to="/parcerias"
-                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-amber-50 dark:bg-slate-900/90 hover:bg-amber-100 dark:hover:bg-slate-800 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/40 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
-                >
-                  <Store className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  Para Empresas
-                </Link>
+              <div className="space-y-3 pt-2">
+                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5">
+                  <Link
+                    to="/passenger"
+                    className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-base shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2.5"
+                  >
+                    <Car className="w-5 h-5" />
+                    Pedir Corrida
+                  </Link>
+                  <Link
+                    to="/driver/register"
+                    className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 font-bold text-sm transition-all hover:scale-[1.01] flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    Quero Dirigir
+                  </Link>
+                </div>
+
+                {/* Secondary accessible options (Empresas & Entregas) without competing with primary CTA */}
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="font-medium text-slate-400 dark:text-slate-500">Outros serviços:</span>
+                  <Link
+                    to="/parcerias"
+                    className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-emerald-400 transition-colors"
+                  >
+                    <Store className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    Para Empresas
+                  </Link>
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
+                  <a
+                    href="#entregas"
+                    className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-emerald-400 transition-colors"
+                  >
+                    <Package className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    Entregas locais (Em breve)
+                  </a>
+                </div>
               </div>
 
               {/* Key Highlights */}
               <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-200 dark:border-slate-800/80 max-w-lg mx-auto lg:mx-0 text-left">
                 <div>
-                  <span className="block text-2xl font-black text-blue-600 dark:text-emerald-400">5% OFF</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Passageiro totalmente verificado</span>
+                  <span className="block text-2xl font-black text-blue-600 dark:text-emerald-400">Sem Dinâmica</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Tarifa justa em São Sebastião</span>
                 </div>
                 <div>
                   <span className="block text-2xl font-black text-slate-900 dark:text-white">R$ 100 ou 10%</span>
@@ -574,12 +589,165 @@ export const HomePage: React.FC = () => {
                   );
                 })()}
 
-                <Link
-                  to="/passenger"
-                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
-                >
-                  Confirmar e Solicitar <ArrowRight className="w-4 h-4" />
-                </Link>
+                <div className="space-y-1.5 pt-1">
+                  <Link
+                    to="/passenger"
+                    className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-500/25 hover:shadow-lg active:scale-95 group"
+                  >
+                    <Car className="w-4 h-4 transition-transform group-hover:scale-110" />
+                    <span>Pedir Corrida no Painel</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                  <p className="text-[11px] text-center text-slate-500 dark:text-slate-400">
+                    Acesse o painel do passageiro para solicitar sua viagem
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* COMO FUNCIONA & DIFERENCIAIS DE CONFIANÇA */}
+      <section id="como-funciona" className="py-14 sm:py-18 bg-transparent border-b border-slate-200 dark:border-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          {/* Section Header */}
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-emerald-400 px-3.5 py-1 rounded-full bg-blue-50 dark:bg-emerald-950/80 border border-blue-200 dark:border-emerald-500/30 inline-flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5" /> Simples, Rápido e Local
+            </span>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+              Como Funciona o VaiCar em São Sebastião
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Sem intermediários complicados: você pede sua viagem em segundos, viaja com motoristas da nossa cidade e paga direto a quem dirige.
+            </p>
+          </div>
+
+          {/* 3 Simple Steps */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Step 1 */}
+            <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-sm">
+                    1
+                  </div>
+                  <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider bg-blue-50/80 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200/60 dark:border-blue-800/60">
+                    Simule & Peça
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                  1. Escolha Origem e Destino
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Pelo navegador ou aplicativo, selecione sua rota em São Sebastião e visualize a estimativa de tempo e tarifa regulamentada antes de confirmar.
+                </p>
+              </div>
+              <div className="pt-2 text-xs font-semibold text-blue-600 dark:text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Sem tarifa dinâmica surpresa</span>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-slate-800 border border-emerald-200 dark:border-slate-700 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-black text-sm">
+                    2
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-50/80 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800/60">
+                    Embarque Seguro
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                  2. Viaje com Parceiro Local
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Um motorista parceiro local aceita sua corrida. Acompanhe a chegada em tempo real com identificação de veículo e condutor verificado.
+                </p>
+              </div>
+              <div className="pt-2 text-xs font-semibold text-blue-600 dark:text-emerald-400 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Condutores com CNH e certidão de antecedentes</span>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-slate-800 border border-blue-200 dark:border-slate-700 flex items-center justify-center text-blue-600 dark:text-emerald-400 font-black text-sm">
+                    3
+                  </div>
+                  <span className="text-[11px] font-bold text-blue-600 dark:text-emerald-400 uppercase tracking-wider bg-blue-50/80 dark:bg-slate-950/80 px-2 py-0.5 rounded border border-blue-200/60 dark:border-slate-800">
+                    Acerto Direto
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                  3. Pague Direto e Avalie
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Ao concluir a viagem, realize o pagamento diretamente ao motorista no Pix ou dinheiro. Avalie a experiência para mantermos a qualidade do serviço.
+                </p>
+              </div>
+              <div className="pt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <DollarSign className="w-3.5 h-3.5" />
+                <span>100% do valor vai para o motorista</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Real Trust Differentiators Banner */}
+          <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Motoristas Verificados</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                    CNH, CRLV e certidão de antecedentes verificados pela plataforma.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Pagamento 100% Direto</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                    Pix ou dinheiro direto a quem dirige. Sem retenções abusivas.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-emerald-400 shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Tarifa Justa e Oficial</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                    Base transparente de R$ 10 + R$ 1/km e R$ 0,25/minuto, sem surpresas.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                  <Gift className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Bônus de Indicação</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                    R$ 5,00 de desconto na primeira corrida indicada por um amigo.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -694,7 +862,7 @@ export const HomePage: React.FC = () => {
                 <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
                   <div className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                    <span><strong>5% de Desconto Exclusivo:</strong> Aplicado automaticamente para passageiros com antecedentes criminais validados. O cadastro simples sem atestado não concede o benefício.</span>
+                    <span><strong>Bônus de Indicação:</strong> R$ 5,00 de desconto na primeira corrida para novos passageiros convidados por amigos cadastrados.</span>
                   </div>
                   <div className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-emerald-400 shrink-0 mt-0.5" />
@@ -718,7 +886,7 @@ export const HomePage: React.FC = () => {
                 </a>
                 <div className="flex items-center justify-between text-[11px] px-1 text-slate-500 dark:text-slate-400">
                   <Link to="/como-funciona/passageiro" className="hover:text-blue-600 dark:hover:text-emerald-400 underline">
-                    Como Funciona & Descontos →
+                    Como Funciona a Plataforma →
                   </Link>
                   <Link to="/passenger" className="hover:text-slate-900 dark:hover:text-white underline">
                     Acessar via Web →
@@ -771,7 +939,7 @@ export const HomePage: React.FC = () => {
                   </div>
                   <div className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                    <span><strong>Cadastro Descomplicado:</strong> Validação ágil de CNH com EAR, CRLV e perfil profissional.</span>
+                    <span><strong>Cadastro Descomplicado:</strong> Validação ágil de CNH, CRLV e certidão de antecedentes.</span>
                   </div>
                 </div>
               </div>
@@ -797,7 +965,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* AREA 3: DELIVERIES - COMING SOON */}
-            <div className="bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 border border-amber-200 dark:border-amber-500/40 rounded-3xl p-7 flex flex-col justify-between shadow-md dark:shadow-2xl relative overflow-hidden group">
+            <div id="entregas" className="bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 border border-amber-200 dark:border-amber-500/40 rounded-3xl p-7 flex flex-col justify-between shadow-md dark:shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
               {/* Styled Accent Header */}
@@ -1124,7 +1292,7 @@ export const HomePage: React.FC = () => {
               Tudo sobre o VaiCar em São Sebastião
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-              Respostas claras sobre tarifas, descontos de 5%, programa de indicação, requisitos de condutores e parcerias comerciais.
+              Respostas claras sobre tarifas regulamentadas, programa de indicação, requisitos de condutores e parcerias comerciais.
             </p>
           </div>
 
