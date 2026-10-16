@@ -24,6 +24,8 @@ export interface MapProps {
   mode?: 'planning' | 'driver_to_pickup' | 'driver_to_destination';
   hudTitle?: string;
   showHud?: boolean;
+  compactPins?: boolean;
+  onRouteInfoChange?: (info: { distanceKm: number; durationMinutes: number } | null) => void;
 }
 
 const DEFAULT_CENTER = {
@@ -66,11 +68,12 @@ function decodePolyline(encoded: string): [number, number][] {
   return points;
 }
 
-// Custom high-visibility SVG Teardrop Pins with Floating Badges
+// Custom high-visibility SVG Teardrop Pins with Floating Badges (or sleek compact pins)
 function createCustomMarkerIcon(
   type: 'pickup' | 'destination' | 'driver' | 'assigned' | 'driver_me',
   label?: string,
-  isDraggable: boolean = true
+  isDraggable: boolean = true,
+  compact: boolean = false
 ) {
   if (type === 'driver_me') {
     const displayLabel = label || 'Você (Sua Localização)';
@@ -128,6 +131,29 @@ function createCustomMarkerIcon(
   }
 
   if (type === 'pickup') {
+    if (compact) {
+      return L.divIcon({
+        className: 'custom-pickup-marker-icon-compact',
+        html: `
+          <div style="width:32px; height:42px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:${isDraggable ? 'grab' : 'default'}; pointer-events:auto; touch-action:none; user-select:none;">
+            <!-- Sleek Teardrop Pin with Needle pointing to exact GPS -->
+            <div style="position:relative; width:30px; height:38px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); cursor:${isDraggable ? 'grab' : 'default'};">
+              <svg width="30" height="38" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 0C8.05887 0 0 8.05887 0 18C0 29.5 18 44 18 44C18 44 36 29.5 36 18C36 8.05887 27.9411 0 18 0Z" fill="#10b981"/>
+                <path d="M18 2C9.16344 2 2 9.16344 2 18C2 28.5 18 41.5 18 41.5C18 41.5 34 28.5 34 18C34 9.16344 26.8366 2 18 2Z" fill="#059669"/>
+                <circle cx="18" cy="17" r="8" fill="#ffffff"/>
+                <circle cx="18" cy="17" r="4.5" fill="#10b981"/>
+              </svg>
+            </div>
+            <!-- Ground Contact Shadow -->
+            <div style="width:14px; height:4px; border-radius:50%; background:rgba(0,0,0,0.35); filter:blur(1px); margin-top:-2px;"></div>
+          </div>
+        `,
+        iconSize: [32, 42],
+        iconAnchor: [16, 42],
+      });
+    }
+
     const displayLabel = label || 'Ponto de Partida';
     return L.divIcon({
       className: 'custom-pickup-marker-icon',
@@ -174,6 +200,29 @@ function createCustomMarkerIcon(
   }
 
   if (type === 'destination') {
+    if (compact) {
+      return L.divIcon({
+        className: 'custom-destination-marker-icon-compact',
+        html: `
+          <div style="width:32px; height:42px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:${isDraggable ? 'grab' : 'default'}; pointer-events:auto; touch-action:none; user-select:none;">
+            <!-- Sleek Teardrop Pin with Needle pointing to exact GPS -->
+            <div style="position:relative; width:30px; height:38px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); cursor:${isDraggable ? 'grab' : 'default'};">
+              <svg width="30" height="38" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 0C8.05887 0 0 8.05887 0 18C0 29.5 18 44 18 44C18 44 36 29.5 36 18C36 8.05887 27.9411 0 18 0Z" fill="#f43f5e"/>
+                <path d="M18 2C9.16344 2 2 9.16344 2 18C2 28.5 18 41.5 18 41.5C18 41.5 34 28.5 34 18C34 9.16344 26.8366 2 18 2Z" fill="#e11d48"/>
+                <circle cx="18" cy="17" r="8" fill="#ffffff"/>
+                <circle cx="18" cy="17" r="4.5" fill="#f43f5e"/>
+              </svg>
+            </div>
+            <!-- Ground Contact Shadow -->
+            <div style="width:14px; height:4px; border-radius:50%; background:rgba(0,0,0,0.35); filter:blur(1px); margin-top:-2px;"></div>
+          </div>
+        `,
+        iconSize: [32, 42],
+        iconAnchor: [16, 42],
+      });
+    }
+
     const displayLabel = label || 'Destino Final';
     return L.divIcon({
       className: 'custom-destination-marker-icon',
@@ -287,6 +336,8 @@ export const MapDisplay: React.FC<MapProps> = ({
   mode = 'planning',
   hudTitle,
   showHud = true,
+  compactPins = false,
+  onRouteInfoChange,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -307,8 +358,14 @@ export const MapDisplay: React.FC<MapProps> = ({
   onMapClickRef.current = onMapClick;
   const onDriverSelectRef = useRef(onDriverSelect);
   onDriverSelectRef.current = onDriverSelect;
+  const onRouteInfoChangeRef = useRef(onRouteInfoChange);
+  onRouteInfoChangeRef.current = onRouteInfoChange;
 
   const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMinutes: number } | null>(null);
+  const updateRouteInfo = useCallback((info: { distanceKm: number; durationMinutes: number } | null) => {
+    setRouteInfo(info);
+    onRouteInfoChangeRef.current?.(info);
+  }, []);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [locatingGps, setLocatingGps] = useState(false);
 
@@ -437,7 +494,7 @@ export const MapDisplay: React.FC<MapProps> = ({
     const isDraggable = draggable && (mode === 'planning' || !mode);
     const markerType = (mode === 'driver_to_pickup' || mode === 'driver_to_destination') ? 'driver_me' : 'pickup';
     const markerTitle = pickupLabel || (markerType === 'driver_me' ? 'Sua Posição Exata' : 'Ponto de Partida');
-    const icon = createCustomMarkerIcon(markerType, pickupLabel, isDraggable);
+    const icon = createCustomMarkerIcon(markerType, pickupLabel, isDraggable, compactPins);
 
     if (!pickupMarkerRef.current) {
       const marker = L.marker(pos, {
@@ -476,7 +533,7 @@ export const MapDisplay: React.FC<MapProps> = ({
         pickupMarkerRef.current.setTooltipContent(pickup.address);
       }
     }
-  }, [pickup?.lat, pickup?.lng, pickup?.address, pickupLabel, draggable, mode, reverseGeocode]);
+  }, [pickup?.lat, pickup?.lng, pickup?.address, pickupLabel, draggable, mode, compactPins, reverseGeocode]);
 
   // 3. Update Destination Marker
   useEffect(() => {
@@ -495,7 +552,7 @@ export const MapDisplay: React.FC<MapProps> = ({
     const isDraggable = draggable && (mode === 'planning' || !mode);
     const markerType = mode === 'driver_to_pickup' ? 'pickup' : 'destination';
     const markerTitle = destinationLabel || (mode === 'driver_to_pickup' ? 'Embarque do Passageiro' : 'Destino Final');
-    const icon = createCustomMarkerIcon(markerType, destinationLabel, isDraggable);
+    const icon = createCustomMarkerIcon(markerType, destinationLabel, isDraggable, compactPins);
 
     if (!destinationMarkerRef.current) {
       const marker = L.marker(pos, {
@@ -534,7 +591,7 @@ export const MapDisplay: React.FC<MapProps> = ({
         destinationMarkerRef.current.setTooltipContent(destination.address);
       }
     }
-  }, [destination?.lat, destination?.lng, destination?.address, destinationLabel, draggable, mode, reverseGeocode]);
+  }, [destination?.lat, destination?.lng, destination?.address, destinationLabel, draggable, mode, compactPins, reverseGeocode]);
 
   // 4. Update Online Drivers Layer
   useEffect(() => {
@@ -648,7 +705,7 @@ export const MapDisplay: React.FC<MapProps> = ({
         routeShadowPolylineRef.current.remove();
         routeShadowPolylineRef.current = null;
       }
-      setRouteInfo(null);
+      updateRouteInfo(null);
       return;
     }
 
@@ -682,7 +739,7 @@ export const MapDisplay: React.FC<MapProps> = ({
               routeShadowPolylineRef.current = shadow;
               routePolylineRef.current = polyline;
 
-              setRouteInfo({
+              updateRouteInfo({
                 distanceKm: dirRes.distanceKm,
                 durationMinutes: dirRes.durationMin,
               });
@@ -726,7 +783,7 @@ export const MapDisplay: React.FC<MapProps> = ({
           routeShadowPolylineRef.current = shadow;
           routePolylineRef.current = polyline;
 
-          setRouteInfo({
+          updateRouteInfo({
             distanceKm: Math.round((route.distance / 1000) * 10) / 10,
             durationMinutes: Math.max(3, Math.round(route.duration / 60)),
           });
