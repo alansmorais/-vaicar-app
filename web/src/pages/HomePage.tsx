@@ -271,144 +271,144 @@ export const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Centralized sub-header banner */}
-      <div className="bg-slate-900/90 border-b border-slate-800/80 py-2.5 px-4 text-center">
-        <p className="text-xs sm:text-sm font-medium text-slate-300 max-w-4xl mx-auto flex items-center justify-center gap-2 flex-wrap">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0" />
+      <div className="bg-slate-100/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800/80 py-2.5 px-4 text-center">
+        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 max-w-4xl mx-auto flex items-center justify-center gap-2 flex-wrap">
+          <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-emerald-500 inline-block animate-pulse shrink-0" />
           <span>
-            Mobilidade justa em São Sebastião: <strong className="text-emerald-400">Corridas ativas</strong> com pagamento direto • <span className="text-emerald-400 font-semibold">5% OFF</span> verificado • <span className="text-amber-400 font-semibold">Entregas em breve!</span>
+            Mobilidade justa em São Sebastião: <strong className="text-blue-700 dark:text-emerald-400">Corridas ativas</strong> com pagamento direto • <span className="text-blue-700 dark:text-emerald-400 font-semibold">5% OFF</span> verificado • <span className="text-amber-700 dark:text-amber-400 font-semibold">Entregas em breve!</span>
           </span>
         </p>
       </div>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-8 pb-16 lg:py-24 border-b border-slate-900 bg-slate-950">
+      <section className="relative overflow-hidden pt-8 pb-16 lg:py-20 border-b border-slate-200 dark:border-slate-900 bg-slate-950">
         <div className="absolute inset-0 z-0">
           <img
             src="/images/sao-sebastiao/hero-rio-santos.jpg"
             alt="Trecho costeiro da Rodovia Rio-Santos entre a Mata Atlântica e o mar de São Sebastião"
-            className="w-full h-full object-cover object-center opacity-25 lg:opacity-30 pointer-events-none"
+            className="w-full h-full object-cover object-center opacity-15 lg:opacity-25 dark:opacity-25 pointer-events-none"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/95 to-slate-950/75" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/80" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.15),transparent)] pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/90 to-white/70 dark:from-slate-950 dark:via-slate-950/95 dark:to-slate-950/75" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-white/60 dark:from-slate-950 dark:via-transparent dark:to-slate-950/80" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(21,93,252,0.08),transparent)] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.15),transparent)] pointer-events-none" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Mobile Quick Action Tabs (Top of Hero on Mobile) */}
-          <div className="grid grid-cols-3 gap-2 pb-6 lg:hidden">
+          <div className="grid grid-cols-3 gap-2.5 pb-6 lg:hidden">
             <Link
               to="/passenger"
-              className="p-3 rounded-2xl bg-emerald-950/90 border border-emerald-500/40 text-center flex flex-col items-center justify-center space-y-1 shadow-lg active:scale-95 transition-all"
+              className="p-3 rounded-2xl bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95 transition-all"
             >
-              <Car className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-              <span className="text-[11px] font-extrabold text-slate-100 dark:text-white leading-tight">Pedir Corrida</span>
-              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">5% OFF</span>
+              <Car className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <span className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">Pedir Corrida</span>
+              <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase">5% OFF</span>
             </Link>
 
             <Link
               to="/como-funciona/motorista"
-              className="p-3 rounded-2xl bg-slate-900/90 border border-slate-700 text-center flex flex-col items-center justify-center space-y-1 shadow-lg active:scale-95 transition-all"
+              className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95 transition-all"
             >
-              <DollarSign className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-              <span className="text-[11px] font-extrabold text-slate-100 dark:text-white leading-tight">Quero Dirigir</span>
-              <span className="text-[9px] font-bold text-slate-500 dark:text-slate-300">R$ 100 ou 10%</span>
+              <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">Quero Dirigir</span>
+              <span className="text-[9px] font-medium text-slate-500 dark:text-slate-400">R$ 100 ou 10%</span>
             </Link>
 
             <Link
               to="/parcerias"
-              className="p-3 rounded-2xl bg-slate-900/90 border border-amber-500/30 text-center flex flex-col items-center justify-center space-y-1 shadow-lg active:scale-95 transition-all"
+              className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95 transition-all"
             >
-              <Store className="w-5 h-5 text-amber-500 dark:text-amber-400" />
-              <span className="text-[11px] font-extrabold text-slate-100 dark:text-white leading-tight">Empresas</span>
-              <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase">Parcerias</span>
+              <Store className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              <span className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">Empresas</span>
+              <span className="text-[9px] font-medium text-amber-600 dark:text-amber-400 uppercase">Parcerias</span>
             </Link>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 text-xs font-semibold backdrop-blur-sm">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-800 text-blue-700 dark:text-blue-400 text-xs font-semibold backdrop-blur-sm">
+                <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-emerald-500 animate-pulse" />
                 Transporte 100% Local • São Sebastião - SP
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
-                Seu aplicativo de corridas locais no <span className="text-emerald-400">Litoral Norte</span>.
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.15]">
+                Seu aplicativo de corridas locais no <span className="text-blue-600 dark:text-emerald-400">Litoral Norte</span>.
               </h1>
 
-              <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                Transporte de passageiros ativo em São Sebastião com tarifas oficiais transparentes. Condutores escolhem entre dois planos alternativos (não cumulativos): <strong>Plano Comissão de 10%</strong> (com acerto semanal) ou <strong>Plano Mensalidade de R$ 100/mês</strong> (sem comissão por corrida). Passageiros totalmente verificados têm <strong>5% de desconto automático</strong>. Pagamento 100% direto ao condutor via Pix ou dinheiro.
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                Transporte de passageiros ativo em São Sebastião com tarifas oficiais transparentes. Condutores contam com dois planos alternativos: <strong>Plano Comissão de 10%</strong> (com acerto semanal) ou <strong>Plano Mensalidade de R$ 100/mês</strong> (sem comissão por corrida). Passageiros totalmente verificados têm <strong>5% de desconto automático</strong>. Pagamento 100% direto ao condutor via Pix ou dinheiro.
               </p>
 
               {/* CTAs */}
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5 pt-2">
                 <Link
                   to="/passenger"
-                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-950/60 transition-all hover:scale-105 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
                 >
                   <Car className="w-4 h-4" />
                   Pedir Corrida (Passageiro)
                 </Link>
                 <Link
                   to="/driver/register"
-                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 font-bold text-sm transition-all hover:scale-105 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 font-bold text-sm transition-all hover:scale-[1.02] flex items-center justify-center gap-2 shadow-sm"
                 >
-                  <DollarSign className="w-4 h-4 text-emerald-400" />
+                  <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   Quero Dirigir / Entregar
                 </Link>
                 <Link
                   to="/parcerias"
-                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-amber-300 border border-amber-500/40 font-bold text-sm transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-amber-50 dark:bg-slate-900/90 hover:bg-amber-100 dark:hover:bg-slate-800 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/40 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
                 >
-                  <Store className="w-4 h-4 text-amber-400" />
+                  <Store className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                   Para Empresas
                 </Link>
               </div>
 
               {/* Key Highlights */}
-              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-800/80 max-w-lg mx-auto lg:mx-0 text-left">
+              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-200 dark:border-slate-800/80 max-w-lg mx-auto lg:mx-0 text-left">
                 <div>
-                  <span className="block text-2xl font-black text-emerald-400">5% OFF</span>
-                  <span className="text-xs text-slate-400 font-medium">Passageiro totalmente verificado</span>
+                  <span className="block text-2xl font-black text-blue-600 dark:text-emerald-400">5% OFF</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Passageiro totalmente verificado</span>
                 </div>
                 <div>
-                  <span className="block text-2xl font-black text-emerald-400">R$ 100 ou 10%</span>
-                  <span className="text-xs text-slate-400 font-medium">Planos alternativos</span>
+                  <span className="block text-2xl font-black text-slate-900 dark:text-white">R$ 100 ou 10%</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Planos alternativos</span>
                 </div>
                 <div>
-                  <span className="block text-2xl font-black text-emerald-400">100% Direto</span>
-                  <span className="text-xs text-slate-400 font-medium">Pix ou dinheiro ao condutor</span>
+                  <span className="block text-2xl font-black text-emerald-600 dark:text-emerald-400">100% Direto</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pix ou dinheiro ao condutor</span>
                 </div>
               </div>
 
               {/* Location Badge */}
-              <div className="pt-2 flex items-center justify-center lg:justify-start gap-2 text-[11px] text-slate-400 font-medium">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <div className="pt-2 flex items-center justify-center lg:justify-start gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400 shrink-0" />
                 <span>Atendimento de Boracéia à Enseada • Conexão Costa Sul, Centro e Balsa</span>
               </div>
             </div>
 
             {/* Right Simulator Card */}
             <div className="lg:col-span-5" id="simulador">
-              <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-6 shadow-2xl backdrop-blur-md space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-emerald-400" /> Simulador de Tarifa Local
+              <div className="bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-md dark:shadow-2xl space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-blue-600 dark:text-emerald-400" /> Simulador de Tarifa Local
                   </h3>
-                  <span className="text-[11px] font-semibold text-emerald-400 px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800">
+                  <span className="text-[11px] font-semibold text-blue-700 dark:text-emerald-400 px-2 py-0.5 rounded bg-blue-50 dark:bg-emerald-950 border border-blue-200 dark:border-emerald-800">
                     Tarifa Oficial 2026
                   </span>
                 </div>
 
                 {/* Origin selection */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-emerald-400" /> Ponto de Partida
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400" /> Ponto de Partida
                   </label>
                   <select
                     value={originIndex}
                     onChange={(e) => setOriginIndex(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                   >
                     {popularPlaces.map((p, idx) => (
                       <option key={p.name} value={idx}>
@@ -420,13 +420,13 @@ export const HomePage: React.FC = () => {
 
                 {/* Destination selection */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-rose-400" /> Ponto de Destino
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500" /> Ponto de Destino
                   </label>
                   <select
                     value={destinationIndex}
                     onChange={(e) => setDestinationIndex(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                   >
                     {popularPlaces.map((p, idx) => (
                       <option key={p.name} value={idx}>
@@ -438,16 +438,16 @@ export const HomePage: React.FC = () => {
 
                 {/* Result box */}
                 {estimate && (
-                  <div className="bg-slate-950 rounded-xl p-4 border border-emerald-500/30 flex items-center justify-between">
+                  <div className="bg-blue-50/60 dark:bg-slate-950 rounded-xl p-4 border border-blue-200 dark:border-emerald-500/30 flex items-center justify-between">
                     <div>
-                      <span className="text-[11px] text-slate-400 block">Estimativa Regulamentada:</span>
-                      <span className="text-3xl font-black text-emerald-400">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block">Estimativa Regulamentada:</span>
+                      <span className="text-3xl font-black text-blue-600 dark:text-emerald-400">
                         {loadingEstimate ? 'Calculando...' : `R$ ${estimate.fareAmount.toFixed(2)}`}
                       </span>
                     </div>
-                    <div className="text-right text-xs text-slate-400 space-y-0.5">
-                      <div className="flex items-center gap-1 justify-end text-slate-300 font-medium">
-                        <Clock className="w-3.5 h-3.5 text-emerald-400" /> ~{estimate.durationMinutes} min
+                    <div className="text-right text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
+                      <div className="flex items-center gap-1 justify-end text-slate-700 dark:text-slate-300 font-medium">
+                        <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400" /> ~{estimate.durationMinutes} min
                       </div>
                       <div>{estimate.distanceKm.toFixed(1)} km aproximados</div>
                     </div>
@@ -455,7 +455,7 @@ export const HomePage: React.FC = () => {
                 )}
 
                 {/* Interactive Route Map Preview */}
-                <div className="rounded-xl overflow-hidden border border-slate-800 shadow-lg">
+                <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
                   <MapDisplay
                     pickup={
                       popularPlaces[originIndex]
@@ -486,7 +486,7 @@ export const HomePage: React.FC = () => {
 
                 <Link
                   to="/passenger"
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/40"
+                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
                 >
                   Confirmar e Solicitar <ArrowRight className="w-4 h-4" />
                 </Link>
@@ -497,38 +497,38 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* REFERRAL MARKETING SPOTLIGHT (INDIQUE E GANHE) */}
-      <section className="py-16 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-b border-slate-900">
+      <section className="py-14 sm:py-18 bg-transparent border-b border-slate-200 dark:border-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-slate-900/90 border border-emerald-500/40 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-sm">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-emerald-500/40 rounded-3xl p-6 sm:p-10 shadow-md dark:shadow-2xl relative overflow-hidden backdrop-blur-sm">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-8 space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-emerald-950 border border-blue-200 dark:border-emerald-500/40 text-blue-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
                   <Gift className="w-3.5 h-3.5" />
                   <span>Programa de Indicação VaiCar</span>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
-                  Indique Amigos e Ganhe <span className="text-emerald-400">R$ 5,00 em Créditos</span>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Indique Amigos e Ganhe <span className="text-blue-600 dark:text-emerald-400">R$ 5,00 em Créditos</span>
                 </h2>
 
-                <p className="text-sm text-slate-300 leading-relaxed max-w-2xl">
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
                   Cada passageiro cadastrado possui um código de indicação exclusivo. Compartilhe com amigos, turistas e familiares em São Sebastião: seu amigo ganha <strong>R$ 5,00 de desconto</strong> na primeira corrida, e você recebe <strong>R$ 5,00 em créditos</strong> na sua carteira após a conclusão da viagem!
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                    <span className="text-xs font-bold text-emerald-400 block">1. Compartilhe seu Código</span>
-                    <p className="text-[11px] text-slate-400">Disponível no seu painel de passageiro em 1 clique via WhatsApp.</p>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-xs font-bold text-blue-600 dark:text-emerald-400 block">1. Compartilhe seu Código</span>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Disponível no seu painel de passageiro em 1 clique via WhatsApp.</p>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                    <span className="text-xs font-bold text-emerald-400 block">2. Amigo Ganha R$ 5</span>
-                    <p className="text-[11px] text-slate-400">Desconto imediato na primeira viagem realizada em São Sebastião.</p>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-xs font-bold text-blue-600 dark:text-emerald-400 block">2. Amigo Ganha R$ 5</span>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Desconto imediato na primeira viagem realizada em São Sebastião.</p>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                    <span className="text-xs font-bold text-emerald-400 block">3. Você Recebe R$ 5</span>
-                    <p className="text-[11px] text-slate-400">Crédito automático para abater nas suas próximas viagens.</p>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="text-xs font-bold text-blue-600 dark:text-emerald-400 block">3. Você Recebe R$ 5</span>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Crédito automático para abater nas suas próximas viagens.</p>
                   </div>
                 </div>
               </div>
@@ -536,14 +536,14 @@ export const HomePage: React.FC = () => {
               <div className="lg:col-span-4 flex flex-col gap-3 text-center sm:text-left">
                 <Link
                   to="/passenger"
-                  className="px-6 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/60 transition-all text-center"
+                  className="px-6 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all text-center active:scale-95"
                 >
                   <Gift className="w-4 h-4" />
                   <span>Pegar meu Código de Indicação</span>
                 </Link>
                 <Link
                   to="/como-funciona/passageiro"
-                  className="px-6 py-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors text-center"
+                  className="px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors text-center"
                 >
                   <span>Ver Regras do Programa</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -555,39 +555,39 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* THREE CORE SERVICE AREAS */}
-      <section id="servicos-apk" className="py-20 bg-slate-950 border-b border-slate-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+      <section id="servicos-apk" className="py-16 sm:py-20 bg-transparent border-b border-slate-200 dark:border-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 sm:space-y-16">
           <div className="text-center max-w-3xl mx-auto">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/30">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-emerald-400 px-3 py-1 rounded-full bg-blue-50 dark:bg-emerald-950/80 border border-blue-200 dark:border-emerald-500/30">
               Ecossistema VaiCar em São Sebastião
             </span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight mt-3">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight mt-3">
               Serviços Transparentes para Nossa Cidade
             </h2>
-            <p className="mt-2 text-slate-400 text-sm">
+            <p className="mt-2 text-slate-500 dark:text-slate-400 text-sm">
               Conheça como solicitar corridas, como atuar como motorista parceiro e o futuro serviço de entregas locais.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* AREA 1: PASSENGERS */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-7 flex flex-col justify-between hover:border-emerald-500/50 transition-all shadow-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-3xl p-7 flex flex-col justify-between hover:border-blue-500/50 dark:hover:border-emerald-500/50 transition-all shadow-md dark:shadow-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 dark:bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
               
               {/* Photo Header */}
-              <div className="relative h-32 -mx-7 -mt-7 mb-6 overflow-hidden rounded-t-3xl">
+              <div className="relative h-36 -mx-7 -mt-7 mb-6 overflow-hidden rounded-t-3xl">
                 <img
                   src="/images/sao-sebastiao/service-passenger-pauba.jpg"
                   alt="Praia de Paúba em São Sebastião sob o sol"
                   loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent" />
                 <div className="absolute bottom-3 left-6 flex items-center gap-2">
-                  <div className="w-11 h-11 rounded-xl bg-emerald-950/90 border border-emerald-500/50 flex items-center justify-center text-emerald-400 shadow-md backdrop-blur-sm">
+                  <div className="w-11 h-11 rounded-xl bg-blue-600/90 dark:bg-emerald-950/90 border border-blue-400/40 dark:border-emerald-500/50 flex items-center justify-center text-white dark:text-emerald-400 shadow-md backdrop-blur-sm">
                     <Car className="w-6 h-6" />
                   </div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-slate-950/85 px-2.5 py-0.5 rounded-full border border-emerald-500/30 backdrop-blur-sm">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white bg-slate-900/85 px-2.5 py-0.5 rounded-full border border-slate-700 backdrop-blur-sm">
                     Serviço Ativo
                   </span>
                 </div>
@@ -595,42 +595,42 @@ export const HomePage: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xl font-black text-white mt-1">Passageiros</h3>
-                  <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1">Passageiros</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
                     Viagens seguras de carro por toda São Sebastião (Centro até Boracéia). Solicite sua corrida em segundos pelo aplicativo nativo ou diretamente no navegador.
                   </p>
                 </div>
 
-                <div className="space-y-3 pt-2 border-t border-slate-800 text-xs text-slate-300">
+                <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
                   <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span><strong>5% de Desconto Exclusivo:</strong> Aplicado automaticamente para passageiros com antecedentes criminais validados. O cadastro simples sem atestado não concede o benefício.</span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span><strong>Pagamento 100% Direto ao Condutor:</strong> O passageiro paga diretamente ao motorista via Pix ou dinheiro. A VaiCar não retém o valor das corridas.</span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span><strong>Preço Justo e Regulamentado:</strong> Base de R$ 10,00, R$ 1,00/km e R$ 0,25/minuto com tolerância de espera de 4 min.</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2.5 pt-6 mt-6 border-t border-slate-800">
+              <div className="space-y-2.5 pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
                 <a
                   href="/downloads/vaicar-passenger.apk"
                   download="vaicar-passenger.apk"
-                  className="w-full py-3.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+                  className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all"
                 >
-                  <Download className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+                  <Download className="w-4 h-4 text-white stroke-[2.5]" />
                   Baixar APK Passageiro (16.8 MB)
                 </a>
-                <div className="flex items-center justify-between text-[11px] px-1 text-slate-400">
-                  <Link to="/como-funciona/passageiro" className="hover:text-emerald-400 underline">
+                <div className="flex items-center justify-between text-[11px] px-1 text-slate-500 dark:text-slate-400">
+                  <Link to="/como-funciona/passageiro" className="hover:text-blue-600 dark:hover:text-emerald-400 underline">
                     Como Funciona & Descontos →
                   </Link>
-                  <Link to="/passenger" className="hover:text-white underline">
+                  <Link to="/passenger" className="hover:text-slate-900 dark:hover:text-white underline">
                     Acessar via Web →
                   </Link>
                 </div>
@@ -638,23 +638,23 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* AREA 2: DRIVERS */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-7 flex flex-col justify-between hover:border-emerald-500/50 transition-all shadow-xl relative overflow-hidden group">
+            <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-3xl p-7 flex flex-col justify-between hover:border-slate-400 dark:hover:border-emerald-500/50 transition-all shadow-md dark:shadow-xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
               {/* Photo Header */}
-              <div className="relative h-32 -mx-7 -mt-7 mb-6 overflow-hidden rounded-t-3xl">
+              <div className="relative h-36 -mx-7 -mt-7 mb-6 overflow-hidden rounded-t-3xl">
                 <img
                   src="/images/sao-sebastiao/service-driver-road.jpg"
                   alt="Curva e mirante da Rodovia Rio-Santos sobre o litoral de São Sebastião"
                   loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent" />
                 <div className="absolute bottom-3 left-6 flex items-center gap-2">
-                  <div className="w-11 h-11 rounded-xl bg-emerald-950/90 border border-emerald-500/50 flex items-center justify-center text-emerald-400 shadow-md backdrop-blur-sm">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-600/90 dark:bg-emerald-950/90 border border-emerald-400/40 dark:border-emerald-500/50 flex items-center justify-center text-white dark:text-emerald-400 shadow-md backdrop-blur-sm">
                     <DollarSign className="w-6 h-6" />
                   </div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-slate-950/85 px-2.5 py-0.5 rounded-full border border-emerald-500/30 backdrop-blur-sm">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white bg-slate-900/85 px-2.5 py-0.5 rounded-full border border-slate-700 backdrop-blur-sm">
                     Oportunidade Local
                   </span>
                 </div>
@@ -662,44 +662,44 @@ export const HomePage: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xl font-black text-white mt-1">Motoristas Parceiros</h3>
-                  <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1">Motoristas Parceiros</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
                     Trabalhe com autonomia total sem repassar fatias abusivas para intermediários. Seja valorizado como profissional do trânsito no Litoral Norte.
                   </p>
                 </div>
 
-                <div className="space-y-3 pt-2 border-t border-slate-800 text-xs text-slate-300">
+                <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
                   <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span><strong>Planos Alternativos (Escolha 1):</strong><br />
                     • <strong>Plano A:</strong> Mensalidade de R$ 100/mês sem comissão por corrida.<br />
                     • <strong>Plano B:</strong> 10% de comissão com acerto semanal.</span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span><strong>100% no seu Pix ou Dinheiro:</strong> O passageiro paga diretamente para você na conclusão da corrida. A VaiCar não retém repasses.</span>
                   </div>
                   <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                     <span><strong>Cadastro Descomplicado:</strong> Validação ágil de CNH com EAR, CRLV e perfil profissional.</span>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2.5 pt-6 mt-6 border-t border-slate-800">
+              <div className="space-y-2.5 pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
                 <a
                   href="/downloads/vaicar-driver.apk"
                   download="vaicar-driver.apk"
-                  className="w-full py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md"
+                  className="w-full py-3.5 px-4 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white border border-slate-700 dark:border-slate-600 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm"
                 >
                   <Download className="w-4 h-4 text-emerald-400" />
                   Baixar APK Motorista (18.2 MB)
                 </a>
-                <div className="flex items-center justify-between text-[11px] px-1 text-slate-400">
-                  <Link to="/como-funciona/motorista" className="hover:text-emerald-400 underline">
+                <div className="flex items-center justify-between text-[11px] px-1 text-slate-500 dark:text-slate-400">
+                  <Link to="/como-funciona/motorista" className="hover:text-blue-600 dark:hover:text-emerald-400 underline">
                     Requisitos & Planos Detalhados →
                   </Link>
-                  <Link to="/driver/register" className="text-emerald-400 font-semibold hover:underline">
+                  <Link to="/driver/register" className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">
                     Quero me Cadastrar →
                   </Link>
                 </div>
@@ -707,21 +707,21 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* AREA 3: DELIVERIES - COMING SOON */}
-            <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-500/40 rounded-3xl p-7 flex flex-col justify-between shadow-2xl relative overflow-hidden group">
+            <div className="bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-950 border border-amber-200 dark:border-amber-500/40 rounded-3xl p-7 flex flex-col justify-between shadow-md dark:shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
               {/* Styled Accent Header */}
-              <div className="relative h-32 -mx-7 -mt-7 mb-6 overflow-hidden rounded-t-3xl bg-gradient-to-br from-amber-950/70 via-slate-900 to-slate-950 border-b border-amber-500/20 p-6 flex flex-col justify-end">
+              <div className="relative h-36 -mx-7 -mt-7 mb-6 overflow-hidden rounded-t-3xl bg-gradient-to-br from-amber-50/80 via-white to-amber-50/50 dark:from-amber-950/70 dark:via-slate-900 dark:to-slate-950 border-b border-amber-200 dark:border-amber-500/20 p-6 flex flex-col justify-end">
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2">
-                    <div className="w-11 h-11 rounded-xl bg-amber-950/90 border border-amber-500/50 flex items-center justify-center text-amber-400 shadow-md">
+                    <div className="w-11 h-11 rounded-xl bg-amber-500/90 dark:bg-amber-950/90 border border-amber-400/40 dark:border-amber-500/50 flex items-center justify-center text-white dark:text-amber-400 shadow-md">
                       <Package className="w-6 h-6" />
                     </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 bg-slate-950/85 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 bg-amber-100/90 dark:bg-slate-950/85 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-500/30">
                       Expansão de Serviços
                     </span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-500/40 text-amber-800 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider">
                     Em Breve
                   </span>
                 </div>
@@ -729,52 +729,52 @@ export const HomePage: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xl font-black text-white mt-1">VaiCar Entregas</h3>
-                  <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1">VaiCar Entregas</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
                     Estamos estruturando o serviço de entregas expressas para conectar o comércio local, restaurantes, farmácias e moradores de São Sebastião.
                   </p>
                 </div>
 
-                <div className="space-y-3 pt-2 border-t border-slate-800 text-xs text-slate-300">
-                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
-                    <div className="flex items-center gap-1.5 font-bold text-amber-400 text-xs">
+                <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-400 text-xs">
                       <span>🏍️ Motocicletas</span>
                     </div>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
                       Entregas ágeis de refeições, remédios e volumes médios com rapidez pela SP-055.
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
-                    <div className="flex items-center gap-1.5 font-bold text-emerald-400 text-xs">
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400 text-xs">
                       <Bike className="w-3.5 h-3.5" /> <span>Bicicletas</span>
                     </div>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
                       Entregas ecológicas, sem custo de combustível, ideais para o Centro Histórico e orla.
                     </p>
                   </div>
                 </div>
 
                 {/* Important Transparency Notice */}
-                <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/20 text-[11px] text-amber-900 dark:text-amber-200/90 leading-relaxed flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <span>
                     <strong>Aviso:</strong> O serviço de entregas está em preparação operacional. Pedidos de entrega não estão ativos nesta versão e os APKs atuais atendem exclusivamente passageiros e motoristas.
                   </span>
                 </div>
               </div>
 
-              <div className="pt-6 mt-6 border-t border-slate-800 flex flex-col gap-2">
+              <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
                 <a
                   href="#lista-espera"
-                  className="w-full py-3.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/20 text-center"
+                  className="w-full py-3.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm text-center"
                 >
                   <Sparkles className="w-4 h-4" />
                   Cadastrar na Lista de Espera
                 </a>
                 <Link
                   to="/parcerias"
-                  className="text-center text-xs text-amber-400 hover:text-amber-300 font-semibold underline pt-1"
+                  className="text-center text-xs text-amber-700 dark:text-amber-400 hover:underline font-semibold pt-1"
                 >
                   É restaurante ou comércio? Conheça as parcerias →
                 </Link>
@@ -787,21 +787,21 @@ export const HomePage: React.FC = () => {
       {/* LOCAL BUSINESS PARTNERSHIP CALLOUT BANNER */}
       <section className="py-12 bg-slate-900 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-amber-500/30 rounded-3xl p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+          <div className="bg-gradient-to-r from-amber-500/10 via-slate-900 to-amber-500/5 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border border-amber-500/30 rounded-3xl p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm dark:shadow-2xl">
             <div className="space-y-2 text-center md:text-left">
               <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-500/40">
                 Para Estabelecimentos de São Sebastião
               </span>
-              <h3 className="text-xl sm:text-2xl font-black text-white">
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
                 Tem um Restaurante, Pousada ou Comércio Local?
               </h3>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-xl">
                 Seja um parceiro VaiCar para entregas ágeis e mobilidade para seus hóspedes e clientes, sem taxas predatórias.
               </p>
             </div>
             <Link
               to="/parcerias"
-              className="px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shrink-0 shadow-lg shadow-amber-500/20"
+              className="px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shrink-0 shadow-sm shadow-amber-500/20"
             >
               <Store className="w-4 h-4" />
               <span>Conhecer Parcerias Comerciais</span>
@@ -812,17 +812,17 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* DELIVERY SERVICE WAITLIST / INTEREST REGISTRATION FORM */}
-      <section id="lista-espera" className="py-20 bg-slate-900/50 border-b border-slate-900">
+      <section id="lista-espera" className="py-20 bg-slate-950/60 border-b border-slate-800">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-md dark:shadow-2xl relative overflow-hidden">
             <div className="text-center max-w-2xl mx-auto space-y-3 mb-8">
               <span className="px-3 py-1 rounded-full bg-amber-950 border border-amber-500/40 text-amber-400 text-xs font-bold uppercase tracking-wider">
                 Lista de Espera Oficial • VaiCar Entregas
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-white">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
                 Cadastre seu Interesse para o Lançamento
               </h2>
-              <p className="text-xs sm:text-sm text-slate-400">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                 Seja avisado com prioridade assim que as operações de entrega forem iniciadas em São Sebastião. Cadastre-se como entregador de moto ou bike, comerciante parceiro ou cliente.
               </p>
             </div>
@@ -844,7 +844,7 @@ export const HomePage: React.FC = () => {
             <form onSubmit={handleWaitlistSubmit} className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Nome Completo / Nome do Estabelecimento *
                   </label>
                   <input
@@ -853,12 +853,12 @@ export const HomePage: React.FC = () => {
                     value={waitlistName}
                     onChange={(e) => setWaitlistName(e.target.value)}
                     placeholder="Ex: João da Silva ou Pizzaria Maresias"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     WhatsApp com DDD *
                   </label>
                   <input
@@ -867,20 +867,20 @@ export const HomePage: React.FC = () => {
                     value={waitlistPhone}
                     onChange={(e) => setWaitlistPhone(e.target.value)}
                     placeholder="(12) 99999-9999"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-emerald-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Perfil de Interesse *
                   </label>
                   <select
                     value={waitlistRole}
                     onChange={(e) => setWaitlistRole(e.target.value as DeliveryWaitlistRole)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-emerald-500"
                   >
                     <option value="courier_motorcycle">🏍️ Entregador (Motocicleta)</option>
                     <option value="courier_bicycle">🚲 Entregador (Bicicleta)</option>
@@ -890,7 +890,7 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     Bairro / Região em São Sebastião
                   </label>
                   <input
@@ -898,12 +898,12 @@ export const HomePage: React.FC = () => {
                     value={waitlistNeighborhood}
                     onChange={(e) => setWaitlistNeighborhood(e.target.value)}
                     placeholder="Ex: Centro, Maresias, Juquehy..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     E-mail (Opcional)
                   </label>
                   <input
@@ -911,13 +911,13 @@ export const HomePage: React.FC = () => {
                     value={waitlistEmail}
                     onChange={(e) => setWaitlistEmail(e.target.value)}
                     placeholder="seuemail@exemplo.com"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-emerald-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Observações ou Modelo do Veículo (Opcional)
                 </label>
                 <input
@@ -925,7 +925,7 @@ export const HomePage: React.FC = () => {
                   value={waitlistNotes}
                   onChange={(e) => setWaitlistNotes(e.target.value)}
                   placeholder="Ex: Moto 160cc com baú, bike própria, horário disponível..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-600 dark:focus:border-emerald-500"
                 />
               </div>
 
@@ -933,7 +933,7 @@ export const HomePage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={waitlistSubmitting}
-                  className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/25 disabled:opacity-50"
+                  className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm shadow-amber-500/25 disabled:opacity-50"
                 >
                   {waitlistSubmitting ? (
                     'Enviando...'
@@ -950,23 +950,23 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Operating Zones & Beaches Showcase with Real Photography */}
-      <section id="praias-cobertas" className="py-20 bg-slate-950 border-b border-slate-900">
+      <section id="praias-cobertas" className="py-20 bg-slate-950 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-4">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/30">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-emerald-400 px-3 py-1 rounded-full bg-blue-50 dark:bg-emerald-950/80 border border-blue-200 dark:border-emerald-500/30">
                 Cobertura Geográfica Real • São Sebastião
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-2.5">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mt-2.5">
                 Principais Rotas & Praias Cobertas
               </h2>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
                 Mobilidade porta a porta em todo o município de São Sebastião — da Costa Sul ao Centro Histórico, travessia da balsa e cachoeiras da Mata Atlântica.
               </p>
             </div>
             <Link
               to="/passenger"
-              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0"
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white dark:bg-slate-900 dark:hover:bg-slate-800 dark:border dark:border-slate-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 shadow-sm"
             >
               Pedir Corrida pelo Mapa <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -977,7 +977,7 @@ export const HomePage: React.FC = () => {
               <div
                 key={dest.name}
                 onClick={() => handleSelectDestination(dest.searchKey)}
-                className="group relative rounded-2xl overflow-hidden border border-slate-800/90 hover:border-emerald-500/60 bg-slate-900 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-950/30 cursor-pointer flex flex-col justify-end"
+                className="group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800/90 hover:border-blue-500/60 dark:hover:border-emerald-500/60 bg-slate-900 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer flex flex-col justify-end"
                 style={{ minHeight: '220px' }}
               >
                 {/* Authentic Location Photo */}
@@ -994,14 +994,14 @@ export const HomePage: React.FC = () => {
                 {/* Content Overlay */}
                 <div className="relative z-10 p-4 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-slate-950/85 px-2 py-0.5 rounded-md border border-emerald-500/30 backdrop-blur-sm flex items-center gap-1">
-                      <MapPin className="w-2.5 h-2.5 text-emerald-400" /> {dest.zone}
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300 dark:text-emerald-400 bg-slate-950/85 px-2 py-0.5 rounded-md border border-blue-500/30 dark:border-emerald-500/30 backdrop-blur-sm flex items-center gap-1">
+                      <MapPin className="w-2.5 h-2.5 text-blue-400 dark:text-emerald-400" /> {dest.zone}
                     </span>
-                    <span className="text-[10px] font-semibold text-slate-300 bg-slate-900/80 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                    <span className="text-[10px] font-semibold text-slate-200 bg-slate-900/80 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                       Simular rota →
                     </span>
                   </div>
-                  <h3 className="text-base font-black text-white group-hover:text-emerald-300 transition-colors">
+                  <h3 className="text-base font-black text-white group-hover:text-blue-200 dark:group-hover:text-emerald-300 transition-colors">
                     {dest.name}
                   </h3>
                   <p className="text-[11px] text-slate-300 font-medium leading-tight">
@@ -1012,11 +1012,11 @@ export const HomePage: React.FC = () => {
             ))}
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center justify-between text-xs text-slate-400 pt-4 border-t border-slate-900 gap-2">
+          <div className="mt-6 flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-800 gap-2">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Mais de 30 praias e bairros atendidos com raio de busca de até 15 km
+              <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400" /> Mais de 30 praias e bairros atendidos com raio de busca de até 15 km
             </span>
-            <span className="text-[11px] text-slate-500">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">
               Dica: Clique em qualquer praia para selecionar como destino no simulador
             </span>
           </div>
@@ -1024,16 +1024,16 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* PERGUNTAS FREQUENTES (FAQ) SECTION */}
-      <section id="faq" className="py-20 bg-slate-900/60 border-b border-slate-900">
+      <section id="faq" className="py-20 bg-slate-950/60 border-b border-slate-800">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="text-center space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/30 inline-flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-emerald-400 px-3 py-1 rounded-full bg-blue-50 dark:bg-emerald-950 border border-blue-200 dark:border-emerald-500/30 inline-flex items-center gap-1.5">
               <HelpCircle className="w-3.5 h-3.5" /> Dúvidas Frequentes
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-white">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
               Tudo sobre o VaiCar em São Sebastião
             </h2>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
               Respostas claras sobre tarifas, descontos de 5%, programa de indicação, requisitos de condutores e parcerias comerciais.
             </p>
           </div>
@@ -1046,8 +1046,8 @@ export const HomePage: React.FC = () => {
                   key={item.question}
                   className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
                     isOpen
-                      ? 'bg-slate-900 border-emerald-500/50 shadow-lg'
-                      : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                      ? 'bg-slate-900 border-blue-500/50 dark:border-emerald-500/50 shadow-md'
+                      : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
                   }`}
                 >
                   <button
@@ -1057,16 +1057,16 @@ export const HomePage: React.FC = () => {
                     className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 cursor-pointer focus:outline-none"
                   >
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-emerald-400">
                         {item.category}
                       </span>
-                      <h3 className="text-sm sm:text-base font-bold text-white leading-snug">
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug">
                         {item.question}
                       </h3>
                     </div>
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                        isOpen ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400 border border-slate-800'
+                        isOpen ? 'bg-blue-600 dark:bg-emerald-600 text-white' : 'bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-700'
                       }`}
                     >
                       {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -1074,7 +1074,7 @@ export const HomePage: React.FC = () => {
                   </button>
 
                   {isOpen && (
-                    <div className="px-4 pb-5 sm:px-5 sm:pb-5 pt-0 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/80 animate-in fade-in duration-150">
+                    <div className="px-4 pb-5 sm:px-5 sm:pb-5 pt-0 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-800 animate-in fade-in duration-150">
                       <p className="pt-3">{item.answer}</p>
                     </div>
                   )}
@@ -1084,12 +1084,12 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div className="pt-4 text-center">
-            <p className="text-xs text-slate-400 mb-2">Ainda tem dúvidas? Fale com a equipe pelo WhatsApp:</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Ainda tem dúvidas? Fale com a equipe pelo WhatsApp:</p>
             <a
               href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 hover:underline"
+              className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-emerald-400 hover:text-blue-700 dark:hover:text-emerald-300 hover:underline"
             >
               <MessageCircle className="w-4 h-4" />
               <span>Entrar no Grupo Oficial de Suporte ↗</span>
@@ -1107,25 +1107,25 @@ export const HomePage: React.FC = () => {
             loading="lazy"
             className="w-full h-full object-cover opacity-15 pointer-events-none"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/80 via-slate-950/95 to-slate-950" />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-950/10 via-slate-950/95 to-slate-950 dark:from-emerald-950/80 dark:via-slate-950/95 dark:to-slate-950" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="bg-slate-900/90 border border-emerald-500/30 rounded-3xl p-8 sm:p-12 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden backdrop-blur-sm">
+          <div className="bg-slate-900/90 border border-slate-800 dark:border-emerald-500/30 rounded-3xl p-8 sm:p-12 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-md dark:shadow-2xl relative overflow-hidden backdrop-blur-sm">
             <div className="space-y-4 max-w-2xl text-center lg:text-left">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-emerald-950 dark:border-emerald-500/40 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
                 Comunidade Oficial VaiCar
               </span>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
                 Fique por dentro da balsa, trânsito e novidades no Litoral Norte
               </h2>
-              <p className="text-sm text-slate-300 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 Entre no nosso grupo oficial no WhatsApp para suporte rápido, avisos sobre filas da balsa para Ilhabela, condições da rodovia Rio-Santos (SP-055) e contato direto com a equipe.
               </p>
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-slate-300">
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Suporte ágil</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Atualizações locais</span>
-                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-emerald-400" /> Motoristas e passageiros</span>
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-emerald-400" /> Suporte ágil</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-emerald-400" /> Atualizações locais</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-emerald-400" /> Motoristas e passageiros</span>
               </div>
             </div>
 
@@ -1134,7 +1134,7 @@ export const HomePage: React.FC = () => {
                 href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-8 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-950/60 transition-all hover:scale-105 text-center"
+                className="px-8 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all hover:scale-105 text-center"
               >
                 <MessageCircle className="w-5 h-5" /> Entrar no Grupo Oficial
               </a>

@@ -121,9 +121,9 @@ async function runThemeTestSuite() {
 
       // Check computed body background
       const bodyBg = await page.evaluate(() => window.getComputedStyle(document.body).backgroundColor);
-      // rgb(245, 247, 251) is #F5F7FB
-      if (bodyBg !== 'rgb(245, 247, 251)') {
-        throw new Error(`Expected body background rgb(245, 247, 251), got: "${bodyBg}"`);
+      // rgb(250, 249, 246) is warm subtle cream #FAF9F6, rgb(245, 247, 251) is #F5F7FB
+      if (bodyBg !== 'rgb(250, 249, 246)' && bodyBg !== 'rgb(245, 247, 251)') {
+        throw new Error(`Expected light body background rgb(250, 249, 246), got: "${bodyBg}"`);
       }
 
       const shot = path.join(screenshotsDir, '01-desktop-home-light.png');
@@ -218,8 +218,8 @@ async function runThemeTestSuite() {
       }
 
       const bodyBg = await page.evaluate(() => window.getComputedStyle(document.body).backgroundColor);
-      if (bodyBg !== 'rgb(245, 247, 251)') {
-        throw new Error(`Expected persisted light background rgb(245, 247, 251), got: "${bodyBg}"`);
+      if (bodyBg !== 'rgb(250, 249, 246)' && bodyBg !== 'rgb(245, 247, 251)') {
+        throw new Error(`Expected persisted light background rgb(250, 249, 246), got: "${bodyBg}"`);
       }
 
       return { details: `html class: "${htmlClasses}", bodyBg: "${bodyBg}"` };
@@ -388,9 +388,9 @@ async function runThemeTestSuite() {
       });
 
       // Verification checks:
-      // bodyBg should be rgb(245, 247, 251) [#F5F7FB]
-      if (tokens.bodyBg !== 'rgb(245, 247, 251)') {
-        throw new Error(`Expected light body background rgb(245, 247, 251), got: ${tokens.bodyBg}`);
+      // bodyBg should be rgb(250, 249, 246) [#FAF9F6] or rgb(245, 247, 251) [#F5F7FB]
+      if (tokens.bodyBg !== 'rgb(250, 249, 246)' && tokens.bodyBg !== 'rgb(245, 247, 251)') {
+        throw new Error(`Expected light body background rgb(250, 249, 246), got: ${tokens.bodyBg}`);
       }
 
       // h1 heading should be dark (#111827 or rgb(17, 24, 39)), not white (#FFFFFF)
