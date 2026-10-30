@@ -325,7 +325,29 @@ html:not(.dark) .leaflet-control-zoom a:hover {
   border-color: var(--vaicar-line) !important;
 }
 .vaicar-home-hero > .absolute.inset-0 {
-  display: none !important;
+  display: block !important;
+}
+.vaicar-home-hero > .absolute.inset-0 img {
+  opacity: .88 !important;
+}
+.vaicar-home-hero > .absolute.inset-0 > div:nth-child(2) {
+  background: linear-gradient(90deg, rgba(8, 31, 34, .78) 0%, rgba(8, 31, 34, .48) 48%, rgba(8, 31, 34, .16) 100%) !important;
+}
+.vaicar-home-hero > .absolute.inset-0 > div:nth-child(3) {
+  background: linear-gradient(0deg, rgba(8, 31, 34, .34), transparent 48%) !important;
+}
+.vaicar-home-hero > .absolute.inset-0 > div:nth-child(4) { display: none !important; }
+.vaicar-home-hero h1 { color: #fff !important; text-shadow: 0 2px 18px rgba(0,0,0,.18); }
+.vaicar-home-hero h1 span { color: #a9e6d4 !important; }
+.vaicar-home-hero p { color: rgba(255,255,255,.88) !important; }
+.vaicar-home-hero .text-slate-500,
+.vaicar-home-hero .text-slate-400 { color: rgba(255,255,255,.76) !important; }
+.vaicar-home-hero .grid.grid-cols-3 { display: none !important; }
+.vaicar-home-hero .lg\\:col-span-5 > div {
+  background: rgba(255,255,255,.94) !important;
+  border: 1px solid rgba(255,255,255,.48) !important;
+  box-shadow: 0 18px 54px rgba(4,25,28,.22) !important;
+  backdrop-filter: blur(12px);
 }
 .vaicar-home-hero h1 { color: var(--vaicar-ink) !important; }
 .vaicar-home-hero h1 span { color: var(--vaicar-ocean) !important; }
@@ -354,11 +376,7 @@ html:not(.dark) .leaflet-control-zoom a:hover {
   border-radius: 1.25rem !important;
   box-shadow: 0 18px 50px rgba(21, 59, 64, .08) !important;
 }
-.vaicar-home > div:first-child {
-  background: #edf5f1 !important;
-  border-color: var(--vaicar-line) !important;
-}
-.vaicar-home > div:first-child p { color: #456260 !important; }
+.vaicar-home > div:first-child { display: none !important; }
 
 .vaicar-audience {
   background: #fff !important;
@@ -415,7 +433,6 @@ html:not(.dark) .leaflet-control-zoom a:hover {
    Detailed explanations remain available through their existing routes. */
 .vaicar-home #como-funciona,
 .vaicar-home #indicacao,
-.vaicar-home #praias-cobertas,
 .vaicar-home #faq {
   display: none !important;
 }
@@ -494,4 +511,49 @@ html.dark .vaicar-footer { background: #0b2023 !important; border-color: #20494b
   .vaicar-home-hero { padding-top: 22px !important; padding-bottom: 38px !important; }
   .vaicar-audience { padding-top: 32px !important; padding-bottom: 32px !important; }
   .vaicar-audience-card { min-height: 76px; padding: 13px; }
+}
+
+
+/* Minimal coastal landing page: real local photography, fewer competing panels */
+.vaicar-home #praias-cobertas {
+  display: block !important;
+  padding-top: 54px !important;
+  padding-bottom: 54px !important;
+  background: #f5f8f5 !important;
+  border-color: var(--vaicar-line) !important;
+}
+.vaicar-home #praias-cobertas > div > div:first-child {
+  margin-bottom: 22px !important;
+}
+.vaicar-home #praias-cobertas .grid > div:nth-child(n+5) {
+  display: none !important;
+}
+.vaicar-home #praias-cobertas .grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+.vaicar-home #praias-cobertas .grid > div {
+  min-height: 190px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+.vaicar-home #praias-cobertas .grid > div > div:last-child {
+  padding: 13px !important;
+}
+.vaicar-home #praias-cobertas h2 { color: var(--vaicar-ink) !important; }
+.vaicar-home #praias-cobertas p { color: var(--vaicar-muted) !important; }
+@media (max-width: 760px) {
+  .vaicar-home #praias-cobertas .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .vaicar-home #praias-cobertas .grid > div {
+    min-height: 150px !important;
+  }
+  .vaicar-home-hero > .absolute.inset-0 > div:nth-child(2) {
+    background: linear-gradient(180deg, rgba(8,31,34,.72), rgba(8,31,34,.45)) !important;
+  }
+}
+html.dark .vaicar-home #praias-cobertas {
+  background: #10282b !important;
 }
