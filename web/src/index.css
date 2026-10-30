@@ -604,3 +604,31 @@ html.dark .vaicar-home #praias-cobertas {
   color: #173f42 !important;
   background: #ffffff !important;
 }
+
+
+/* Stronger mobile hero contrast: darken the photo itself so the headline reads at a glance */
+.vaicar-home-hero > .absolute.inset-0::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 27, 30, .48);
+  pointer-events: none;
+}
+.vaicar-home-hero .lg\\:col-span-7 h1 {
+  color: #ffffff !important;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .72), 0 5px 22px rgba(0, 0, 0, .48) !important;
+  position: relative;
+  z-index: 1;
+}
+.vaicar-home-hero .lg\\:col-span-7 h1 span {
+  color: #c9ffea !important;
+}
+.vaicar-home-hero .lg\\:col-span-7 > p {
+  color: #ffffff !important;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .72) !important;
+}
+@media (max-width: 760px) {
+  .vaicar-home-hero > .absolute.inset-0::after {
+    background: rgba(4, 27, 30, .58);
+  }
+}
