@@ -242,7 +242,7 @@ export const Navbar: React.FC = () => {
             <Link
               to="/driver"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-bold text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-bold !text-[#174b39] hover:bg-emerald-50"
             >
               <span className="flex items-center gap-2">💼 Portal do Motorista & Entregador</span>
               <span className="text-[10px] text-slate-400">Cockpit</span>
@@ -250,7 +250,7 @@ export const Navbar: React.FC = () => {
             <Link
               to="/como-funciona/motorista"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="block px-2.5 py-1.5 rounded-lg text-xs font-medium !text-[#52685e] hover:!text-[#174b39] hover:bg-emerald-50"
             >
               → Requisitos & Planos (R$ 100/mês ou 10%)
             </Link>
@@ -277,7 +277,7 @@ export const Navbar: React.FC = () => {
           <Link
             to="/download/passenger"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="block px-3 py-2 rounded-xl text-xs font-semibold !text-[#24483b] hover:bg-emerald-50"
           >
             📥 Baixar Aplicativos Oficiais (APKs)
           </Link>
@@ -285,7 +285,7 @@ export const Navbar: React.FC = () => {
           <Link
             to="/admin"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="block px-3 py-2 rounded-xl text-xs font-semibold !text-[#52685e] hover:!text-[#174b39] hover:bg-emerald-50"
           >
             ⚙️ Painel de Gestão Administrativa
           </Link>
