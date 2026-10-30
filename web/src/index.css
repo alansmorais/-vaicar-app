@@ -632,3 +632,122 @@ html.dark .vaicar-home #praias-cobertas {
     background: rgba(4, 27, 30, .58);
   }
 }
+
+
+/* =========================================================
+   TROPICAL PREMIUM — PASSENGER & DRIVER APP SHELLS
+   Visual-only layer. Keeps all existing flows and handlers.
+   ========================================================= */
+.vaicar-tropical-screen {
+  --vc-emerald: #07966f;
+  --vc-emerald-dark: #087653;
+  --vc-forest: #174b3b;
+  --vc-graphite: #263238;
+  --vc-muted: #64746f;
+  --vc-border: #e2ebe6;
+  --vc-surface: #ffffff;
+  color: var(--vc-graphite) !important;
+  background: #f6faf7 !important;
+  color-scheme: light;
+}
+.vaicar-tropical-screen header {
+  background: rgba(255,255,255,.97) !important;
+  color: var(--vc-forest) !important;
+  border-color: var(--vc-border) !important;
+  box-shadow: 0 2px 14px rgba(20,65,48,.05);
+}
+.vaicar-tropical-screen h1,
+.vaicar-tropical-screen h2,
+.vaicar-tropical-screen h3,
+.vaicar-tropical-screen h4,
+.vaicar-tropical-screen .text-white,
+.vaicar-tropical-screen .text-slate-100,
+.vaicar-tropical-screen .text-slate-200 {
+  color: var(--vc-forest) !important;
+}
+.vaicar-tropical-screen p,
+.vaicar-tropical-screen label,
+.vaicar-tropical-screen .text-slate-300,
+.vaicar-tropical-screen .text-slate-400,
+.vaicar-tropical-screen .text-slate-500 {
+  color: var(--vc-muted) !important;
+}
+.vaicar-tropical-screen [class*="bg-slate-950"],
+.vaicar-tropical-screen [class*="bg-slate-900"],
+.vaicar-tropical-screen [class*="bg-slate-800"] {
+  background-color: #ffffff !important;
+}
+.vaicar-tropical-screen [class*="border-slate-800"],
+.vaicar-tropical-screen [class*="border-slate-700"],
+.vaicar-tropical-screen [class*="border-slate-600"] {
+  border-color: var(--vc-border) !important;
+}
+.vaicar-tropical-screen [class*="text-emerald-300"],
+.vaicar-tropical-screen [class*="text-emerald-400"],
+.vaicar-tropical-screen [class*="text-emerald-500"],
+.vaicar-tropical-screen [class*="text-blue-400"],
+.vaicar-tropical-screen [class*="text-blue-500"] {
+  color: var(--vc-emerald) !important;
+}
+.vaicar-tropical-screen button[class*="bg-emerald-600"],
+.vaicar-tropical-screen a[class*="bg-emerald-600"],
+.vaicar-tropical-screen button[class*="bg-emerald-500"],
+.vaicar-tropical-screen a[class*="bg-emerald-500"],
+.vaicar-tropical-screen button[class*="bg-blue-600"],
+.vaicar-tropical-screen a[class*="bg-blue-600"] {
+  background: var(--vc-emerald) !important;
+  border-color: var(--vc-emerald) !important;
+  color: #ffffff !important;
+  box-shadow: 0 5px 14px rgba(7,150,111,.16);
+}
+.vaicar-tropical-screen button[class*="bg-emerald-600"] *,
+.vaicar-tropical-screen a[class*="bg-emerald-600"] *,
+.vaicar-tropical-screen button[class*="bg-emerald-500"] *,
+.vaicar-tropical-screen a[class*="bg-emerald-500"] *,
+.vaicar-tropical-screen button[class*="bg-blue-600"] *,
+.vaicar-tropical-screen a[class*="bg-blue-600"] * {
+  color: #ffffff !important;
+}
+.vaicar-tropical-screen input,
+.vaicar-tropical-screen select,
+.vaicar-tropical-screen textarea {
+  color: var(--vc-graphite) !important;
+  background: #ffffff !important;
+  border-color: #d7e4dc !important;
+  border-radius: 13px !important;
+}
+.vaicar-tropical-screen input::placeholder,
+.vaicar-tropical-screen textarea::placeholder {
+  color: #899891 !important;
+}
+.vaicar-tropical-screen [class*="rounded-xl"],
+.vaicar-tropical-screen [class*="rounded-2xl"],
+.vaicar-tropical-screen [class*="rounded-3xl"] {
+  border-radius: 18px;
+}
+.vaicar-tropical-screen [class*="shadow-"] {
+  box-shadow: 0 8px 24px rgba(25,70,52,.07) !important;
+}
+.vaicar-tropical-screen .leaflet-container {
+  border-radius: 20px;
+  background: #edf4ef;
+}
+.vaicar-tropical-screen .leaflet-control-zoom a,
+.vaicar-tropical-screen .leaflet-bar a {
+  background: #ffffff !important;
+  color: var(--vc-forest) !important;
+  border-color: var(--vc-border) !important;
+}
+.vaicar-tropical-screen .leaflet-control-attribution {
+  background: rgba(255,255,255,.88) !important;
+  color: #64746f !important;
+}
+@media (max-width: 640px) {
+  .vaicar-tropical-screen {
+    background: #f6faf7 !important;
+  }
+  .vaicar-tropical-screen header {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
