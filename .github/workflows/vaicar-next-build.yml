@@ -1,0 +1,36 @@
+name: Preview branch build
+
+on:
+  push:
+    branches:
+      - vaicar-next
+  pull_request:
+    branches:
+      - vaicar-next
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vaicar-next-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build web and API (no deployment)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Build web and type-check API
+        run: npm run build
