@@ -973,3 +973,109 @@ html.dark .vaicar-home #praias-cobertas {
     border-radius: 18px !important;
   }
 }
+
+
+/* =========================================================
+   HOMEPAGE RESPONSIVE + LIGHT SIMULATOR FIX
+   Correct the tablet-width overflow and dark-on-dark map label.
+   ========================================================= */
+html, body, #root {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+html, body {
+  overflow-x: hidden !important;
+}
+.vaicar-home {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+.vaicar-navbar {
+  width: 100% !important;
+  max-width: none !important;
+}
+.vaicar-navbar > div {
+  width: 100% !important;
+  max-width: 1440px !important;
+}
+.vaicar-home-hero {
+  width: 100% !important;
+  max-width: none !important;
+}
+.vaicar-home-hero #simulador {
+  min-width: 0 !important;
+}
+.vaicar-home-hero #simulador > div {
+  background: #ffffff !important;
+  color: #173f42 !important;
+  border-color: #dce9e2 !important;
+}
+.vaicar-home-hero #simulador [class*="bg-gradient-to-br"] {
+  background: linear-gradient(135deg, #e5f4ec 0%, #cce9dc 52%, #a9d6c5 100%) !important;
+}
+.vaicar-home-hero #simulador [class*="bg-white/85"] {
+  background: rgba(255,255,255,.94) !important;
+  border-color: #ffffff !important;
+  color: #174b3b !important;
+  box-shadow: 0 10px 28px rgba(20,75,55,.12) !important;
+}
+.vaicar-home-hero #simulador [class*="bg-white/85"] p,
+.vaicar-home-hero #simulador [class*="bg-white/85"] p.text-sm,
+.vaicar-home-hero #simulador [class*="bg-white/85"] p.text-xs {
+  color: #365d50 !important;
+  text-shadow: none !important;
+}
+.vaicar-home-hero #simulador [class*="bg-white/85"] svg {
+  color: #07845f !important;
+}
+.vaicar-home-hero #simulador .text-slate-800,
+.vaicar-home-hero #simulador .text-slate-700 {
+  color: #244b40 !important;
+}
+.vaicar-home-hero #simulador .text-slate-600,
+.vaicar-home-hero #simulador .text-slate-500,
+.vaicar-home-hero #simulador .text-slate-400 {
+  color: #526b60 !important;
+}
+html.dark .vaicar-home-hero #simulador > div {
+  background: #ffffff !important;
+  color: #173f42 !important;
+  border-color: #dce9e2 !important;
+}
+html.dark .vaicar-home-hero #simulador [class*="bg-gradient-to-br"] {
+  background: linear-gradient(135deg, #e5f4ec 0%, #cce9dc 52%, #a9d6c5 100%) !important;
+}
+html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] {
+  background: rgba(255,255,255,.96) !important;
+  color: #174b3b !important;
+}
+html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
+  color: #365d50 !important;
+}
+@media (max-width: 1100px) {
+  .vaicar-navbar > div > div {
+    height: 68px !important;
+  }
+  .vaicar-navbar [class~="md:flex"] {
+    display: none !important;
+  }
+  .vaicar-navbar [class~="md:hidden"] {
+    display: flex !important;
+  }
+  .vaicar-navbar > div {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+@media (max-width: 760px) {
+  .vaicar-home-hero #simulador > div {
+    padding: 18px !important;
+    border-radius: 20px !important;
+  }
+  .vaicar-home-hero #simulador [class*="bg-gradient-to-br"] {
+    height: 190px !important;
+  }
+}
