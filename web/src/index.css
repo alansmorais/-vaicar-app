@@ -1204,3 +1204,35 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
     color: #89500c !important;
   }
 }
+
+
+/* Final legibility pass for mobile navigation */
+@media (max-width: 1100px) {
+  .vaicar-navbar .vaicar-mobile-drawer .text-slate-100,
+  .vaicar-navbar .vaicar-mobile-drawer .text-slate-200,
+  .vaicar-navbar .vaicar-mobile-drawer .text-slate-300,
+  .vaicar-navbar .vaicar-mobile-drawer .text-slate-400 {
+    color: #405b4e !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer > div[class*="space-y-1"] a:first-child,
+  .vaicar-navbar .vaicar-mobile-drawer > div[class*="space-y-1"] a:first-child * {
+    color: #174b39 !important;
+    opacity: 1 !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer > div[class*="space-y-1"] a:not(:first-child),
+  .vaicar-navbar .vaicar-mobile-drawer > div[class*="space-y-1"] a:not(:first-child) * {
+    color: #52685e !important;
+    opacity: 1 !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer a[href="/admin"],
+  .vaicar-navbar .vaicar-mobile-drawer a[href*="/download"],
+  .vaicar-navbar .vaicar-mobile-drawer > a[href="/"] {
+    color: #294b3e !important;
+    opacity: 1 !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer .text-amber-700,
+  .vaicar-navbar .vaicar-mobile-drawer .text-amber-800,
+  .vaicar-navbar .vaicar-mobile-drawer .text-amber-400 {
+    color: #86520c !important;
+  }
+}
