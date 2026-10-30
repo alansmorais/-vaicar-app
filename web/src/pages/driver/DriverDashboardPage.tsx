@@ -986,7 +986,7 @@ export const DriverDashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="relative w-screen h-[100dvh] overflow-hidden bg-slate-950 text-slate-100 flex flex-col select-none">
+    <div className="vaicar-tropical-screen relative w-screen h-[100dvh] overflow-hidden bg-slate-50 text-slate-900 flex flex-col select-none">
       {/* 1. FULLSCREEN / 80-90% MAP CANVAS (COCKPIT MAIN VIEW) */}
       <div className="absolute inset-0 z-0 w-full h-full">
         {incomingRide ? (
