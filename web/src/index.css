@@ -346,8 +346,7 @@ html:not(.dark) .leaflet-control-zoom a:hover {
 .vaicar-home-hero button.bg-blue-600:hover {
   background: var(--vaicar-ocean-deep) !important;
 }
-.vaicar-home-hero .bg-white,
-.vaicar-home-hero .dark\\:bg-slate-900 {
+.vaicar-home-hero .bg-white {
   background-color: #fff !important;
 }
 .vaicar-home-hero [id="simulador"] > div {
