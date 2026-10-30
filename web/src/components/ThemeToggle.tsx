@@ -43,8 +43,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'navbar', cl
           onClick={() => setTheme('light')}
           className={`flex-1 min-h-[44px] py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
             theme === 'light'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
+              : 'text-slate-300 hover:text-white'
           }`}
           aria-pressed={theme === 'light'}
           aria-label="Ativar tema claro"
@@ -58,8 +58,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'navbar', cl
           onClick={() => setTheme('dark')}
           className={`flex-1 min-h-[44px] py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
             theme === 'dark'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
+              : 'text-slate-300 hover:text-white'
           }`}
           aria-pressed={theme === 'dark'}
           aria-label="Ativar tema escuro"
@@ -73,8 +73,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'navbar', cl
           onClick={() => setTheme('system')}
           className={`flex-1 min-h-[44px] py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
             theme === 'system'
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
+              : 'text-slate-300 hover:text-white'
           }`}
           aria-pressed={theme === 'system'}
           aria-label="Seguir tema do sistema"
@@ -98,7 +98,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'navbar', cl
             className={`p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-xs transition-colors ${
               theme === 'light'
                 ? 'bg-blue-600 text-white font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-300 hover:text-white'
             }`}
             title="Tema Claro"
             aria-pressed={theme === 'light'}
@@ -112,7 +112,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'navbar', cl
             className={`p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-xs transition-colors ${
               theme === 'dark'
                 ? 'bg-blue-600 text-white font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-300 hover:text-white'
             }`}
             title="Tema Escuro"
             aria-pressed={theme === 'dark'}
@@ -126,7 +126,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'navbar', cl
             className={`p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-xs transition-colors ${
               theme === 'system'
                 ? 'bg-blue-600 text-white font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                : 'text-slate-300 hover:text-white'
             }`}
             title="Automático (Seguir Sistema)"
             aria-pressed={theme === 'system'}
