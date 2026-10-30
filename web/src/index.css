@@ -1157,3 +1157,50 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
   .vaicar-navbar > div:first-child > div > a:first-child img { height: 38px !important; }
   .vaicar-navbar > div:first-child > div > a:first-child span.text-2xl { font-size: 20px !important; }
 }
+
+
+/* High-contrast light drawer: readable text on every navigation card */
+@media (max-width: 1100px) {
+  .vaicar-navbar .vaicar-mobile-drawer {
+    background: #ffffff !important;
+    color: #183d32 !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer .text-slate-400,
+  .vaicar-navbar .vaicar-mobile-drawer .text-slate-300,
+  .vaicar-navbar .vaicar-mobile-drawer .text-slate-100,
+  .vaicar-navbar .vaicar-mobile-drawer .text-slate-200 {
+    color: #52685e !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer > a:not([href*="whatsapp"]),
+  .vaicar-navbar .vaicar-mobile-drawer > a:not([href*="whatsapp"]) *,
+  .vaicar-navbar .vaicar-mobile-drawer > div[class*="space-y-1"] a,
+  .vaicar-navbar .vaicar-mobile-drawer > div[class*="space-y-1"] a * {
+    color: #24483b !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer > div[class*="space-y-1"] {
+    background: #f5f9f6 !important;
+    border-color: #d8e6dd !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer a[href="/passenger"],
+  .vaicar-navbar .vaicar-mobile-drawer a[href="/driver"],
+  .vaicar-navbar .vaicar-mobile-drawer a[href="/parcerias"] {
+    font-weight: 700 !important;
+    color: #11634b !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer a[href="/passenger"] span:last-child {
+    color: #075c43 !important;
+    background: #d9f3e6 !important;
+    border-color: #9ed8ba !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer a[href*="whatsapp"],
+  .vaicar-navbar .vaicar-mobile-drawer a[href*="whatsapp"] * {
+    color: #ffffff !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer .border-t {
+    border-color: #dce8e0 !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer .text-amber-700,
+  .vaicar-navbar .vaicar-mobile-drawer .text-amber-800 {
+    color: #89500c !important;
+  }
+}
