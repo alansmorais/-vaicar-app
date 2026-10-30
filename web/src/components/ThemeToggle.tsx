@@ -34,52 +34,50 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'navbar', cl
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [dropdownOpen]);
 
-  // Variant 1: Mobile Segmented Control (for Mobile Drawer)
+  // Variant 1: Mobile Segmented Control (light Tropical Premium)
   if (variant === 'mobile') {
     return (
-      <div className={`p-1.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-1.5 ${className}`}>
+      <div className={`p-1.5 rounded-2xl bg-[#f1f7f3] border border-[#d8e7dd] flex items-center justify-between gap-1.5 ${className}`}>
         <button
           type="button"
           onClick={() => setTheme('light')}
           className={`flex-1 min-h-[44px] py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
             theme === 'light'
-              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
-              : 'text-slate-300 hover:text-white'
+              ? 'bg-[#087f5b] text-white shadow-md shadow-emerald-900/15'
+              : 'text-[#365548] hover:bg-white'
           }`}
           aria-pressed={theme === 'light'}
           aria-label="Ativar tema claro"
         >
-          <Sun className="w-4 h-4 text-amber-400" />
+          <Sun className="w-4 h-4 text-amber-500" />
           <span>Claro</span>
         </button>
-
         <button
           type="button"
           onClick={() => setTheme('dark')}
           className={`flex-1 min-h-[44px] py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
             theme === 'dark'
-              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
-              : 'text-slate-300 hover:text-white'
+              ? 'bg-[#087f5b] text-white shadow-md shadow-emerald-900/15'
+              : 'text-[#365548] hover:bg-white'
           }`}
           aria-pressed={theme === 'dark'}
           aria-label="Ativar tema escuro"
         >
-          <Moon className="w-4 h-4 text-blue-300" />
+          <Moon className="w-4 h-4 text-blue-500" />
           <span>Escuro</span>
         </button>
-
         <button
           type="button"
           onClick={() => setTheme('system')}
           className={`flex-1 min-h-[44px] py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
             theme === 'system'
-              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
-              : 'text-slate-300 hover:text-white'
+              ? 'bg-[#087f5b] text-white shadow-md shadow-emerald-900/15'
+              : 'text-[#365548] hover:bg-white'
           }`}
           aria-pressed={theme === 'system'}
           aria-label="Seguir tema do sistema"
         >
-          <Laptop className="w-4 h-4 text-emerald-400" />
+          <Laptop className="w-4 h-4 text-[#087f5b]" />
           <span>Auto</span>
         </button>
       </div>
