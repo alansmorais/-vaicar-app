@@ -298,3 +298,201 @@ html:not(.dark) .leaflet-control-zoom a:hover {
 .pin-pulse {
   animation: pinPulseRing 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
 }
+
+
+/* =========================================================
+   VAICAR COASTAL MOBILITY IDENTITY — WEBSITE PRESENTATION
+   Scoped to the public site shell and homepage only.
+   Does not change application logic, APIs, forms or APKs.
+   ========================================================= */
+:root {
+  --vaicar-ink: #153b40;
+  --vaicar-muted: #5d7373;
+  --vaicar-ocean: #087f83;
+  --vaicar-ocean-deep: #08666d;
+  --vaicar-seafoam: #e4f2ed;
+  --vaicar-sand: #f4f1e8;
+  --vaicar-line: #dce8e2;
+  --vaicar-surface: #ffffff;
+}
+
+.vaicar-home {
+  color: var(--vaicar-ink);
+  background: #f5f8f5;
+}
+.vaicar-home-hero {
+  background: linear-gradient(125deg, #e4f2ed 0%, #f7f8f2 54%, #dcefeb 100%) !important;
+  border-color: var(--vaicar-line) !important;
+}
+.vaicar-home-hero > .absolute.inset-0 {
+  display: none !important;
+}
+.vaicar-home-hero h1 { color: var(--vaicar-ink) !important; }
+.vaicar-home-hero h1 span { color: var(--vaicar-ocean) !important; }
+.vaicar-home-hero p { color: #526b6b !important; }
+.vaicar-home-hero .text-blue-600,
+.vaicar-home-hero .text-blue-700,
+.vaicar-home-hero .text-emerald-600,
+.vaicar-home-hero .text-emerald-700 { color: var(--vaicar-ocean) !important; }
+.vaicar-home-hero .bg-blue-600,
+.vaicar-home-hero a.bg-blue-600,
+.vaicar-home-hero button.bg-blue-600 {
+  background: var(--vaicar-ocean) !important;
+  border-color: var(--vaicar-ocean) !important;
+  color: #fff !important;
+}
+.vaicar-home-hero .bg-blue-600:hover,
+.vaicar-home-hero a.bg-blue-600:hover,
+.vaicar-home-hero button.bg-blue-600:hover {
+  background: var(--vaicar-ocean-deep) !important;
+}
+.vaicar-home-hero .bg-white,
+.vaicar-home-hero .dark\\:bg-slate-900 {
+  background-color: #fff !important;
+}
+.vaicar-home-hero [id="simulador"] > div {
+  border-color: #d7e5df !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 18px 50px rgba(21, 59, 64, .08) !important;
+}
+.vaicar-home > div:first-child {
+  background: #edf5f1 !important;
+  border-color: var(--vaicar-line) !important;
+}
+.vaicar-home > div:first-child p { color: #456260 !important; }
+
+.vaicar-audience {
+  background: #fff !important;
+  border-color: var(--vaicar-line) !important;
+}
+.vaicar-audience h2 { color: var(--vaicar-ink) !important; }
+.vaicar-audience > div > div:first-child > p { color: var(--vaicar-muted) !important; }
+.vaicar-audience-card {
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px;
+  border: 1px solid var(--vaicar-line);
+  border-radius: 16px;
+  background: #fbfdfb;
+  color: var(--vaicar-ink);
+  text-decoration: none;
+  transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.vaicar-audience-card:hover {
+  border-color: #8fc6b9;
+  background: #f2faf6;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(21, 59, 64, .07);
+}
+.vaicar-audience-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: var(--vaicar-ocean);
+  background: var(--vaicar-seafoam);
+}
+.vaicar-audience-card strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+.vaicar-audience-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--vaicar-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.vaicar-audience-arrow { color: #91aaa3; transition: transform .18s ease; }
+.vaicar-audience-card:hover .vaicar-audience-arrow { transform: translateX(3px); color: var(--vaicar-ocean); }
+
+/* The landing page is a service gateway, not a long-form editorial page.
+   Detailed explanations remain available through their existing routes. */
+.vaicar-home #como-funciona,
+.vaicar-home #indicacao,
+.vaicar-home #praias-cobertas,
+.vaicar-home #faq {
+  display: none !important;
+}
+
+.vaicar-home #servicos-apk { background: #f5f8f5 !important; }
+.vaicar-home #servicos-apk > div > div:first-child h2 { color: var(--vaicar-ink) !important; }
+.vaicar-home #servicos-apk > div > div:first-child p { color: var(--vaicar-muted) !important; }
+.vaicar-home #servicos-apk > div > div:last-child > div {
+  border-color: var(--vaicar-line) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 28px rgba(21, 59, 64, .06) !important;
+}
+.vaicar-home #lista-espera {
+  background: #edf5f1 !important;
+  border-color: var(--vaicar-line) !important;
+}
+.vaicar-home #lista-espera > div > div {
+  background: #fff !important;
+  border-color: var(--vaicar-line) !important;
+  box-shadow: 0 12px 32px rgba(21, 59, 64, .06) !important;
+}
+.vaicar-home input:focus,
+.vaicar-home select:focus { --tw-ring-color: #087f83 !important; border-color: #087f83 !important; }
+
+.vaicar-navbar {
+  background: rgba(255,255,255,.94) !important;
+  border-color: var(--vaicar-line) !important;
+  color: var(--vaicar-ink) !important;
+}
+.vaicar-navbar .text-blue-600,
+.vaicar-navbar .text-blue-700,
+.vaicar-navbar .text-emerald-600,
+.vaicar-navbar .text-emerald-700 { color: var(--vaicar-ocean) !important; }
+.vaicar-navbar .bg-blue-600 { background: var(--vaicar-ocean) !important; }
+.vaicar-footer {
+  background: #12363a !important;
+  border-color: #20494b !important;
+  color: #c4d6d1 !important;
+}
+.vaicar-footer h4,
+.vaicar-footer .text-slate-100 { color: #f4faf7 !important; }
+.vaicar-footer .text-emerald-500,
+.vaicar-footer .text-emerald-400 { color: #82cbb8 !important; }
+
+html.dark .vaicar-home {
+  background: #10282b;
+  color: #e8f2ee;
+}
+html.dark .vaicar-home-hero {
+  background: linear-gradient(125deg, #12383a 0%, #10282b 58%, #183e3e 100%) !important;
+  border-color: #25494a !important;
+}
+html.dark .vaicar-home-hero h1 { color: #f0f7f3 !important; }
+html.dark .vaicar-home-hero p { color: #c2d5ce !important; }
+html.dark .vaicar-home-hero .bg-white,
+html.dark .vaicar-home-hero [id="simulador"] > div {
+  background-color: #173538 !important;
+  border-color: #315456 !important;
+}
+html.dark .vaicar-audience { background: #132f32 !important; border-color: #25494a !important; }
+html.dark .vaicar-audience h2 { color: #f0f7f3 !important; }
+html.dark .vaicar-audience-card {
+  background: #18383a;
+  color: #f0f7f3;
+  border-color: #315456;
+}
+html.dark .vaicar-audience-card:hover { background: #1c4141; border-color: #5d9f91; }
+html.dark .vaicar-audience-card small { color: #b2c9c1; }
+html.dark .vaicar-home #servicos-apk { background: #10282b !important; }
+html.dark .vaicar-home #lista-espera { background: #132f32 !important; }
+html.dark .vaicar-home #lista-espera > div > div { background: #18383a !important; border-color: #315456 !important; }
+html.dark .vaicar-navbar { background: rgba(16,40,43,.96) !important; border-color: #25494a !important; color: #e8f2ee !important; }
+html.dark .vaicar-footer { background: #0b2023 !important; border-color: #20494b !important; }
+
+@media (max-width: 640px) {
+  .vaicar-home-hero { padding-top: 22px !important; padding-bottom: 38px !important; }
+  .vaicar-audience { padding-top: 32px !important; padding-bottom: 32px !important; }
+  .vaicar-audience-card { min-height: 76px; padding: 13px; }
+}
