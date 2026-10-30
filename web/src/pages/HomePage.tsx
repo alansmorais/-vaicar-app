@@ -32,8 +32,6 @@ import {
 } from 'lucide-react';
 import { ridesApi } from '../api/rides.js';
 import { mapsApi, KnownLocation } from '../api/maps.js';
-import { driversApi, PublicDriverMarker } from '../api/drivers.js';
-import { MapDisplay } from '../components/MapDisplay.js';
 import { deliveriesApi } from '../api/deliveries.js';
 import { DeliveryWaitlistRole } from '../../../shared/src/types.js';
 
@@ -172,7 +170,6 @@ const FAQ_ITEMS: FaqItem[] = [
 
 export const HomePage: React.FC = () => {
   const [popularPlaces, setPopularPlaces] = useState<KnownLocation[]>([]);
-  const [onlineDrivers, setOnlineDrivers] = useState<PublicDriverMarker[]>([]);
   const [originIndex, setOriginIndex] = useState<number>(0);
   const [destinationIndex, setDestinationIndex] = useState<number>(4); // Maresias
   const [estimate, setEstimate] = useState<{ fareAmount: number; distanceKm: number; durationMinutes: number } | null>(null);
@@ -211,9 +208,6 @@ export const HomePage: React.FC = () => {
       setPopularPlaces(places);
     }).catch(console.error);
 
-    driversApi.getOnlineDrivers().then((drivers) => {
-      setOnlineDrivers(drivers);
-    }).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -490,35 +484,14 @@ export const HomePage: React.FC = () => {
                   return (
                     <div className="space-y-3">
                       <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm relative">
-                        <MapDisplay
-                          pickup={
-                            currentOrigin
-                              ? {
-                                  address: currentOrigin.address,
-                                  lat: currentOrigin.lat,
-                                  lng: currentOrigin.lng,
-                                }
-                              : {
-                                  address: 'Centro, São Sebastião - SP',
-                                  lat: -23.8055,
-                                  lng: -45.4011,
-                                }
-                          }
-                          destination={
-                            currentDestination
-                              ? {
-                                  address: currentDestination.address,
-                                  lat: currentDestination.lat,
-                                  lng: currentDestination.lng,
-                                }
-                              : null
-                          }
-                          drivers={onlineDrivers}
-                          height="250px"
-                          showHud={false}
-                          compactPins={true}
-                          onRouteInfoChange={setRouteMetrics}
-                        />
+                        <div className="relative flex h-[250px] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#d9eee7] via-[#b8ddd5] to-[#6ba9a5] dark:from-[#153b40] dark:via-[#0e5559] dark:to-[#082f35]">
+                          <div className="absolute inset-0 opacity-25" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, white 1px, transparent 1.5px), radial-gradient(circle at 70% 60%, white 1px, transparent 1.5px)', backgroundSize: '34px 34px' }} />
+                          <div className="relative z-10 rounded-2xl border border-white/50 bg-white/85 px-5 py-4 text-center shadow-lg backdrop-blur dark:border-white/10 dark:bg-slate-950/75">
+                            <MapPin className="mx-auto mb-2 h-7 w-7 text-emerald-700 dark:text-emerald-400" />
+                            <p className="text-sm font-bold text-slate-800 dark:text-white">São Sebastião • Litoral Norte</p>
+                            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Escolha origem e destino para consultar sua tarifa</p>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Route Trajectory & Distance/Time Panel */}
