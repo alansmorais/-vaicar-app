@@ -291,8 +291,8 @@ export const HomePage: React.FC = () => {
       <section className="vaicar-home-hero relative overflow-hidden pt-8 pb-16 lg:py-20 border-b border-slate-200 dark:border-slate-900 bg-slate-950">
         <div className="absolute inset-0 z-0">
           <img
-            src="/images/sao-sebastiao/hero-rio-santos.jpg"
-            alt="Trecho costeiro da Rodovia Rio-Santos entre a Mata Atlântica e o mar de São Sebastião"
+            src="/images/sao-sebastiao/community-canal.jpg"
+            alt="Vista panorâmica do Canal e da cidade de São Sebastião"
             className="w-full h-full object-cover object-center opacity-15 lg:opacity-25 dark:opacity-25 pointer-events-none"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/90 to-white/70 dark:from-slate-950 dark:via-slate-950/95 dark:to-slate-950/75" />
