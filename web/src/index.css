@@ -557,3 +557,50 @@ html.dark .vaicar-footer { background: #0b2023 !important; border-color: #20494b
 html.dark .vaicar-home #praias-cobertas {
   background: #10282b !important;
 }
+
+
+/* Homepage contrast refinement: readable type over the coastal photo and inside the fare card */
+.vaicar-home-hero .lg\\:col-span-7 h1 {
+  color: #ffffff !important;
+  text-shadow: 0 2px 16px rgba(3, 25, 28, .42) !important;
+}
+.vaicar-home-hero .lg\\:col-span-7 h1 span {
+  color: #baf3df !important;
+}
+.vaicar-home-hero .lg\\:col-span-7 > p {
+  color: #f2faf7 !important;
+  text-shadow: 0 1px 8px rgba(3, 25, 28, .48);
+}
+.vaicar-home-hero #simulador h3 {
+  color: #173f42 !important;
+}
+.vaicar-home-hero #simulador label {
+  color: #355b5c !important;
+}
+.vaicar-home-hero #simulador p {
+  color: #526b6b !important;
+  text-shadow: none !important;
+}
+.vaicar-home-hero #simulador p.text-sm,
+.vaicar-home-hero #simulador .text-slate-800 {
+  color: #173f42 !important;
+}
+.vaicar-home-hero #simulador .text-slate-600,
+.vaicar-home-hero #simulador .text-slate-500,
+.vaicar-home-hero #simulador .text-slate-400 {
+  color: #526b6b !important;
+}
+.vaicar-home-hero #simulador .text-blue-700,
+.vaicar-home-hero #simulador .text-blue-600,
+.vaicar-home-hero #simulador .text-emerald-700 {
+  color: #087f83 !important;
+}
+.vaicar-home-hero #simulador select {
+  color: #173f42 !important;
+  background-color: #f8fbf9 !important;
+  border-color: #c7dcd4 !important;
+}
+.vaicar-home-hero #simulador select option {
+  color: #173f42 !important;
+  background: #ffffff !important;
+}
