@@ -205,8 +205,19 @@ export const HomePage: React.FC = () => {
 
   useEffect(() => {
     mapsApi.getPopularPlaces().then((places) => {
-      setPopularPlaces(places);
-    }).catch(console.error);
+      // The API may return a non-array payload in older or misconfigured environments.
+      // Never allow that response to crash the public homepage render.
+      const payload = places as unknown;
+      const locations = Array.isArray(payload)
+        ? payload
+        : payload && typeof payload === 'object' && Array.isArray((payload as { places?: unknown }).places)
+          ? (payload as { places: KnownLocation[] }).places
+          : [];
+      setPopularPlaces(locations as KnownLocation[]);
+    }).catch((error) => {
+      console.error('[HomePage] Could not load popular places:', error);
+      setPopularPlaces([]);
+    });
 
   }, []);
 
