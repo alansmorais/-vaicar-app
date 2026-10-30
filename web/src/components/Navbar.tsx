@@ -55,7 +55,7 @@ export const Navbar: React.FC = () => {
           </Link>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="vaicar-desktop-nav hidden md:flex items-center gap-1">
             <Link
               to="/"
               className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
@@ -118,7 +118,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* User Auth Info / Actions */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="vaicar-desktop-actions hidden md:flex items-center gap-3">
             <ThemeToggle variant="navbar" />
             {user ? (
               <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
@@ -187,7 +187,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Mobile hamburger button & theme icon */}
-          <div className="flex md:hidden items-center gap-2">
+          <div className="vaicar-mobile-controls flex md:hidden items-center gap-2">
             <ThemeToggle variant="icon" />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -202,7 +202,7 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-slate-900 border-b border-slate-800 px-4 pt-3 pb-6 space-y-3">
+        <div className="vaicar-mobile-drawer md:hidden">
           {/* Appearance selection */}
           <div className="pb-1 border-b border-slate-800/80">
             <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-2">
