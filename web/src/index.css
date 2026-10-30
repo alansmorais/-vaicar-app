@@ -1059,10 +1059,10 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
   .vaicar-navbar > div > div {
     height: 68px !important;
   }
-  .vaicar-navbar [class~="md:flex"] {
+  .vaicar-navbar > div > div > [class~="md:flex"] {
     display: none !important;
   }
-  .vaicar-navbar [class~="md:hidden"] {
+  .vaicar-navbar > div > div > [class~="md:hidden"] {
     display: flex !important;
   }
   .vaicar-navbar > div {
@@ -1077,5 +1077,44 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
   }
   .vaicar-home-hero #simulador [class*="bg-gradient-to-br"] {
     height: 190px !important;
+  }
+}
+
+
+/* Tablet navigation correction: keep the mobile drawer vertical, never flex its contents in a row */
+@media (max-width: 1100px) {
+  .vaicar-navbar > div + div[class~="md:hidden"] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 16px 18px 22px !important;
+    background: #ffffff !important;
+    color: #23483a !important;
+    border-top: 1px solid #e5eee8 !important;
+    border-bottom: 1px solid #dce9e1 !important;
+    box-shadow: 0 16px 28px rgba(20,65,48,.10) !important;
+  }
+  .vaicar-navbar > div + div[class~="md:hidden"] > * {
+    display: block;
+    width: 100%;
+    margin: 0 0 10px !important;
+  }
+  .vaicar-navbar > div + div[class~="md:hidden"] > div:first-child {
+    padding: 0 0 13px !important;
+    margin-bottom: 10px !important;
+    border-color: #e3ece6 !important;
+  }
+  .vaicar-navbar > div + div[class~="md:hidden"] [class*="bg-slate-950"],
+  .vaicar-navbar > div + div[class~="md:hidden"] [class*="bg-slate-900"] {
+    background: #f6faf7 !important;
+    border-color: #e0ebe4 !important;
+  }
+  .vaicar-navbar > div + div[class~="md:hidden"] a,
+  .vaicar-navbar > div + div[class~="md:hidden"] span {
+    color: #315748;
+  }
+  .vaicar-navbar > div + div[class~="md:hidden"] a[class*="bg-emerald-600"],
+  .vaicar-navbar > div + div[class~="md:hidden"] a[class*="bg-emerald-600"] * {
+    color: #ffffff !important;
   }
 }
