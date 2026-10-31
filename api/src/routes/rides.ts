@@ -28,7 +28,7 @@ import {
   getActivePendingOfferForDriver,
 } from '../services/firestore.js';
 import { sendRideReceiptEmail } from '../services/email.js';
-import { dispatchNextCandidate, expireOffer, declineOffer } from '../services/dispatch.js';
+import { dispatchNextCandidate, expireOffer, declineOffer, acceptOffer } from '../services/dispatch.js';
 import { config } from '../config/index.js';
 import { broadcastLiveEvent } from '../services/liveStream.js';
 import {
@@ -797,6 +797,21 @@ ridesRouter.post('/:id/accept', async (req: Request, res: Response, next: NextFu
       }
     } else if (vehicleType === 'bicycle' || !['car', 'motorcycle', 'van'].includes(vehicleType)) {
       throw new AppError(ErrorCode.FORBIDDEN, 'Este veículo não está habilitado para corridas de passageiros.', 403);
+    }
+
+    if (!config.testMode) {
+      if (!ride.currentOfferId) {
+        throw new AppError(ErrorCode.FORBIDDEN, 'Esta corrida ainda não possui uma oferta direcionada para sua conta.', 403);
+      }
+      const acceptedRide = await acceptOffer(ride.currentOfferId, driver.uid);
+      const acceptedPayload = formatRidePayload(acceptedRide);
+      return res.json({
+        success: true,
+        requestId: req.id,
+        data: acceptedPayload,
+        ride: acceptedPayload,
+        ...acceptedPayload,
+      });
     }
 
     const now = new Date().toISOString();
