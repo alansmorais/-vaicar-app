@@ -66,7 +66,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
           },
           (results, status) => {
             setLoading(false);
-            if (status === window.google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && Array.isArray(results) && results.length > 0) {
               const mapped: PlacePrediction[] = results.map((p) => ({
                 description: p.description,
                 placeId: p.place_id,
@@ -95,7 +95,14 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
 
   const fetchBackendPredictions = async (query: string) => {
     try {
-      const results = await mapsApi.autocomplete(query);
+      const payload = await mapsApi.autocomplete(query);
+      const results = Array.isArray(payload)
+        ? payload
+        : Array.isArray((payload as any)?.predictions)
+          ? (payload as any).predictions
+          : Array.isArray((payload as any)?.suggestions)
+            ? (payload as any).suggestions
+            : [];
       setPredictions(results);
       setIsOpen(results.length > 0);
     } catch {
