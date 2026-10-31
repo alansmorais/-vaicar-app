@@ -52,7 +52,7 @@ export const Navbar: React.FC = () => {
             <a href="/#como-funciona" className="px-3 py-2 text-sm font-semibold transition-colors">Como Funciona</a>
             <Link to="/como-funciona/motorista" className="px-3 py-2 text-sm font-semibold transition-colors">Para Motoristas</Link>
             <Link to="/parcerias" className="px-3 py-2 text-sm font-semibold transition-colors">Para Empresas</Link>
-            <a href="/#lista-espera" className="px-3 py-2 text-sm font-semibold transition-colors">Entregas</a>
+            <Link to="/como-funciona/entregador" className="px-3 py-2 text-sm font-semibold transition-colors">Entregas</Link>
             <a href="/#faq" className="px-3 py-2 text-sm font-semibold transition-colors">Sobre</a>
             <a href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3" target="_blank" rel="noopener noreferrer" className="px-3 py-2 text-sm font-semibold transition-colors">Contato</a>
           </div>
@@ -161,7 +161,7 @@ export const Navbar: React.FC = () => {
           {/* Passageiro Mobile Group */}
           <div className="space-y-1 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
             <Link
-              to="/passenger"
+              to="/como-funciona/passageiro"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-bold text-emerald-700 dark:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
@@ -180,7 +180,7 @@ export const Navbar: React.FC = () => {
           {/* Motorista & Entregador Mobile Group */}
           <div className="space-y-1 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
             <Link
-              to="/driver"
+              to="/como-funciona/motorista"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-bold !text-[#174b39] hover:bg-emerald-50"
             >
@@ -202,6 +202,14 @@ export const Navbar: React.FC = () => {
               → Cadastro para Carro, Moto e Bike
             </Link>
           </div>
+
+          <Link
+            to="/como-funciona/entregador"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
+          >
+            🛵 Página para Entregadores
+          </Link>
 
           {/* Parcerias Comerciais Mobile Group */}
           <Link
