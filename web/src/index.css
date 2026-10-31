@@ -2760,3 +2760,39 @@ body:has(.vaicar-home) .vaicar-reference-signature{
   body:has(.vaicar-home) .vaicar-audience-card small{font-size:10px!important}
   body:has(.vaicar-home) .vaicar-audience-arrow{right:10px!important;bottom:10px!important;width:25px!important;height:25px!important;padding:6px!important}
 }
+
+/* Final service-card treatment: no shared band or section panel */
+body:has(.vaicar-home) section.vaicar-audience{
+  background:transparent!important;
+  background-color:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  margin-top:-112px!important;
+  padding:24px 0 38px!important;
+  position:relative!important;
+  z-index:3!important;
+}
+body:has(.vaicar-home) section.vaicar-audience>div{
+  display:block!important;
+  max-width:1440px!important;
+}
+body:has(.vaicar-home) section.vaicar-audience>div>.flex:first-child{display:none!important}
+body:has(.vaicar-home) section.vaicar-audience>div>.grid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:20px!important;
+  background:transparent!important;
+}
+body:has(.vaicar-home) .vaicar-audience-card{
+  background:rgba(255,255,255,.94)!important;
+  border:1px solid rgba(255,255,255,.85)!important;
+  box-shadow:0 14px 34px rgba(0,28,31,.24)!important;
+}
+@media(max-width:1100px) and (min-width:768px){
+ body:has(.vaicar-home) section.vaicar-audience{margin-top:-92px!important;padding-top:20px!important}
+ body:has(.vaicar-home) section.vaicar-audience>div>.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}
+}
+@media(max-width:767px){
+ body:has(.vaicar-home) section.vaicar-audience{margin-top:-84px!important;padding:18px 0 28px!important}
+ body:has(.vaicar-home) section.vaicar-audience>div>.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+}
