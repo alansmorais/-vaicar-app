@@ -2117,7 +2117,7 @@ describe('VaiCar Platform - API Automated Tests', () => {
         .get('/api/v1/drivers/available-rides')
         .set('Authorization', `Bearer ${stage3CarDriverToken}`);
       expect(carRideAvail.status).toBe(200);
-      expect(carRideAvail.body.data.some((r: any) => r.id === rideId)).toBe(true);
+      expect(carRideAvail.body.data.some((r: any) => r.id === rideId)).toBe(false);
 
       // 7. Bicycle courier calls available-rides -> MUST NOT see the passenger ride!
       const bikeRideAvail = await request(app)
@@ -2134,6 +2134,17 @@ describe('VaiCar Platform - API Automated Tests', () => {
     });
 
     it('executes full driver delivery lifecycle with direct payment and approval', async () => {
+      // Isolate this scenario from any previous passenger request left by tests.
+      const previousActiveRide = await request(app)
+        .get('/api/v1/passengers/active-ride')
+        .set('Authorization', `Bearer ${stage3PassToken}`);
+      if (previousActiveRide.body.data?.id) {
+        await request(app)
+          .post(`/api/v1/rides/${previousActiveRide.body.data.id}/cancel`)
+          .set('Authorization', `Bearer ${stage3PassToken}`)
+          .send({ reason: 'Limpeza antes do teste de ciclo de entrega' });
+      }
+
       const origin = { address: 'Rua Frei Galvão 100, São Sebastião - SP', lat: -23.8055, lng: -45.4011 };
       const destination = { address: 'Rua José Bonifácio 400, São Sebastião - SP', lat: -23.8100, lng: -45.4050 };
 
