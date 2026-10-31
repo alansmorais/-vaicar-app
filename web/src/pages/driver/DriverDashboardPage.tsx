@@ -7,6 +7,7 @@ import { ReceiptModal } from '../../components/ReceiptModal.js';
 import { MapDisplay } from '../../components/MapDisplay.js';
 import { driversApi } from '../../api/drivers.js';
 import { ridesApi } from '../../api/rides.js';
+import { getAuthToken } from '../../api/client.js';
 import { storageApi } from '../../api/storage.js';
 import { processDocumentOrImageFile } from '../../utils/imageUtils.js';
 import { zones } from '../../../../shared/src/tokens.js';
@@ -346,7 +347,7 @@ export const DriverDashboardPage: React.FC = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    const token = getAuthToken() || '';
     const sseUrl = `/api/v1/live/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
     let es: EventSource | null = null;
