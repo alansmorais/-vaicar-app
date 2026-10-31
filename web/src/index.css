@@ -4033,3 +4033,113 @@ body:has(.vaicar-home) .vaicar-reference-stage {
     box-shadow:none!important;
   }
 }
+
+
+/* Stitch reference match: four distinct floating service cards */
+@media (min-width:768px) {
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-audience-cards {
+    left:0!important;
+    bottom:62px!important;
+    width:calc(100% - 285px)!important;
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:16px!important;
+    align-items:stretch!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    padding:0!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-audience-cards > a.vaicar-profile-card {
+    box-sizing:border-box!important;
+    width:100%!important;
+    height:226px!important;
+    min-height:226px!important;
+    padding:20px 18px 16px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    justify-content:space-between!important;
+    overflow:visible!important;
+    border:1px solid #e2e8f0!important;
+    border-radius:17px!important;
+    background:rgba(255,255,255,.96)!important;
+    box-shadow:0 10px 30px -5px rgba(0,0,0,.12),0 4px 8px -3px rgba(0,0,0,.06)!important;
+    text-decoration:none!important;
+    transform:none!important;
+    transition:transform .2s ease,box-shadow .2s ease!important;
+    cursor:pointer!important;
+    pointer-events:auto!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-audience-cards > a.vaicar-profile-card:nth-child(even) {
+    transform:translateY(12px)!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-audience-cards > a.vaicar-profile-card:hover {
+    transform:translateY(-5px)!important;
+    box-shadow:0 16px 34px -5px rgba(0,0,0,.18)!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-audience-cards > a.vaicar-profile-card:nth-child(even):hover {
+    transform:translateY(7px)!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-card > svg {
+    box-sizing:border-box!important;
+    width:48px!important;
+    height:48px!important;
+    padding:12px!important;
+    margin:0 0 12px!important;
+    border-radius:12px!important;
+    background:#ecfdf5!important;
+    color:#065f46!important;
+    fill:none!important;
+    filter:none!important;
+    stroke-width:2.5!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-driver > svg {
+    background:#fffbeb!important;
+    color:#d97706!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-delivery > svg {
+    background:#f0fdfa!important;
+    color:#0f766e!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-business > svg {
+    background:#eff6ff!important;
+    color:#1d4ed8!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-card strong {
+    color:#172033!important;
+    font-size:17px!important;
+    line-height:1.2!important;
+    font-weight:800!important;
+    text-shadow:none!important;
+    white-space:normal!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-card > span {
+    color:#64748b!important;
+    font-size:12px!important;
+    line-height:1.5!important;
+    margin-top:6px!important;
+    text-shadow:none!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-card i {
+    position:static!important;
+    align-self:flex-end!important;
+    flex:none!important;
+    display:grid!important;
+    place-items:center!important;
+    width:36px!important;
+    height:36px!important;
+    margin-top:10px!important;
+    color:#fff!important;
+    border-radius:50%!important;
+    background:#065f46!important;
+    box-shadow:0 3px 8px rgba(0,0,0,.12)!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-driver i {background:#f59e0b!important;}
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-delivery i {background:#0d9488!important;}
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-business i {background:#2563eb!important;}
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-profile-card i svg {
+    width:18px!important;
+    height:18px!important;
+  }
+}
