@@ -52,7 +52,7 @@ const DESTINATION_CARDS: DestinationCard[] = [
     image: '/images/sao-sebastiao/praia-maresias.jpg',
     alt: 'Vista panorâmica da Praia de Maresias com ondas e areia branca em São Sebastião',
     searchKey: 'Maresias',
-  },,
+  },
   {
     name: 'Praia de Juquehy',
     zone: 'Costa Sul',
@@ -60,7 +60,7 @@ const DESTINATION_CARDS: DestinationCard[] = [
     image: '/images/sao-sebastiao/praia-juquehy.jpg',
     alt: 'Orla e faixa de areia da Praia de Juquehy em São Sebastião',
     searchKey: 'Juquehy',
-  },,
+  },
   {
     name: 'Praia de Boiçucanga',
     zone: 'Costa Sul',
@@ -68,7 +68,7 @@ const DESTINATION_CARDS: DestinationCard[] = [
     image: '/images/sao-sebastiao/praia-boicucanga.jpg',
     alt: 'Enseada da Praia de Boiçucanga em São Sebastião com morros ao fundo',
     searchKey: 'Boiçucanga',
-  },,
+  },
   {
     name: 'Camburi & Camburizinho',
     zone: 'Costa Sul',
@@ -76,7 +76,7 @@ const DESTINATION_CARDS: DestinationCard[] = [
     image: '/images/sao-sebastiao/praia-camburi.jpg',
     alt: 'Praia de Camburi em São Sebastião com mar aberto e vegetação nativa',
     searchKey: 'Cambury',
-  },,
+  },
   {
     name: 'Praia de Guaecá',
     zone: 'Centro-Sul',
@@ -84,7 +84,7 @@ const DESTINATION_CARDS: DestinationCard[] = [
     image: '/images/sao-sebastiao/praia-guaeca.jpg',
     alt: 'Praia de Guaecá em São Sebastião com vista panorâmica para o canal e Ilhabela',
     searchKey: 'Guaecá',
-  },,
+  },
   {
     name: 'Centro Histórico & Balsa',
     zone: 'Centro',
@@ -92,7 +92,7 @@ const DESTINATION_CARDS: DestinationCard[] = [
     image: '/images/sao-sebastiao/centro-historico.jpg',
     alt: 'Rua da Praia no Centro Histórico de São Sebastião com orla e coqueiros',
     searchKey: 'Centro Histórico',
-  },,
+  },
   {
     name: 'Cachoeiras do Ribeirão de Itu',
     zone: 'Mata Atlântica',
@@ -100,7 +100,7 @@ const DESTINATION_CARDS: DestinationCard[] = [
     image: '/images/sao-sebastiao/cachoeira-itu.jpg',
     alt: 'Queda dágua cristalina da Trilha das Cachoeiras do Ribeirão de Itu em Boiçucanga',
     searchKey: 'Boiçucanga',
-  },,
+  },
   {
     name: 'Toque-Toque (Grande & Pequeno)',
     zone: 'Costa Sul',
