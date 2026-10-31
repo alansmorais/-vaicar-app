@@ -3363,3 +3363,25 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   .vaicar-city-photo,.vaicar-city-photo:nth-child(n+5) { display:block!important; flex:0 0 145px!important; height:180px!important; }
   .vaicar-city-photo span { font-size:13px!important; left:9px!important; }
 }
+
+
+/* Final header controls: match the reference's language capsule and single login CTA */
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions > div:first-child { display:none!important; }
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions:before {
+  content:"🇧🇷  PT ⌄"; display:inline-flex; align-items:center; justify-content:center;
+  min-width:100px; height:40px; padding:0 13px; margin-right:8px;
+  color:#fff!important; background:rgba(5,66,100,.72); border-radius:999px;
+  font-size:14px; font-weight:650;
+}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions > div:last-child > a:first-of-type,
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions > div:last-child > a:last-of-type {
+  display:none!important;
+}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions > div:last-child > button {
+  background:#006b49!important; color:#fff!important; border:0!important;
+  border-radius:13px!important; min-width:98px!important; min-height:42px!important;
+  font-size:14px!important; font-weight:750!important;
+}
+@media(max-width:767px) {
+  body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions:before { display:none!important; }
+}
