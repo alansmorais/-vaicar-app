@@ -365,9 +365,8 @@ export const DriverDashboardPage: React.FC = () => {
             }
             setAvailableRides((prev) => prev.filter((r) => r.id !== rideData.id));
           } else if (payload.type === 'RIDE_CREATED' || payload.type === 'OFFER_CREATED') {
-            if (isOnline && !activeRide) {
-              driversApi.getAvailableRides().then(setAvailableRides).catch(console.error);
-            }
+            // The authenticated pending-offer poll is authoritative; never populate
+            // the alert from the legacy broadcast ride pool.
           } else if (activeRide && activeRide.id === rideData.id) {
             setActiveRide(rideData);
           }
