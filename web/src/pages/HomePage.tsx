@@ -306,10 +306,10 @@ export const HomePage: React.FC = () => {
             <div className="vaicar-hero-copy lg:col-span-7 space-y-6 text-center lg:text-left">
               <div className="vaicar-reference-eyebrow">MOBILIDADE LOCAL • LITORAL NORTE</div>
               <h1 className="vaicar-reference-title">
-                Sua cidade.<br />Seu caminho.
+                Corridas e entregas<br />em São Sebastião.
               </h1>
               <p className="vaicar-reference-subtitle">
-                Peça sua corrida em poucos passos. Simples, rápido e feito para São Sebastião.
+                Uma plataforma local que conecta passageiros, motoristas, clientes e entregadores, tornando a mobilidade na cidade mais simples, rápida e acessível.
               </p>
               <div className="vaicar-mobility-steps" aria-label="Como pedir uma corrida">
                 <span><b>1</b> Informe o local de partida</span>
