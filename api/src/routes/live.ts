@@ -2,28 +2,40 @@ import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { addLiveClient, removeLiveClient, broadcastLiveEvent, getLiveClientCount } from '../services/liveStream.js';
 import { verifyServerJwt } from '../services/jwt.js';
+import { getFirebaseAdminAuth } from '../services/firebaseAdmin.js';
 
 export const liveRouter = Router();
 
 /**
  * GET /api/v1/live/stream
- * Server-Sent Events (SSE) live event stream.
+ * EventSource cannot set Authorization headers, so browsers pass their current
+ * Firebase ID token (or server JWT) as a query parameter. Verify it exactly as
+ * the authenticated API does before associating the stream with a user.
  */
-liveRouter.get('/stream', (req: Request, res: Response) => {
-  // Extract user info if token is provided via query or Authorization header
-  let userId: string | undefined = undefined;
+liveRouter.get('/stream', async (req: Request, res: Response) => {
+  let userId: string | undefined;
   const authHeader = req.headers.authorization;
   const token = (typeof req.query.token === 'string' ? req.query.token : undefined) ||
     (authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : undefined);
 
   if (token) {
-    const verified = verifyServerJwt(token);
-    if (verified && verified.uid) {
-      userId = verified.uid;
+    const serverPayload = verifyServerJwt(token);
+    if (serverPayload?.uid) {
+      userId = serverPayload.uid;
+    } else {
+      const authAdmin = getFirebaseAdminAuth();
+      if (authAdmin) {
+        try {
+          const decoded = await authAdmin.verifyIdToken(token);
+          userId = decoded.uid;
+        } catch {
+          // Invalid/expired credentials receive a public stream only. The
+          // authenticated API remains authoritative for all user data/actions.
+        }
+      }
     }
   }
 
-  // Set SSE HTTP response headers
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
@@ -34,20 +46,16 @@ liveRouter.get('/stream', (req: Request, res: Response) => {
 
   const clientId = `client-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   addLiveClient(clientId, res, userId);
-
-  // Send initial handshake event
   res.write(`event: CONNECTED\ndata: ${JSON.stringify({ type: 'CONNECTED', clientId, activeClients: getLiveClientCount(), timestamp: new Date().toISOString() })}\n\n`);
 
-  req.on('close', () => {
-    removeLiveClient(clientId);
-  });
+  req.on('close', () => removeLiveClient(clientId));
 });
 
 /**
  * GET /api/v1/live/status
  * Health inspection for SSE stream
  */
-liveRouter.get('/status', (req: Request, res: Response) => {
+liveRouter.get('/status', (_req: Request, res: Response) => {
   res.json({
     status: 'online',
     activeClients: getLiveClientCount(),
