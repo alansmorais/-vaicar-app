@@ -416,184 +416,65 @@ export const HomePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Simulator Card */}
-            <div className="vaicar-hero-simulator lg:col-span-5" id="simulador">
-              <div className="bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-md dark:shadow-2xl space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-blue-600 dark:text-emerald-400" /> Simulador de Tarifa Local
-                  </h3>
-                  <span className="text-[11px] font-semibold text-blue-700 dark:text-emerald-400 px-2 py-0.5 rounded bg-blue-50 dark:bg-emerald-950 border border-blue-200 dark:border-emerald-800">
-                    Tarifa Oficial 2026
-                  </span>
-                </div>
-
-                {/* Origin selection */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400" /> Ponto de Partida
-                  </label>
-                  <select
-                    value={originIndex}
-                    onChange={(e) => setOriginIndex(Number(e.target.value))}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                  >
-                    {popularPlaces.map((p, idx) => (
-                      <option key={p.name} value={idx}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Destination selection */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-rose-500" /> Ponto de Destino
-                  </label>
-                  <select
-                    value={destinationIndex}
-                    onChange={(e) => setDestinationIndex(Number(e.target.value))}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                  >
-                    {popularPlaces.map((p, idx) => (
-                      <option key={p.name} value={idx}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Result box */}
-                {estimate && (
-                  <div className="bg-blue-50/60 dark:bg-slate-950 rounded-xl p-4 border border-blue-200 dark:border-emerald-500/30 flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block">Estimativa Regulamentada:</span>
-                      <span className="text-3xl font-black text-blue-600 dark:text-emerald-400">
-                        {loadingEstimate ? 'Calculando...' : `R$ ${estimate.fareAmount.toFixed(2)}`}
-                      </span>
-                    </div>
-                    <div className="text-right text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-                      <div className="flex items-center gap-1 justify-end text-slate-700 dark:text-slate-300 font-medium">
-                        <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400" /> ~{estimate.durationMinutes} min
-                      </div>
-                      <div>{estimate.distanceKm.toFixed(1)} km aproximados</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Interactive Route Map Preview & Navigation Controls */}
-                {(() => {
-                  const currentOrigin = popularPlaces[originIndex];
-                  const currentDestination = popularPlaces[destinationIndex];
-                  const gmapsUrl = currentOrigin && currentDestination
-                    ? `https://www.google.com/maps/dir/?api=1&origin=${currentOrigin.lat},${currentOrigin.lng}&destination=${currentDestination.lat},${currentDestination.lng}&travelmode=driving`
-                    : currentDestination
-                      ? `https://www.google.com/maps/dir/?api=1&destination=${currentDestination.lat},${currentDestination.lng}&travelmode=driving`
-                      : 'https://www.google.com/maps';
-
-                  const wazeUrl = currentDestination
-                    ? `https://waze.com/ul?ll=${currentDestination.lat},${currentDestination.lng}&navigate=yes`
-                    : currentOrigin
-                      ? `https://waze.com/ul?ll=${currentOrigin.lat},${currentOrigin.lng}&navigate=yes`
-                      : 'https://waze.com';
-
-                  return (
-                    <div className="space-y-3">
-                      <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm relative">
-                        <div className="relative flex h-[250px] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#d9eee7] via-[#b8ddd5] to-[#6ba9a5] dark:from-[#153b40] dark:via-[#0e5559] dark:to-[#082f35]">
-                          <div className="absolute inset-0 opacity-25" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, white 1px, transparent 1.5px), radial-gradient(circle at 70% 60%, white 1px, transparent 1.5px)', backgroundSize: '34px 34px' }} />
-                          <div className="relative z-10 rounded-2xl border border-white/50 bg-white/85 px-5 py-4 text-center shadow-lg backdrop-blur dark:border-white/10 dark:bg-slate-950/75">
-                            <MapPin className="mx-auto mb-2 h-7 w-7 text-emerald-700 dark:text-emerald-400" />
-                            <p className="text-sm font-bold text-slate-800 dark:text-white">São Sebastião • Litoral Norte</p>
-                            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Escolha origem e destino para consultar sua tarifa</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Route Trajectory & Distance/Time Panel */}
-                      <div className="bg-slate-50 dark:bg-slate-950/80 rounded-xl p-3 border border-slate-200 dark:border-slate-800 text-xs">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          {/* Trajectory */}
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="flex items-center gap-1 min-w-0">
-                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm" />
-                              <span
-                                className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[110px] sm:max-w-[130px]"
-                                title={currentOrigin?.name}
-                              >
-                                {currentOrigin?.name || 'Origem'}
-                              </span>
-                            </div>
-                            <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <div className="flex items-center gap-1 min-w-0">
-                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 shadow-sm" />
-                              <span
-                                className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[110px] sm:max-w-[130px]"
-                                title={currentDestination?.name}
-                              >
-                                {currentDestination?.name || 'Destino'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Distance & Time badge */}
-                          {(estimate || routeMetrics) && (
-                            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs">
-                              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                                📍 {(estimate?.distanceKm ?? routeMetrics?.distanceKm)?.toFixed(1)} km
-                              </span>
-                              <span className="text-slate-300 dark:text-slate-700">•</span>
-                              <span className="text-[11px] font-bold text-blue-600 dark:text-emerald-400">
-                                ⏱️ ~{estimate?.durationMinutes ?? routeMetrics?.durationMinutes} min
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* External Navigation Launchers Action Bar */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <a
-                          href={gmapsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-slate-950 dark:hover:bg-slate-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-slate-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
-                          title="Abrir rota no Google Maps"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                          <span>Google Maps</span>
-                        </a>
-                        <a
-                          href={wazeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-slate-950 dark:hover:bg-cyan-950/60 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-slate-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
-                          title="Navegar no Waze"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
-                          <span>Waze</span>
-                        </a>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                <div className="space-y-1.5 pt-1">
-                  <Link
-                    to="/passenger"
-                    className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-500/25 hover:shadow-lg active:scale-95 group"
-                  >
-                    <Car className="w-4 h-4 transition-transform group-hover:scale-110" />
-                    <span>Pedir Corrida no Painel</span>
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            {/* Compact booking panel — reference HTML layout */}
+            <div className="vaicar-hero-simulator vaicar-booking-panel lg:col-span-5" id="simulador">
+              <div className="vaicar-booking-card">
+                <div className="vaicar-booking-tabs" role="navigation" aria-label="Serviços VaiCar">
+                  <Link to="/passenger" className="vaicar-booking-tab is-active">
+                    <Car aria-hidden="true" />
+                    <span>Pedir Corrida</span>
                   </Link>
-                  <p className="text-[11px] text-center text-slate-500 dark:text-slate-400">
-                    Acesse o painel do passageiro para solicitar sua viagem
-                  </p>
+                  <a href="#lista-espera" className="vaicar-booking-tab">
+                    <Bike aria-hidden="true" />
+                    <span>Entregar</span>
+                  </a>
+                  <Link to="/parcerias" className="vaicar-booking-tab">
+                    <Store aria-hidden="true" />
+                    <span>Para Empresas</span>
+                  </Link>
                 </div>
+
+                <div className="vaicar-booking-fields">
+                  <label className="vaicar-booking-field">
+                    <MapPin aria-hidden="true" />
+                    <span className="sr-only">Ponto de Partida</span>
+                    <select
+                      aria-label="Onde você está?"
+                      value={originIndex}
+                      onChange={(e) => setOriginIndex(Number(e.target.value))}
+                    >
+                      <option value="" disabled>Onde você está?</option>
+                      {popularPlaces.map((p, idx) => (
+                        <option key={p.name} value={idx}>{p.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="vaicar-booking-field is-destination">
+                    <MapPin aria-hidden="true" />
+                    <span className="sr-only">Ponto de Destino</span>
+                    <select
+                      aria-label="Para onde vai?"
+                      value={destinationIndex}
+                      onChange={(e) => setDestinationIndex(Number(e.target.value))}
+                    >
+                      <option value="" disabled>Para onde vai?</option>
+                      {popularPlaces.map((p, idx) => (
+                        <option key={p.name} value={idx}>{p.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <Link to="/passenger" className="vaicar-booking-submit">
+                  <span>Ver Motoristas Disponíveis</span>
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+                <p className="vaicar-booking-safe">
+                  <ShieldCheck aria-hidden="true" />
+                  Pagamento 100% seguro no app
+                </p>
               </div>
-            </div>
+            </div>>
           </div>
         </div>
       </section>
