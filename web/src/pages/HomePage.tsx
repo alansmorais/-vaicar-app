@@ -383,6 +383,54 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* DIRECT SERVICE ENTRY POINTS */}
+      <section id="servicos-principais" className="vaicar-audience border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider">Mobilidade local</span>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight mt-1">O que você precisa fazer hoje?</h2>
+            </div>
+            <p className="text-sm max-w-md">Um só lugar para viagens, trabalho e entregas em São Sebastião.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Link to="/passenger" className="vaicar-audience-card group">
+              <span className="vaicar-audience-icon"><Car className="w-5 h-5" /></span>
+              <span className="flex-1 min-w-0">
+                <strong>Sou Passageiro</strong>
+                <small>Peça uma corrida</small>
+              </span>
+              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
+            </Link>
+            <Link to="/driver/register" className="vaicar-audience-card group">
+              <span className="vaicar-audience-icon"><DollarSign className="w-5 h-5" /></span>
+              <span className="flex-1 min-w-0">
+                <strong>Sou Motorista</strong>
+                <small>Seja motorista parceiro</small>
+              </span>
+              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
+            </Link>
+            <a href="#lista-espera" className="vaicar-audience-card group">
+              <span className="vaicar-audience-icon"><Bike className="w-5 h-5" /></span>
+              <span className="flex-1 min-w-0">
+                <strong>Sou Entregador</strong>
+                <small>Cadastre seu interesse · em breve</small>
+              </span>
+              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
+            </a>
+            <Link to="/parcerias" className="vaicar-audience-card group">
+              <span className="vaicar-audience-icon"><Store className="w-5 h-5" /></span>
+              <span className="flex-1 min-w-0">
+                <strong>Para Empresas</strong>
+                <small>Restaurantes e comércios</small>
+              </span>
+              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
+            </Link>
+          </div>
+          <div className="vaicar-reference-signature" aria-label="São Sebastião, nossa casa">São Sebastião<br/>Nossa Casa <span>♡</span><i /></div>
+        </div>
+      </section>
+
       {/* Operating Zones & Beaches Showcase with Real Photography */}
       <section id="praias-cobertas" className="vaicar-destinations py-20 bg-slate-950 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
