@@ -462,9 +462,10 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
         return;
       }
 
-      if (ride.driverId || !['REQUESTED', 'OFFERED'].includes(ride.status)) {
+      if (ride.driverId || !['REQUESTED', 'OFFERED'].includes(ride.status) ||
+          (ride.currentOfferId && ride.currentOfferId !== offer.id)) {
         transaction.update(offerRef, { status: 'EXPIRED', respondedAt: now });
-        transactionError = new AppError(ErrorCode.CONFLICT, 'Corrida já foi aceita por outro motorista ou cancelada.', 409);
+        transactionError = new AppError(ErrorCode.CONFLICT, 'Corrida já foi aceita por outro motorista, cancelada ou esta oferta não está mais ativa.', 409);
         return;
       }
 
@@ -511,9 +512,36 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
 
     const ride = await getRide(offer.rideId);
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
-    if (ride.driverId || !['REQUESTED', 'OFFERED'].includes(ride.status)) {
+    if (ride.driverId || !['REQUESTED', 'OFFERED'].includes(ride.status) ||
+        (ride.currentOfferId && ride.currentOfferId !== offer.id)) {
       await saveRideOffer({ ...offer, status: 'EXPIRED', respondedAt: now });
-      throw new AppError(ErrorCode.CONFLICT, 'Corrida já foi aceita por outro motorista ou cancelada.', 409);
+      throw new AppError(ErrorCode.CONFLICT, 'Corrida já foi aceita por outro motorista, cancelada ou esta oferta não está mais ativa.', 409);
+    }
+
+    // Keep the in-memory fallback aligned with Firestore acceptance checks.
+    const latestVehicleType = driver.vehicle?.type || (driver.isCourier ? 'motorcycle' : 'car');
+    const latestServices = driver.servicesOffered?.length
+      ? driver.servicesOffered
+      : (driver.isCourier || latestVehicleType === 'bicycle' ? ['delivery'] : ['ride']);
+    const isDeliveryOffer = offer.serviceType === 'delivery';
+    const compatibleVehicle = isDeliveryOffer
+      ? ['car', 'motorcycle', 'van', 'bicycle'].includes(latestVehicleType)
+      : ['car', 'motorcycle', 'van'].includes(latestVehicleType);
+    const compatibleService = latestServices.includes(isDeliveryOffer ? 'delivery' : 'ride');
+    const gpsUpdatedAt = driver.currentLocation?.updatedAt
+      ? new Date(driver.currentLocation.updatedAt).getTime()
+      : NaN;
+    const gpsAgeMs = Date.now() - gpsUpdatedAt;
+    const freshGps = Number.isFinite(gpsUpdatedAt) &&
+      gpsAgeMs <= MAX_TELEMETRY_AGE_MS && gpsAgeMs >= -5000;
+    if (driver.status !== 'APPROVED' || !driver.isOnline ||
+        !compatibleVehicle || !compatibleService || !freshGps ||
+        (!isDeliveryOffer && !driver.vehicle?.plate)) {
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        'Sua aprovação, disponibilidade, localização ou tipo de veículo não permite aceitar esta oferta.',
+        403
+      );
     }
 
     await saveRideOffer({ ...offer, status: 'ACCEPTED', respondedAt: now });
