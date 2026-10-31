@@ -1524,3 +1524,123 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* =========================================================
+   VAICAR LOCAL IDENTITY — São Sebastião photo-led homepage
+   Uses the existing locally stored São Sebastião panorama.
+   Public website only; all links and simulator logic unchanged.
+   ========================================================= */
+.vaicar-home-hero {
+  min-height: 650px;
+  border-bottom: 0 !important;
+  background: #073d35 !important;
+}
+.vaicar-home-hero > .absolute.inset-0.z-0 > img {
+  opacity: .92 !important;
+  object-position: center 46% !important;
+  filter: saturate(1.08) contrast(1.03);
+}
+.vaicar-home-hero > .absolute.inset-0.z-0 > div:nth-child(2) {
+  background: linear-gradient(90deg, rgba(3,34,31,.78) 0%, rgba(3,43,38,.57) 48%, rgba(3,43,38,.18) 100%) !important;
+}
+.vaicar-home-hero > .absolute.inset-0.z-0 > div:nth-child(3) {
+  background: linear-gradient(0deg, rgba(3,34,31,.48) 0%, transparent 42%, rgba(3,34,31,.18) 100%) !important;
+}
+.vaicar-home-hero > .absolute.inset-0.z-0 > div:nth-child(4) {
+  background: radial-gradient(ellipse 70% 75% at 12% 45%, rgba(3,40,34,.2), transparent) !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] {
+  color: #fff !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] > div.inline-flex {
+  color: #e2fff0 !important;
+  background: rgba(5,67,51,.58) !important;
+  border-color: rgba(190,255,218,.34) !important;
+  backdrop-filter: blur(12px);
+}
+.vaicar-home-hero [class~="lg:col-span-7"] h1,
+.vaicar-home-hero [class~="lg:col-span-7"] h1 span {
+  color: #fff !important;
+  text-shadow: 0 3px 22px rgba(0,0,0,.22);
+}
+.vaicar-home-hero [class~="lg:col-span-7"] h1 span {
+  color: #8ff0bd !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] p,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-slate-500,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-slate-400,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-slate-600,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-slate-700 {
+  color: rgba(247,255,250,.9) !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] .border-t {
+  border-color: rgba(225,255,239,.28) !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] .text-blue-600,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-emerald-600 {
+  color: #9af0c2 !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] a:first-child {
+  background: linear-gradient(135deg,#079767,#006b4c) !important;
+  border: 1px solid rgba(207,255,226,.3) !important;
+  box-shadow: 0 12px 28px rgba(0,65,45,.3) !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] a:nth-child(2) {
+  background: rgba(255,255,255,.94) !important;
+  color: #164b38 !important;
+  border-color: rgba(255,255,255,.72) !important;
+}
+.vaicar-home-hero #simulador > div {
+  background: rgba(255,255,255,.94) !important;
+  border: 1px solid rgba(255,255,255,.72) !important;
+  box-shadow: 0 22px 60px rgba(0,35,28,.28) !important;
+  backdrop-filter: blur(18px);
+  color: #174638 !important;
+}
+.vaicar-home-hero #simulador h3,
+.vaicar-home-hero #simulador label {
+  color: #174638 !important;
+}
+.vaicar-home-hero #simulador .border-b {
+  border-color: #dcebe2 !important;
+}
+.vaicar-home-hero #simulador select {
+  background: #fff !important;
+  border-color: #cbded3 !important;
+  color: #174638 !important;
+}
+.vaicar-home-hero #simulador .bg-blue-50\/60,
+.vaicar-home-hero #simulador .bg-blue-50\/60 * {
+  color: #087653 !important;
+}
+.vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a:first-child {
+  background: linear-gradient(135deg,#079767,#006b4c) !important;
+}
+@media (min-width: 1024px) {
+  .vaicar-home-hero { min-height: 690px; }
+}
+@media (max-width: 1023px) {
+  .vaicar-home-hero {
+    min-height: 0;
+    padding-top: 28px !important;
+    padding-bottom: 48px !important;
+  }
+  .vaicar-home-hero > .absolute.inset-0.z-0 > img {
+    opacity: .62 !important;
+    object-position: 52% center !important;
+  }
+  .vaicar-home-hero > .absolute.inset-0.z-0 > div:nth-child(2) {
+    background: linear-gradient(180deg,rgba(3,34,31,.68),rgba(3,43,38,.72)) !important;
+  }
+  .vaicar-home-hero [class~="lg:col-span-7"] h1 {
+    font-size: clamp(2.1rem,8vw,3.5rem) !important;
+  }
+  .vaicar-home-hero #simulador { max-width: 560px; margin-inline: auto; width: 100%; }
+}
+@media (max-width: 520px) {
+  .vaicar-home-hero { padding-top: 20px !important; }
+  .vaicar-home-hero .grid.grid-cols-3.gap-2\.5 { gap: 8px !important; }
+  .vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a { min-height: 92px; }
+  .vaicar-home-hero #simulador > div { padding: 18px !important; border-radius: 20px !important; }
+}
