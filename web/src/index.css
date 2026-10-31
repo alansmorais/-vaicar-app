@@ -3727,39 +3727,44 @@ body:has(.vaicar-home) .vaicar-reference-stage {
 .vaicar-footer [class*="border-slate-900"] { border-color:#E2E8F0!important; }
 
 
-/* Correct homepage layering: keep navigation outside the hero photograph.
-   The booking panel and four role cards float independently over the photo;
-   no shared white strip or wrapper background behind the cards. */
+/* Homepage reference layout: photo runs behind the transparent navigation.
+   Booking panel remains a separate floating card; role links have no card surfaces. */
 body:has(.vaicar-home) .vaicar-navbar {
-  position:relative!important;
-  inset:auto!important;
+  position:absolute!important;
+  top:0!important;
+  left:0!important;
+  right:0!important;
+  width:100%!important;
   z-index:60!important;
-  background:#ffffff!important;
+  background:rgba(8,64,88,.24)!important;
   border:0!important;
-  border-bottom:1px solid #e5ece8!important;
-  box-shadow:0 3px 14px rgba(15,45,42,.08)!important;
-  backdrop-filter:none!important;
+  box-shadow:none!important;
+  backdrop-filter:blur(5px)!important;
 }
 body:has(.vaicar-home) .vaicar-navbar a,
 body:has(.vaicar-home) .vaicar-navbar button,
 body:has(.vaicar-home) .vaicar-navbar span {
-  color:#17463b!important;
-  text-shadow:none!important;
+  color:#fff!important;
+  text-shadow:0 1px 3px rgba(0,30,45,.42)!important;
 }
 body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-name,
-body:has(.vaicar-home) .vaicar-navbar .text-2xl {color:#123f39!important;}
+body:has(.vaicar-home) .vaicar-navbar .text-2xl {color:#102f43!important;}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-name span {color:#55d17c!important;}
 body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a:first-child {
-  color:#087b58!important;
+  color:#fff!important;
   border-bottom:2px solid #20b77b!important;
 }
 body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-location {color:#155fd1!important;}
+
 body:has(.vaicar-home) .vaicar-reference-stage {
+  position:relative!important;
   margin-top:0!important;
-  padding-top:54px!important;
-  height:690px!important;
-  min-height:690px!important;
+  padding-top:112px!important;
+  height:786px!important;
+  min-height:786px!important;
 }
 .vaicar-stage-photo {inset:0!important;}
+
 .vaicar-audience-cards {
   background:transparent!important;
   border:0!important;
@@ -3767,16 +3772,40 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   padding:0!important;
   border-radius:0!important;
 }
-.vaicar-profile-card {
-  background-clip:padding-box!important;
-  border:1px solid rgba(255,255,255,.82)!important;
-  box-shadow:0 14px 30px rgba(0,30,30,.22)!important;
+.vaicar-profile-card,
+.vaicar-profile-card.vaicar-profile-passenger,
+.vaicar-profile-card.vaicar-profile-driver,
+.vaicar-profile-card.vaicar-profile-delivery,
+.vaicar-profile-card.vaicar-profile-business {
+  background:transparent!important;
+  background-color:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+  color:#fff!important;
+}
+.vaicar-profile-card:hover {
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.vaicar-profile-card strong,
+.vaicar-profile-card > span {
+  color:#fff!important;
+  text-shadow:0 1px 4px rgba(0,25,25,.65)!important;
+}
+.vaicar-profile-card > svg {
+  color:#fff!important;
+  fill:none!important;
+  filter:drop-shadow(0 1px 3px rgba(0,25,25,.45))!important;
+}
+.vaicar-profile-card i {
+  box-shadow:none!important;
 }
 @media (min-width:768px) {
   body:has(.vaicar-home) .vaicar-reference-stage {
     margin-top:0!important;
-    padding-top:54px!important;
-    height:690px!important;
-    min-height:690px!important;
+    padding-top:112px!important;
+    height:786px!important;
+    min-height:786px!important;
   }
 }
