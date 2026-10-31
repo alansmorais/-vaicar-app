@@ -3758,7 +3758,8 @@ body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-location {color:#155fd1!impo
 
 body:has(.vaicar-home) .vaicar-reference-stage {
   position:relative!important;
-  margin-top:0!important;
+  /* Pull the photo up beneath the absolutely positioned navigation. */
+  margin-top:-82px!important;
   padding-top:112px!important;
   height:786px!important;
   min-height:786px!important;
@@ -3803,7 +3804,7 @@ body:has(.vaicar-home) .vaicar-reference-stage {
 }
 @media (min-width:768px) {
   body:has(.vaicar-home) .vaicar-reference-stage {
-    margin-top:0!important;
+    margin-top:-82px!important;
     padding-top:112px!important;
     height:786px!important;
     min-height:786px!important;
