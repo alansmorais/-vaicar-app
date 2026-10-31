@@ -514,16 +514,18 @@ export async function declineOffer(offerId: string, driverUid: string): Promise<
       if (rideDoc.exists) {
         const ride = rideDoc.data() as Ride;
         const declined = ride.declinedDriverIds || [];
+        const isCurrentOffer = ride.currentOfferId === offer.id;
+        const update: Partial<Ride> = {};
         if (!declined.includes(driverUid)) {
-          transaction.update(rideRef, {
-            declinedDriverIds: [...declined, driverUid],
-            status: 'REQUESTED',
-            currentOfferId: undefined,
-          });
+          update.declinedDriverIds = [...declined, driverUid];
         }
-        if (!ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)) {
+        // A delayed response for an older offer must never clear a newer offer.
+        if (isCurrentOffer && !ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)) {
+          update.status = 'REQUESTED';
+          update.currentOfferId = undefined;
           rideIdToAdvance = ride.id;
         }
+        if (Object.keys(update).length > 0) transaction.update(rideRef, update);
       }
     });
   } else {
@@ -537,15 +539,18 @@ export async function declineOffer(offerId: string, driverUid: string): Promise<
       const ride = await getRide(offer.rideId);
       if (ride) {
         const declined = ride.declinedDriverIds || [];
-        if (!declined.includes(driverUid)) {
-          await saveRide({
-            ...ride,
-            declinedDriverIds: [...declined, driverUid],
-            status: 'REQUESTED',
-            currentOfferId: undefined,
-          });
+        const isCurrentOffer = ride.currentOfferId === offer.id;
+        const updatedRide: Ride = {
+          ...ride,
+          declinedDriverIds: declined.includes(driverUid) ? declined : [...declined, driverUid],
+          ...(isCurrentOffer && !ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)
+            ? { status: 'REQUESTED' as const, currentOfferId: undefined }
+            : {}),
+        };
+        if (!declined.includes(driverUid) || (isCurrentOffer && !ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status))) {
+          await saveRide(updatedRide);
         }
-        if (!ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)) {
+        if (isCurrentOffer && !ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)) {
           rideIdToAdvance = ride.id;
         }
       }
@@ -589,16 +594,18 @@ export async function expireOffer(offerId: string): Promise<void> {
       if (rideDoc.exists) {
         const ride = rideDoc.data() as Ride;
         const declined = ride.declinedDriverIds || [];
+        const isCurrentOffer = ride.currentOfferId === offer.id;
+        const update: Partial<Ride> = {};
         if (!declined.includes(offer.driverId)) {
-          transaction.update(rideRef, {
-            declinedDriverIds: [...declined, offer.driverId],
-            status: 'REQUESTED',
-            currentOfferId: undefined,
-          });
+          update.declinedDriverIds = [...declined, offer.driverId];
         }
-        if (!ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)) {
+        // A delayed expiry callback must not overwrite a newer offer.
+        if (isCurrentOffer && !ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)) {
+          update.status = 'REQUESTED';
+          update.currentOfferId = undefined;
           rideIdToAdvance = ride.id;
         }
+        if (Object.keys(update).length > 0) transaction.update(rideRef, update);
       }
     });
   } else {
@@ -608,15 +615,18 @@ export async function expireOffer(offerId: string): Promise<void> {
       const ride = await getRide(offer.rideId);
       if (ride) {
         const declined = ride.declinedDriverIds || [];
-        if (!declined.includes(offer.driverId)) {
-          await saveRide({
-            ...ride,
-            declinedDriverIds: [...declined, offer.driverId],
-            status: 'REQUESTED',
-            currentOfferId: undefined,
-          });
+        const isCurrentOffer = ride.currentOfferId === offer.id;
+        const updatedRide: Ride = {
+          ...ride,
+          declinedDriverIds: declined.includes(offer.driverId) ? declined : [...declined, offer.driverId],
+          ...(isCurrentOffer && !ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)
+            ? { status: 'REQUESTED' as const, currentOfferId: undefined }
+            : {}),
+        };
+        if (!declined.includes(offer.driverId) || (isCurrentOffer && !ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status))) {
+          await saveRide(updatedRide);
         }
-        if (!ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)) {
+        if (isCurrentOffer && !ride.driverId && ['REQUESTED', 'OFFERED'].includes(ride.status)) {
           rideIdToAdvance = ride.id;
         }
       }
