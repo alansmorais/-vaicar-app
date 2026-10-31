@@ -3645,3 +3645,78 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   background:linear-gradient(90deg,rgba(250,249,246,.88),rgba(250,249,246,.72))!important;
 }
 .vaicar-info-page img { filter:none!important; }
+
+
+/* Finish the public-site visual system on legal and APK download routes */
+.vaicar-info-page [class*="bg-gradient-to-b"],
+.vaicar-info-page [class*="bg-gradient-to-br"] {
+  background-image:none!important;
+  background-color:#FFFFFF!important;
+}
+.vaicar-info-page [class*="bg-slate-950"],
+.vaicar-info-page [class*="bg-slate-900"],
+.vaicar-info-page [class*="bg-slate-800"] {
+  background-color:#FFFFFF!important;
+}
+.vaicar-info-page [class*="border-slate-900"],
+.vaicar-info-page [class*="border-slate-800"],
+.vaicar-info-page [class*="border-slate-700"] {
+  border-color:#E2E8F0!important;
+}
+.vaicar-info-page [class*="text-white"],
+.vaicar-info-page [class*="text-slate-100"],
+.vaicar-info-page [class*="text-slate-200"] {
+  color:#111827!important;
+}
+.vaicar-info-page [class*="text-slate-300"],
+.vaicar-info-page [class*="text-slate-400"],
+.vaicar-info-page [class*="text-slate-500"] {
+  color:#64748B!important;
+}
+.vaicar-info-page [class*="text-emerald-300"],
+.vaicar-info-page [class*="text-emerald-400"],
+.vaicar-info-page [class*="text-emerald-500"] {
+  color:#047857!important;
+}
+.vaicar-info-page [class*="bg-emerald-950"],
+.vaicar-info-page [class*="bg-emerald-900"],
+.vaicar-info-page [class*="bg-emerald-500/"],
+.vaicar-info-page [class*="bg-emerald-600"] {
+  background-color:#ECFDF5!important;
+}
+.vaicar-info-page [class*="border-emerald-"] { border-color:#A7F3D0!important; }
+.vaicar-info-page [class*="bg-amber-950"],
+.vaicar-info-page [class*="bg-amber-900"] { background-color:#FFFBEB!important; }
+.vaicar-info-page [class*="text-amber-200"],
+.vaicar-info-page [class*="text-amber-300"],
+.vaicar-info-page [class*="text-amber-400"] { color:#92400E!important; }
+.vaicar-info-page [class*="border-amber-"] { border-color:#FDE68A!important; }
+.vaicar-info-page [class*="bg-rose-950"],
+.vaicar-info-page [class*="bg-rose-900"] { background-color:#FFF1F2!important; }
+.vaicar-info-page [class*="text-rose-300"],
+.vaicar-info-page [class*="text-rose-400"] { color:#BE123C!important; }
+.vaicar-info-page [class*="border-rose-"] { border-color:#FECDD3!important; }
+.vaicar-info-page [class*="shadow-2xl"],
+.vaicar-info-page [class*="shadow-xl"] { box-shadow:0 12px 30px rgba(15,23,42,.08)!important; }
+.vaicar-info-page button[class*="bg-slate-800"],
+.vaicar-info-page button[class*="bg-slate-700"] {
+  background:#EFF6FF!important; color:#155DFC!important;
+}
+.vaicar-info-page a[class*="bg-emerald-500"],
+.vaicar-info-page a[class*="bg-emerald-600"] {
+  background:#006B49!important; color:#FFFFFF!important;
+}
+.vaicar-footer {
+  background:#FFFFFF!important; color:#64748B!important;
+  border-color:#E2E8F0!important;
+}
+.vaicar-footer h4,
+.vaicar-footer .text-slate-100,
+.vaicar-footer .text-slate-200 { color:#111827!important; }
+.vaicar-footer .text-slate-600,
+.vaicar-footer .text-slate-500 { color:#64748B!important; }
+.vaicar-footer .text-emerald-700,
+.vaicar-footer .text-emerald-600,
+.vaicar-footer .text-emerald-500 { color:#047857!important; }
+.vaicar-footer [class*="bg-slate-900"] { background:#F8FAFC!important; }
+.vaicar-footer [class*="border-slate-900"] { border-color:#E2E8F0!important; }
