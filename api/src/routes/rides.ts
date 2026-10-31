@@ -25,9 +25,10 @@ import {
   debitReferralCreditForRide,
   refundReferralCreditForRide,
   listOffersForRide,
+  getActivePendingOfferForDriver,
 } from '../services/firestore.js';
 import { sendRideReceiptEmail } from '../services/email.js';
-import { dispatchNextCandidate, expireOffer } from '../services/dispatch.js';
+import { dispatchNextCandidate, expireOffer, declineOffer } from '../services/dispatch.js';
 import { config } from '../config/index.js';
 import { broadcastLiveEvent } from '../services/liveStream.js';
 import {
@@ -731,28 +732,27 @@ ridesRouter.post(['/request', '/'], async (req: Request, res: Response, next: Ne
 });
 
 /**
- * Driver Declines Ride Request
- * Releases the ride back to the general pool (driverId: undefined) so other online drivers can take it
+ * Driver declines only the offer currently assigned to their authenticated account.
+ * The dispatch service records the decline and advances to the next eligible driver.
  */
 ridesRouter.post('/:id/decline', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
+    if (!driver || driver.status !== 'APPROVED') {
+      throw new AppError(ErrorCode.FORBIDDEN, 'Apenas motoristas aprovados podem recusar ofertas.', 403);
+    }
+
     const ride = await getRide(String(req.params.id));
     if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
 
-    if (ride.status === 'REQUESTED') {
-      const updatedRide: Ride = {
-        ...ride,
-        driverId: undefined,
-        driverName: undefined,
-        driverPhone: undefined,
-        driverPhotoUrl: undefined,
-        vehicle: undefined,
-      };
-      await saveRide(updatedRide);
-      return res.json({ success: true, requestId: req.id, data: updatedRide });
+    const offer = await getActivePendingOfferForDriver(driver.uid);
+    if (!offer || offer.rideId !== ride.id || ride.currentOfferId !== offer.id) {
+      throw new AppError(ErrorCode.FORBIDDEN, 'Esta oferta não está direcionada para sua conta ou já expirou.', 403);
     }
 
-    res.json({ success: true, requestId: req.id, data: ride });
+    await declineOffer(offer.id, driver.uid);
+    const updatedRide = await getRide(ride.id);
+    return res.json({ success: true, requestId: req.id, data: updatedRide ? formatRidePayload(updatedRide) : null });
   } catch (error) {
     next(error);
   }
@@ -800,16 +800,17 @@ ridesRouter.post('/:id/accept', async (req: Request, res: Response, next: NextFu
     }
 
     const now = new Date().toISOString();
-    if (ride.currentOfferId) {
-      const offer = await getRideOffer(ride.currentOfferId);
-      if (!offer || offer.status !== 'PENDING' || offer.driverId !== driver.uid) {
-        throw new AppError(ErrorCode.FORBIDDEN, 'Esta solicitação não foi direcionada para você ou a oferta não está mais válida.', 403);
-      }
-      if (new Date(offer.expiresAt).getTime() <= Date.now()) {
-        throw new AppError(ErrorCode.GONE, 'O tempo para aceitar esta oferta terminou.', 410);
-      }
-      await saveRideOffer({ ...offer, status: 'ACCEPTED', respondedAt: now });
+    if (!ride.currentOfferId) {
+      throw new AppError(ErrorCode.FORBIDDEN, 'Esta corrida ainda não possui uma oferta direcionada para sua conta.', 403);
     }
+    const offer = await getRideOffer(ride.currentOfferId);
+    if (!offer || offer.status !== 'PENDING' || offer.driverId !== driver.uid) {
+      throw new AppError(ErrorCode.FORBIDDEN, 'Esta solicitação não foi direcionada para você ou a oferta não está mais válida.', 403);
+    }
+    if (new Date(offer.expiresAt).getTime() <= Date.now()) {
+      throw new AppError(ErrorCode.GONE, 'O tempo para aceitar esta oferta terminou.', 410);
+    }
+    await saveRideOffer({ ...offer, status: 'ACCEPTED', respondedAt: now });
     const pixInfo = getDriverPixInfo(driver);
     const updatedRide: Ride = {
       ...ride,
@@ -1359,6 +1360,20 @@ ridesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => 
   try {
     const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
     if (driver && driver.status === 'APPROVED') {
+      const pendingOffer = await getActivePendingOfferForDriver(driver.uid);
+      if (!pendingOffer) {
+        return res.json({ success: true, requestId: req.id, data: [] });
+      }
+      const offeredRide = await getRide(pendingOffer.rideId);
+      if (
+        !offeredRide ||
+        offeredRide.currentOfferId !== pendingOffer.id ||
+        offeredRide.status !== 'OFFERED'
+      ) {
+        return res.json({ success: true, requestId: req.id, data: [] });
+      }
+      return res.json({ success: true, requestId: req.id, data: [formatRidePayload(offeredRide)] });
+
       const allRides = await listAllRides();
       const isBicycle = driver.vehicle?.type === 'bicycle';
       const servicesOffered = driver.servicesOffered || (driver.isCourier || isBicycle ? ['delivery'] : ['ride']);
