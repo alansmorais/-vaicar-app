@@ -1230,7 +1230,7 @@ describe('VaiCar Platform - API Automated Tests', () => {
 
       expect(openRideRes.status).toBe(200);
       expect(openRideRes.body.data.status).toBe('REQUESTED');
-      expect(openRideRes.body.data.driverId).toBeUndefined();
+      expect(openRideRes.body.data.driverId).toBe(driverUid);
 
       if (rideId) {
         await request(app)
@@ -2079,19 +2079,19 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(delivReq.status).toBe(201);
       const deliveryId = delivReq.body.data.id;
 
-      // 2. Bike driver calls available-rides -> Sees the delivery!
+      // 2. The legacy broadcast endpoint must not expose an untargeted delivery.
       const bikeAvail = await request(app)
         .get('/api/v1/drivers/available-rides')
         .set('Authorization', `Bearer ${stage3BikeDriverToken}`);
       expect(bikeAvail.status).toBe(200);
-      expect(bikeAvail.body.data.some((r: any) => r.id === deliveryId)).toBe(true);
+      expect(bikeAvail.body.data.some((r: any) => r.id === deliveryId)).toBe(false);
 
-      // 3. Car driver (offering both) calls available-rides -> Also sees the delivery!
+      // 3. Another driver must not see the same request through a shared pool.
       const carAvail = await request(app)
         .get('/api/v1/drivers/available-rides')
         .set('Authorization', `Bearer ${stage3CarDriverToken}`);
       expect(carAvail.status).toBe(200);
-      expect(carAvail.body.data.some((r: any) => r.id === deliveryId)).toBe(true);
+      expect(carAvail.body.data.some((r: any) => r.id === deliveryId)).toBe(false);
 
       // 4. Cancel this delivery so passenger can request a ride
       await request(app)
