@@ -26,6 +26,7 @@ import { BusinessPartnershipsPage } from './pages/BusinessPartnershipsPage.js';
 import { PassengerInfoPage } from './pages/PassengerInfoPage.js';
 import { DriverRequirementsPage } from './pages/DriverRequirementsPage.js';
 import { DeliveryInfoPage } from './pages/DeliveryInfoPage.js';
+import { HowItWorksPage } from './pages/HowItWorksPage.js';
 
 export const App: React.FC = () => {
   return (
@@ -49,7 +50,7 @@ export const App: React.FC = () => {
               <Route path="/baixar/passageiro" element={<PassengerDownloadPage />} />
               <Route path="/como-funciona/passageiro" element={<PassengerInfoPage />} />
               <Route path="/passageiro/info" element={<PassengerInfoPage />} />
-              <Route path="/como-funciona" element={<PassengerInfoPage />} />
+              <Route path="/como-funciona" element={<HowItWorksPage />} />
 
               {/* Driver & Couriers */}
               <Route path="/driver" element={<DriverDashboardPage />} />
