@@ -4,7 +4,7 @@ import { Shield, Lock, Eye, Database, CheckCircle2, ArrowLeft, UserCheck, MapPin
 
 export const PrivacyPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="vaicar-info-page min-h-screen bg-slate-50 text-slate-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Navigation & Header */}
         <div>
