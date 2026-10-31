@@ -18,7 +18,6 @@ export interface PublicDriverMarker {
     brand: string;
     model: string;
     color: string;
-    plate?: string;
   };
   currentLocation?: {
     lat: number;
