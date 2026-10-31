@@ -49,11 +49,11 @@ export const Navbar: React.FC = () => {
           {/* Desktop navigation — homepage reference order */}
           <div className="vaicar-desktop-nav hidden md:flex items-center gap-1">
             <Link to="/" className={`px-3 py-2 text-sm font-semibold transition-colors ${isActive('/') ? 'is-reference-active' : ''}`}>Início</Link>
-            <a href="#como-funciona" className="px-3 py-2 text-sm font-semibold transition-colors">Como Funciona</a>
-            <Link to="/driver" className="px-3 py-2 text-sm font-semibold transition-colors">Para Motoristas</Link>
+            <a href="/#como-funciona" className="px-3 py-2 text-sm font-semibold transition-colors">Como Funciona</a>
+            <Link to="/como-funciona/motorista" className="px-3 py-2 text-sm font-semibold transition-colors">Para Motoristas</Link>
             <Link to="/parcerias" className="px-3 py-2 text-sm font-semibold transition-colors">Para Empresas</Link>
-            <a href="#lista-espera" className="px-3 py-2 text-sm font-semibold transition-colors">Entregas</a>
-            <a href="#sobre" className="px-3 py-2 text-sm font-semibold transition-colors">Sobre</a>
+            <a href="/#lista-espera" className="px-3 py-2 text-sm font-semibold transition-colors">Entregas</a>
+            <a href="/#faq" className="px-3 py-2 text-sm font-semibold transition-colors">Sobre</a>
             <a href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3" target="_blank" rel="noopener noreferrer" className="px-3 py-2 text-sm font-semibold transition-colors">Contato</a>
           </div>
 
