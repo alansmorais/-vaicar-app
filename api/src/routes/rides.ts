@@ -1214,6 +1214,7 @@ export async function approveRidePaymentHandler(req: Request, res: Response, nex
     };
 
     await saveRide(updatedRide);
+    if (ride.driverId) await releaseDriverRideLock(ride.driverId, ride.id);
 
     // Process referral reward for qualifying first completed ride
     await processReferralRewardOnCompletion(updatedRide);
