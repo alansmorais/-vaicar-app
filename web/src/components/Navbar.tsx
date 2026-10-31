@@ -39,11 +39,11 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between h-20">
           {/* Logo & Brand */}
           <Link to="/" className="flex items-center gap-3 group">
-            <MapPin className="vaicar-brand-pin" aria-hidden="true" />
-            <div className="flex flex-col vaicar-brand-wordmark">
-              <span className="vaicar-brand-name">Vai<span>Car</span></span>
-              <span className="vaicar-brand-location">SÃO SEBASTIÃO • SP</span>
-            </div>
+            <img
+              src="/vaicar_logo.png"
+              alt="VaiCar — São Sebastião • SP"
+              className="vaicar-brand-logo"
+            />
           </Link>
 
           {/* Desktop navigation — homepage reference order */}
