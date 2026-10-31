@@ -25,6 +25,7 @@ import { LoginPage } from './pages/LoginPage.js';
 import { BusinessPartnershipsPage } from './pages/BusinessPartnershipsPage.js';
 import { PassengerInfoPage } from './pages/PassengerInfoPage.js';
 import { DriverRequirementsPage } from './pages/DriverRequirementsPage.js';
+import { DeliveryInfoPage } from './pages/DeliveryInfoPage.js';
 
 export const App: React.FC = () => {
   return (
@@ -59,6 +60,8 @@ export const App: React.FC = () => {
               <Route path="/baixar/motorista" element={<DriverDownloadPage />} />
               <Route path="/baixar" element={<Navigate to="/download/passenger" replace />} />
               <Route path="/como-funciona/motorista" element={<DriverRequirementsPage />} />
+              <Route path="/como-funciona/entregador" element={<DeliveryInfoPage />} />
+              <Route path="/entregador" element={<DeliveryInfoPage />} />
               <Route path="/motorista/requisitos" element={<DriverRequirementsPage />} />
 
               {/* Local Business Partnerships */}
