@@ -405,10 +405,28 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
       }
 
       const rideRef = db.collection('rides').doc(offer.rideId);
-      const rideDoc = await transaction.get(rideRef);
+      const driverRef = db.collection('drivers').doc(driver.uid);
+      // Re-read the driver's authoritative approval state inside the same
+      // transaction as assignment, so a concurrent suspension/rejection wins.
+      const [rideDoc, driverDoc] = await Promise.all([
+        transaction.get(rideRef),
+        transaction.get(driverRef),
+      ]);
+      let latestDriver = driverDoc.exists ? driverDoc.data() as DriverProfile : null;
+      if (!latestDriver) {
+        const driverQuery = db.collection('drivers').where('uid', '==', driver.uid).limit(1);
+        const driverQuerySnapshot = await transaction.get(driverQuery);
+        if (!driverQuerySnapshot.empty) {
+          latestDriver = driverQuerySnapshot.docs[0].data() as DriverProfile;
+        }
+      }
       if (!rideDoc.exists) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
       const ride = rideDoc.data() as Ride;
 
+      if (!latestDriver || latestDriver.status !== 'APPROVED') {
+        transactionError = new AppError(ErrorCode.FORBIDDEN, 'Seu cadastro não está aprovado para aceitar corridas.', 403);
+        return;
+      }
       if (ride.driverId || !['REQUESTED', 'OFFERED'].includes(ride.status)) {
         transaction.update(offerRef, { status: 'EXPIRED', respondedAt: now });
         transactionError = new AppError(ErrorCode.CONFLICT, 'Corrida já foi aceita por outro motorista ou cancelada.', 409);
