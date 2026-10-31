@@ -19,6 +19,22 @@ export const MAX_TELEMETRY_AGE_MS = 60000; // STRICT: telemetry no older than 60
 
 // Active in-memory timers for wakeup optimization (authoritative state is in Firestore)
 const activeOfferTimers = new Map<string, NodeJS.Timeout>();
+// Driver-scoped reservation prevents concurrent accepts across different rides.
+const localDriverRideLocks = new Map<string, string>();
+
+export async function releaseDriverRideLock(driverUid: string, rideId: string): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (db) {
+    const lockRef = db.collection('driver_ride_locks').doc(driverUid);
+    await db.runTransaction(async (transaction) => {
+      const lockDoc = await transaction.get(lockRef);
+      if (lockDoc.exists && lockDoc.data()?.activeRideId === rideId) {
+        transaction.set(lockRef, { activeRideId: null, updatedAt: new Date().toISOString() }, { merge: true });
+      }
+    });
+  }
+  if (localDriverRideLocks.get(driverUid) === rideId) localDriverRideLocks.delete(driverUid);
+}
 
 export function calculateHaversineDistanceKm(
   lat1: number,
@@ -406,11 +422,13 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
 
       const rideRef = db.collection('rides').doc(offer.rideId);
       const driverRef = db.collection('drivers').doc(driver.uid);
+      const driverLockRef = db.collection('driver_ride_locks').doc(driver.uid);
       // Re-read the driver's authoritative approval state inside the same
       // transaction as assignment, so a concurrent suspension/rejection wins.
-      const [rideDoc, driverDoc] = await Promise.all([
+      const [rideDoc, driverDoc, driverLockDoc] = await Promise.all([
         transaction.get(rideRef),
         transaction.get(driverRef),
+        transaction.get(driverLockRef),
       ]);
       let latestDriver = driverDoc.exists ? driverDoc.data() as DriverProfile : null;
       if (!latestDriver) {
@@ -422,6 +440,12 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
       }
       if (!rideDoc.exists) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
       const ride = rideDoc.data() as Ride;
+
+      const lockedRideId = driverLockDoc.exists ? driverLockDoc.data()?.activeRideId : null;
+      if (lockedRideId && lockedRideId !== offer.rideId) {
+        transactionError = new AppError(ErrorCode.CONFLICT, 'Você já está responsável por outra corrida.', 409);
+        return;
+      }
 
       if (!latestDriver || latestDriver.status !== 'APPROVED') {
         transactionError = new AppError(ErrorCode.FORBIDDEN, 'Seu cadastro não está aprovado para aceitar corridas.', 403);
@@ -486,6 +510,7 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
       };
 
       transaction.update(rideRef, updatedRide as any);
+      transaction.set(driverLockRef, { activeRideId: offer.rideId, updatedAt: now }, { merge: true });
       resultRide = updatedRide;
     });
 
@@ -496,7 +521,13 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
     broadcastLiveEvent('RIDE_UPDATED', resultRide);
     return resultRide;
   } else {
-    // Local in-memory transaction fallback for testing
+    // Reserve synchronously before the first await to serialize local accepts.
+    const existingLocalLock = localDriverRideLocks.get(driver.uid);
+    if (existingLocalLock) {
+      throw new AppError(ErrorCode.CONFLICT, 'Você já está responsável por outra corrida.', 409);
+    }
+    localDriverRideLocks.set(driver.uid, '__accepting__');
+    try {
     const offer = await getRideOffer(offerId);
     if (!offer) throw new AppError(ErrorCode.NOT_FOUND, 'Oferta não encontrada.', 404);
     if (offer.driverId !== driver.uid) {
@@ -556,8 +587,13 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
       acceptedAt: now,
     };
     await saveRide(updatedRide);
+    localDriverRideLocks.set(driver.uid, offer.rideId);
     broadcastLiveEvent('RIDE_UPDATED', updatedRide);
     return updatedRide;
+    } catch (error) {
+      if (localDriverRideLocks.get(driver.uid) === '__accepting__') localDriverRideLocks.delete(driver.uid);
+      throw error;
+    }
   }
 }
 
