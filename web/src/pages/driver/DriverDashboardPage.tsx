@@ -143,6 +143,7 @@ export const DriverDashboardPage: React.FC = () => {
   const [driver, setDriver] = useState<DriverProfile | null>(authDriver);
   const [isOnline, setIsOnline] = useState<boolean>(authDriver?.isOnline || false);
   const [availableRides, setAvailableRides] = useState<Ride[]>([]);
+  const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
   const [activeRide, setActiveRide] = useState<Ride | null>(null);
   const [rideHistory, setRideHistory] = useState<Ride[]>([]);
   const [receiptToShow, setReceiptToShow] = useState<Receipt | null>(null);
@@ -308,20 +309,29 @@ export const DriverDashboardPage: React.FC = () => {
 
     const fetchUpdates = async () => {
       try {
-        const [rides, active] = await Promise.all([
-          driversApi.getAvailableRides(),
+        const [offer, active] = await Promise.all([
+          driversApi.getPendingOffer(),
           driversApi.getActiveRide().catch(() => null),
         ]);
         if (active) {
           setActiveRide(active);
           setAvailableRides([]);
+          setPendingOfferId(null);
           return;
         }
         // If active ride was cancelled elsewhere, return driver to search cockpit
         if (activeRide && activeRide.status.startsWith('CANCELLED')) {
           setActiveRide(null);
         }
-        setAvailableRides(rides);
+        if (offer?.rideId) {
+          const offeredRide = await ridesApi.getById(offer.rideId);
+          setPendingOfferId(offer.id);
+          setAvailableRides([offeredRide]);
+          setIncomingCountdown(offer.secondsRemaining ?? 0);
+        } else {
+          setPendingOfferId(null);
+          setAvailableRides([]);
+        }
       } catch (err) {
         console.error('Available rides error:', err);
       }
@@ -385,10 +395,10 @@ export const DriverDashboardPage: React.FC = () => {
     return availableRides.find((r) => !dismissedRideIds.includes(r.id)) || null;
   }, [isOnline, activeRide, availableRides, dismissedRideIds]);
 
-  // Audio chime & 30s countdown for incoming ride alert pop-up
+  // Audio chime & server-authoritative 20s offer countdown for incoming ride alert
   useEffect(() => {
     if (!incomingRide) {
-      setIncomingCountdown(30);
+      setIncomingCountdown(0);
       return;
     }
 
@@ -397,17 +407,11 @@ export const DriverDashboardPage: React.FC = () => {
       playIncomingRideChime();
     }
 
-    setIncomingCountdown(30);
-    let elapsed = 0;
     const timer = setInterval(() => {
-      elapsed++;
-      if (elapsed % 5 === 0) {
-        playIncomingRideChime();
-      }
       setIncomingCountdown((prev) => {
         if (prev <= 1) {
           handleDeclineRide(incomingRide.id);
-          return 30;
+          return 0;
         }
         return prev - 1;
       });
@@ -591,7 +595,11 @@ export const DriverDashboardPage: React.FC = () => {
     setError(null);
     setActionLoading(true);
     try {
-      const accepted = await ridesApi.accept(rideId);
+      if (!pendingOfferId) {
+        throw new Error('A oferta direcionada expirou ou não está mais disponível.');
+      }
+      const accepted = await driversApi.acceptOffer(pendingOfferId);
+      setPendingOfferId(null);
       setActiveRide(accepted);
       setAvailableRides([]);
       setDriverRouteMode('to_passenger');
@@ -606,7 +614,10 @@ export const DriverDashboardPage: React.FC = () => {
   const handleDeclineRide = async (rideId: string) => {
     setDismissedRideIds((curr) => [...curr, rideId]);
     try {
-      await ridesApi.decline(rideId);
+      if (pendingOfferId) {
+        await driversApi.declineOffer(pendingOfferId);
+        setPendingOfferId(null);
+      }
     } catch {
       // ignore
     }
