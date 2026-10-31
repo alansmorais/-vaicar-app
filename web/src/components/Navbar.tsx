@@ -39,18 +39,10 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between h-20">
           {/* Logo & Brand */}
           <Link to="/" className="flex items-center gap-3 group">
-            <img
-              src="/vaicar_logo.png"
-              alt="VaiCar"
-              className="h-11 w-auto rounded-lg object-contain transition-transform group-hover:scale-105"
-            />
-            <div className="flex flex-col">
-              <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center transition-colors">
-                VAI<span className="text-blue-600 dark:text-emerald-400">CAR</span>
-              </span>
-              <span className="text-[10px] font-semibold text-blue-600 dark:text-emerald-400 tracking-wider flex items-center gap-1 uppercase">
-                <MapPin className="w-2.5 h-2.5" /> São Sebastião • SP
-              </span>
+            <MapPin className="vaicar-brand-pin" aria-hidden="true" />
+            <div className="flex flex-col vaicar-brand-wordmark">
+              <span className="vaicar-brand-name">Vai<span>Car</span></span>
+              <span className="vaicar-brand-location">SÃO SEBASTIÃO • SP</span>
             </div>
           </Link>
 
