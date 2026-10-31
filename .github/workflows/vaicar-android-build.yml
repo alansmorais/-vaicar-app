@@ -3,7 +3,7 @@ name: VaiCar native Android build
 on:
   push:
     branches: [vaicar-next]
-    paths: ["app/**", "*.gradle.kts", "settings.gradle.kts", ".github/workflows/vaicar-android-build.yml"]
+    paths: ["app/**", "*.gradle.kts", "settings.gradle.kts", "gradle.properties", ".github/workflows/vaicar-android-build.yml"]
   pull_request:
     branches: [vaicar-next]
     paths: ["app/**", "*.gradle.kts", "settings.gradle.kts", ".github/workflows/vaicar-android-build.yml"]
