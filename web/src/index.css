@@ -3033,3 +3033,81 @@ body:has(.vaicar-home) .vaicar-mobility-steps b{
 @media(max-width:767px){
  body:has(.vaicar-home) .vaicar-mobility-steps{align-items:center!important;font-size:12px!important}
 }
+
+
+/* Homepage colors aligned with the public VaiCar light theme used on main.
+   Keep the coastal photograph natural; apply the brand palette to UI surfaces. */
+body:has(.vaicar-home) {
+  background:#FAF9F6!important;
+  color:#111827!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero {
+  background-color:#FAF9F6!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-image {
+  filter:none!important;
+  opacity:1!important;
+  mix-blend-mode:normal!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-card {
+  background:#FFFFFF!important;
+  color:#111827!important;
+  border:1px solid #E2E8F0!important;
+  box-shadow:0 18px 48px rgba(17,24,39,.16)!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-tab {
+  color:#475569!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-tab.is-active {
+  color:#155DFC!important;
+  background:#EFF6FF!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-field {
+  background:#FFFFFF!important;
+  border:1px solid #CBD5E1!important;
+  color:#111827!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-field select {
+  color:#111827!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-submit {
+  background:#155DFC!important;
+  color:#FFFFFF!important;
+  border:1px solid #155DFC!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-submit:hover {
+  background:#2563EB!important;
+  border-color:#2563EB!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-safe {
+  color:#64748B!important;
+}
+body:has(.vaicar-home) .vaicar-mobility-steps {
+  color:#FFFFFF!important;
+}
+body:has(.vaicar-home) .vaicar-mobility-steps b {
+  background:#155DFC!important;
+  color:#FFFFFF!important;
+}
+body:has(.vaicar-home) .vaicar-audience-card {
+  background:#FFFFFF!important;
+  border:1px solid #E2E8F0!important;
+  box-shadow:0 10px 28px rgba(17,24,39,.14)!important;
+}
+body:has(.vaicar-home) .vaicar-audience-icon {
+  background:#EFF6FF!important;
+  color:#155DFC!important;
+}
+body:has(.vaicar-home) .vaicar-audience-card strong {
+  color:#111827!important;
+}
+body:has(.vaicar-home) .vaicar-audience-card small {
+  color:#64748B!important;
+}
+body:has(.vaicar-home) .vaicar-audience-arrow {
+  background:#155DFC!important;
+  color:#FFFFFF!important;
+}
+body:has(.vaicar-home) .vaicar-audience-card:hover .vaicar-audience-arrow {
+  background:#2563EB!important;
+}
