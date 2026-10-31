@@ -838,55 +838,18 @@ driversRouter.get('/available-rides', async (req: Request, res: Response, next: 
       return res.json({ success: true, requestId: req.id, data: [] });
     }
 
-    const allRides = await listAllRides();
-    const isBicycle = driver.vehicle?.type === 'bicycle';
-    const servicesOffered = driver.servicesOffered || (driver.isCourier || isBicycle ? ['delivery'] : ['ride']);
-    const offersDelivery = servicesOffered.includes('delivery');
-    const offersRide = !isBicycle && servicesOffered.includes('ride');
+    // Backward-compatible endpoint: expose only this driver's targeted offer.
+    const offer = await getActivePendingOfferForDriver(driver.uid);
+    if (!offer) {
+      return res.json({ success: true, requestId: req.id, data: [] });
+    }
 
-    const now = Date.now();
-    const MAX_AGE_MS = 10 * 60 * 1000;
+    const ride = await getRide(offer.rideId);
+    if (!ride || ride.currentOfferId !== offer.id || ride.status !== 'OFFERED') {
+      return res.json({ success: true, requestId: req.id, data: [] });
+    }
 
-    const available = allRides.filter((r) => {
-      if (!['REQUESTED', 'OFFERED'].includes(r.status)) return false;
-      if (r.driverId && r.driverId !== driver.uid) return false;
-      if (r.declinedDriverIds && r.declinedDriverIds.includes(driver.uid)) return false;
-
-      // Auto-expire stale ride
-      const reqTime = new Date(r.requestedAt || (r as any).createdAt || 0).getTime();
-      if (now - reqTime > MAX_AGE_MS) {
-        saveRide({
-          ...r,
-          status: 'CANCELLED_BY_SYSTEM',
-          cancelledAt: new Date().toISOString(),
-          cancelledBy: 'system',
-          cancelReason: 'Tempo limite de busca expirado.',
-        }).catch(console.error);
-        return false;
-      }
-
-      // Check distance to pickup for general pool rides unless testMode or explicitly requested for this driver
-      if (!config.testMode && r.driverId !== driver.uid && driver.currentLocation?.lat && r.origin?.lat) {
-        const dist = calculateHaversineDistanceKm(
-          driver.currentLocation.lat,
-          driver.currentLocation.lng,
-          r.origin.lat,
-          r.origin.lng
-        );
-        if (dist > 15.0) return false;
-      }
-
-      const rideService = r.serviceType || 'ride';
-      if (rideService === 'delivery' && !offersDelivery) return false;
-      if (rideService === 'ride' && !offersRide) return false;
-      return true;
-    });
-
-    res.json({
-      success: true,
-      requestId: req.id,
-      data: available.map(formatRidePayload),
-    });
+    return res.json({ success: true, requestId: req.id, data: [formatRidePayload(ride)] });
   } catch (error) {
     next(error);
   }
