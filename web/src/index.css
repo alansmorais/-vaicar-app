@@ -4153,20 +4153,29 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   }
 }
 
-/* Supplied official VaiCar brand asset */
+/* Official VaiCar logo — circular framed treatment */
 .vaicar-navbar .vaicar-brand-logo {
   display:block !important;
-  width:auto !important;
-  height:58px !important;
-  max-width:190px !important;
+  width:76px !important;
+  height:76px !important;
+  max-width:76px !important;
+  aspect-ratio:1 / 1 !important;
+  box-sizing:border-box !important;
   object-fit:contain !important;
-  object-position:left center !important;
-  background:transparent !important;
+  object-position:center !important;
+  padding:4px !important;
+  border:3px solid rgba(255,255,255,.96) !important;
+  border-radius:50% !important;
+  background:rgba(4,55,45,.78) !important;
+  box-shadow:0 4px 16px rgba(0,0,0,.24), 0 0 0 2px rgba(16,185,129,.34) !important;
   filter:none !important;
 }
 @media (max-width:767px) {
   .vaicar-navbar .vaicar-brand-logo {
-    height:46px !important;
-    max-width:160px !important;
+    width:58px !important;
+    height:58px !important;
+    max-width:58px !important;
+    padding:3px !important;
+    border-width:2px !important;
   }
 }
