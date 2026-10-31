@@ -2322,3 +2322,59 @@ body:has(.vaicar-home) .vaicar-navbar button {color:#fff;}
  .vaicar-booking-field {height:49px;margin-top:11px;}
  .vaicar-booking-submit {height:50px;font-size:14px;}
 }
+
+
+/* Final proportion and colour refinement based on the supplied reference */
+.vaicar-home-hero .vaicar-hero-image {
+  opacity:1 !important;
+  filter:saturate(1.42) contrast(1.10) brightness(1.06) !important;
+  object-position:center 48% !important;
+}
+.vaicar-home-hero .vaicar-hero-overlay {
+  background:linear-gradient(90deg,rgba(0,27,42,.22) 0%,rgba(0,35,48,.06) 52%,rgba(0,30,43,.10) 100%) !important;
+}
+.vaicar-home-hero .vaicar-hero-vignette {
+  background:linear-gradient(180deg,rgba(0,22,36,.12),transparent 24%,transparent 76%,rgba(0,38,30,.12)) !important;
+}
+.vaicar-audience {margin-top:-154px !important;padding:0 0 22px !important;}
+.vaicar-audience > div > .grid {gap:12px !important;}
+.vaicar-audience-card {
+  min-height:154px !important;
+  padding:18px 20px !important;
+  border-radius:18px !important;
+  box-shadow:0 8px 22px rgba(0,35,38,.14) !important;
+}
+.vaicar-audience-icon {width:48px !important;height:48px !important;}
+.vaicar-audience-icon svg {width:39px !important;height:39px !important;}
+.vaicar-audience-card strong {font-size:18px !important;line-height:1.15 !important;}
+.vaicar-audience-card small {font-size:12px !important;line-height:1.25 !important;}
+.vaicar-audience-arrow {width:36px !important;height:36px !important;padding:9px !important;}
+.vaicar-destinations {padding:18px 0 26px !important;}
+.vaicar-destinations > div > .flex {margin-bottom:9px !important;}
+.vaicar-destinations > div > .flex h2 {font-size:25px !important;}
+.vaicar-destinations > div > .flex p {font-size:12px !important;line-height:1.35 !important;}
+.vaicar-destinations > div > .grid {gap:8px !important;}
+.vaicar-destinations > div > .grid > div {
+  height:156px !important;min-height:156px !important;
+  border-radius:12px !important;box-shadow:0 3px 10px rgba(0,0,0,.10) !important;
+}
+.vaicar-destinations > div > .grid > div > img {
+  filter:saturate(1.18) contrast(1.04) !important;
+}
+.vaicar-destinations > div > .grid > div > div:nth-child(2) {background:linear-gradient(180deg,transparent 25%,rgba(0,0,0,.56)) !important;}
+.vaicar-destinations > div > .grid > div > div.relative {padding:10px !important;}
+.vaicar-destinations > div > .grid > div h3 {font-size:13px !important;line-height:1.1 !important;}
+.vaicar-destinations > div > .grid > div span {font-size:9px !important;}
+@media(max-width:767px) {
+ .vaicar-audience {margin-top:-128px !important;padding-bottom:16px !important;}
+ .vaicar-audience > div > .grid {gap:9px !important;}
+ .vaicar-audience-card {min-height:122px !important;padding:12px !important;border-radius:15px !important;}
+ .vaicar-audience-icon {width:36px !important;height:36px !important;}
+ .vaicar-audience-icon svg {width:30px !important;height:30px !important;}
+ .vaicar-audience-card strong {font-size:13px !important;}
+ .vaicar-audience-card small {font-size:10px !important;}
+ .vaicar-audience-arrow {width:30px !important;height:30px !important;padding:7px !important;}
+ .vaicar-destinations {padding:16px 0 22px !important;}
+ .vaicar-destinations > div > .grid {gap:8px !important;}
+ .vaicar-destinations > div > .grid > div {height:142px !important;min-height:142px !important;}
+}
