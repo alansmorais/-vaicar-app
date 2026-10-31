@@ -1455,3 +1455,8 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
   .vaicar-home #praias-cobertas .grid > div h3 { font-size: 13px !important; }
   .vaicar-home #praias-cobertas .grid > div p { font-size: 10px !important; }
 }
+
+/* Show the complete local coverage gallery, including Centro Histórico and Mata Atlântica */
+.vaicar-home #praias-cobertas .grid > div:nth-child(n+5) {
+  display: flex !important;
+}
