@@ -7,12 +7,18 @@ plugins {
 android {
     namespace = "app.vaicar"
     compileSdk = 35
-    defaultConfig { applicationId = "app.vaicar"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = "1.0.0" }
+    defaultConfig {
+        applicationId = "app.vaicar"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0.0"
+        buildConfigField("String", "API_BASE_URL", "\"https://vaicar-app-770203144889.southamerica-east1.run.app/\"")
+    }
     buildFeatures {
         compose = true
         buildConfig = true
     }
-    defaultConfig { buildConfigField("String", "API_BASE_URL", "\\\"https://vaicar-app-770203144889.southamerica-east1.run.app/\\\"") }
     kotlinOptions { jvmTarget = "17" }
 }
 
