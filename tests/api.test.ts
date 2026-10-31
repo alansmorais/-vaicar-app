@@ -59,6 +59,31 @@ describe('VaiCar Platform - API Automated Tests', () => {
     expect(res.body.notice).toContain('disponível para solicitação');
   });
 
+  describe('Private document upload authorization', () => {
+    it('rejects uploads without an authenticated account', async () => {
+      const res = await request(app)
+        .post('/api/v1/storage/upload')
+        .send({ fileData: 'data:image/png;base64,iVBORw0KGgo=', pathPrefix: 'users', uid: 'someone' });
+      expect(res.status).toBe(401);
+    });
+
+    it('prevents an authenticated user from uploading into another account folder', async () => {
+      const res = await request(app)
+        .post('/api/v1/storage/upload')
+        .set('Authorization', `Bearer ${passengerToken}`)
+        .send({ fileData: 'data:image/png;base64,iVBORw0KGgo=', pathPrefix: 'users', uid: 'another-user' });
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects arbitrary upload folders', async () => {
+      const res = await request(app)
+        .post('/api/v1/storage/upload')
+        .set('Authorization', `Bearer ${passengerToken}`)
+        .send({ fileData: 'data:image/png;base64,iVBORw0KGgo=', pathPrefix: '../private', uid: 'test-pass-01' });
+      expect(res.status).toBe(400);
+    });
+  });
+
   describe('Passenger Registration Validation', () => {
     it('rejects registration with missing WhatsApp', async () => {
       const res = await request(app)
