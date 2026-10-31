@@ -12,8 +12,8 @@ deliveriesRouter.get('/info', (req: Request, res: Response) => {
   res.json({
     success: true,
     service: 'VaiCar Entregas',
-    status: 'COMING_SOON',
-    label: 'Em Breve',
+    status: 'AVAILABLE',
+    label: 'Disponível',
     market: 'São Sebastião, Litoral Norte SP',
     modalities: [
       {
@@ -28,7 +28,7 @@ deliveriesRouter.get('/info', (req: Request, res: Response) => {
       },
     ],
     notice:
-      'O serviço de entregas está em estruturação operacional e regulatória. Não está disponível para agendamento imediato ou dentro dos aplicativos de corrida atuais.',
+      'O serviço de entregas está disponível para solicitação no aplicativo. A disponibilidade de entregadores depende da região, do horário e de parceiros online.',
   });
 });
 
