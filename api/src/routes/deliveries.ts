@@ -6,7 +6,7 @@ import { ErrorCode } from '../../../shared/src/errors.js';
 export const deliveriesRouter = Router();
 
 /**
- * Public informational endpoint about the upcoming VaiCar Entregas service.
+ * Public informational endpoint describing current VaiCar Entregas availability.
  */
 deliveriesRouter.get('/info', (req: Request, res: Response) => {
   res.json({
@@ -62,7 +62,7 @@ deliveriesRouter.post('/waitlist', async (req: Request, res: Response, next: Nex
 
     res.status(201).json({
       success: true,
-      message: 'Seu interesse no VaiCar Entregas foi registrado com sucesso! Entraremos em contato assim que o serviço for inaugurado.',
+      message: 'Seu interesse no VaiCar Entregas foi registrado com sucesso! A equipe poderá entrar em contato para orientar sobre cadastro e disponibilidade de parceiros na sua região.',
       data: {
         id: entry.id,
         name: entry.name,
