@@ -50,6 +50,15 @@ describe('VaiCar Platform - API Automated Tests', () => {
     expect(res.body.requestId).toBeDefined();
   });
 
+  it('reports VaiCar Entregas as available when delivery booking flows are enabled', async () => {
+    const res = await request(app).get('/api/v1/deliveries/info');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('AVAILABLE');
+    expect(res.body.label).toBe('Disponível');
+    expect(res.body.modalities.map((item: { type: string }) => item.type)).toEqual(['motorcycle', 'bicycle']);
+    expect(res.body.notice).toContain('disponível para solicitação');
+  });
+
   describe('Passenger Registration Validation', () => {
     it('rejects registration with missing WhatsApp', async () => {
       const res = await request(app)
