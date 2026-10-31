@@ -3016,3 +3016,20 @@ body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-card{
  body:has(.vaicar-home) .vaicar-home-hero .vaicar-reference-layout{grid-template-columns:1fr!important}
  body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-panel{max-width:560px!important;margin:0 auto!important}
 }
+
+body:has(.vaicar-home) .vaicar-mobility-steps{
+  display:flex!important;flex-direction:column!important;gap:10px!important;
+  margin-top:24px!important;color:#fff!important;font-size:14px!important;font-weight:600!important;
+  text-shadow:0 1px 8px rgba(0,0,0,.24)!important;
+}
+body:has(.vaicar-home) .vaicar-mobility-steps span{
+  display:flex!important;align-items:center!important;gap:11px!important;
+}
+body:has(.vaicar-home) .vaicar-mobility-steps b{
+  display:inline-grid!important;place-items:center!important;width:28px!important;height:28px!important;
+  flex:0 0 28px!important;border-radius:50%!important;background:#fff!important;color:#075c43!important;
+  text-shadow:none!important;font-size:13px!important;font-weight:800!important;
+}
+@media(max-width:767px){
+ body:has(.vaicar-home) .vaicar-mobility-steps{align-items:center!important;font-size:12px!important}
+}
