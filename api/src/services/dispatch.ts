@@ -427,6 +427,41 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
         transactionError = new AppError(ErrorCode.FORBIDDEN, 'Seu cadastro não está aprovado para aceitar corridas.', 403);
         return;
       }
+
+      // Eligibility can change after dispatch created the offer. Revalidate
+      // the driver's live state and capability before assigning the ride.
+      if (!latestDriver.isOnline) {
+        transactionError = new AppError(ErrorCode.FORBIDDEN, 'Você está offline e não pode aceitar esta corrida.', 403);
+        return;
+      }
+      const latestVehicleType = latestDriver.vehicle?.type || (latestDriver.isCourier ? 'motorcycle' : 'car');
+      const latestServices = latestDriver.servicesOffered?.length
+        ? latestDriver.servicesOffered
+        : (latestDriver.isCourier || latestVehicleType === 'bicycle' ? ['delivery'] : ['ride']);
+      const isDeliveryOffer = offer.serviceType === 'delivery';
+      const compatibleVehicle = isDeliveryOffer
+        ? ['car', 'motorcycle', 'van', 'bicycle'].includes(latestVehicleType)
+        : ['car', 'motorcycle', 'van'].includes(latestVehicleType);
+      const compatibleService = latestServices.includes(isDeliveryOffer ? 'delivery' : 'ride');
+      const gpsUpdatedAt = latestDriver.currentLocation?.updatedAt
+        ? new Date(latestDriver.currentLocation.updatedAt).getTime()
+        : NaN;
+      const gpsAgeMs = Date.now() - gpsUpdatedAt;
+      const freshGps = Number.isFinite(gpsUpdatedAt) &&
+        gpsAgeMs <= MAX_TELEMETRY_AGE_MS && gpsAgeMs >= -5000;
+      if (!compatibleVehicle || !compatibleService || !freshGps) {
+        transactionError = new AppError(
+          ErrorCode.FORBIDDEN,
+          'Sua disponibilidade, localização ou tipo de veículo não corresponde mais a esta oferta.',
+          403
+        );
+        return;
+      }
+      if (!isDeliveryOffer && !latestDriver.vehicle?.plate) {
+        transactionError = new AppError(ErrorCode.FORBIDDEN, 'Veículo sem placa cadastrada não pode aceitar corridas.', 403);
+        return;
+      }
+
       if (ride.driverId || !['REQUESTED', 'OFFERED'].includes(ride.status)) {
         transaction.update(offerRef, { status: 'EXPIRED', respondedAt: now });
         transactionError = new AppError(ErrorCode.CONFLICT, 'Corrida já foi aceita por outro motorista ou cancelada.', 409);
