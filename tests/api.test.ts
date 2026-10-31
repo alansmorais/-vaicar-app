@@ -1213,19 +1213,17 @@ describe('VaiCar Platform - API Automated Tests', () => {
         .set('Authorization', `Bearer ${driverToken}`);
 
       expect(availableRes.status).toBe(200);
-      const incoming = availableRes.body.data.find((r: any) => r.id === rideId);
-      expect(incoming).toBeDefined();
-      expect(incoming.status).toBe('REQUESTED');
+      // Legacy pool endpoint must never expose rides without a targeted offer.
+      expect(availableRes.body.data.find((r: any) => r.id === rideId)).toBeUndefined();
 
-      // 3. Driver declines the ride
+      // 3. A driver cannot decline a ride that was not offered to their account.
       const declineRes = await request(app)
         .post(`/api/v1/rides/${rideId}/decline`)
         .set('Authorization', `Bearer ${driverToken}`);
 
-      expect(declineRes.status).toBe(200);
-      expect(declineRes.body.data.driverId).toBeUndefined();
+      expect(declineRes.status).toBe(403);
 
-      // 4. Ride is still in REQUESTED status, but now open in the general pool
+      // 4. The ride remains untouched and is not exposed through a shared pool.
       const openRideRes = await request(app)
         .get(`/api/v1/rides/${rideId}`)
         .set('Authorization', `Bearer ${passToken}`);
