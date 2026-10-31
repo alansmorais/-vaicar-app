@@ -1298,3 +1298,160 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
     row-gap: 8px !important;
   }
 }
+
+
+/* Tropical Premium — service cards and São Sebastião photo gallery */
+.vaicar-home #servicos-principais {
+  background: #f7faf8 !important;
+  border-color: #e1ebe5 !important;
+  color: #24483b !important;
+}
+.vaicar-home #servicos-principais h2 {
+  color: #173f32 !important;
+  letter-spacing: -.035em;
+}
+.vaicar-home #servicos-principais > div > div:first-child > span {
+  color: #087f5b !important;
+}
+.vaicar-home #servicos-principais > div > div:first-child > p {
+  color: #5b7066 !important;
+}
+.vaicar-home .vaicar-audience-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 13px !important;
+  min-height: 88px !important;
+  padding: 17px !important;
+  background: #ffffff !important;
+  border: 1px solid #dce9e1 !important;
+  border-radius: 18px !important;
+  color: #1d4537 !important;
+  box-shadow: 0 3px 12px rgba(20,65,48,.045) !important;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease !important;
+}
+.vaicar-home .vaicar-audience-card:hover {
+  transform: translateY(-2px);
+  border-color: #91cbb0 !important;
+  box-shadow: 0 10px 24px rgba(20,95,65,.10) !important;
+}
+.vaicar-home .vaicar-audience-icon {
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 44px !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 14px !important;
+  background: #e4f4eb !important;
+  color: #087f5b !important;
+}
+.vaicar-home .vaicar-audience-card strong {
+  display: block;
+  color: #173f32 !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+}
+.vaicar-home .vaicar-audience-card small {
+  display: block;
+  margin-top: 3px;
+  color: #5c7167 !important;
+  font-size: 12px !important;
+}
+.vaicar-home .vaicar-audience-arrow {
+  color: #729487 !important;
+}
+
+/* Photo gallery: eight real local destinations, consistent crop and readable captions */
+.vaicar-home #praias-cobertas {
+  background: #ffffff !important;
+  padding-top: 64px !important;
+  padding-bottom: 64px !important;
+  border-color: #e5eee8 !important;
+}
+.vaicar-home #praias-cobertas > div > div:first-child {
+  align-items: flex-end !important;
+  margin-bottom: 26px !important;
+}
+.vaicar-home #praias-cobertas > div > div:first-child > div:first-child > span {
+  color: #087f5b !important;
+  background: #e8f6ee !important;
+  border: 1px solid #cfe8d9 !important;
+}
+.vaicar-home #praias-cobertas h2 {
+  color: #173f32 !important;
+  font-size: clamp(24px, 3vw, 34px) !important;
+  letter-spacing: -.035em !important;
+}
+.vaicar-home #praias-cobertas p {
+  color: #5b7066 !important;
+}
+.vaicar-home #praias-cobertas > div > div:first-child > a {
+  background: #087f5b !important;
+  color: #ffffff !important;
+  border: 1px solid #087f5b !important;
+  box-shadow: 0 5px 14px rgba(8,127,91,.18) !important;
+}
+.vaicar-home #praias-cobertas .grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+.vaicar-home #praias-cobertas .grid > div {
+  display: flex !important;
+  min-height: 218px !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 22px rgba(14,48,38,.10) !important;
+  isolation: isolate;
+}
+.vaicar-home #praias-cobertas .grid > div > img {
+  transition: transform .55s cubic-bezier(.2,.7,.2,1) !important;
+}
+.vaicar-home #praias-cobertas .grid > div:hover > img {
+  transform: scale(1.055) !important;
+}
+.vaicar-home #praias-cobertas .grid > div > div:nth-last-child(2) {
+  background: linear-gradient(180deg, rgba(5,28,25,.04) 0%, rgba(5,28,25,.12) 34%, rgba(5,28,25,.88) 100%) !important;
+}
+.vaicar-home #praias-cobertas .grid > div > div:last-child {
+  padding: 16px !important;
+}
+.vaicar-home #praias-cobertas .grid > div > div:last-child > div > span:first-child {
+  color: #d8ffeb !important;
+  background: rgba(5,55,39,.84) !important;
+  border: 1px solid rgba(174,239,205,.35) !important;
+}
+.vaicar-home #praias-cobertas .grid > div h3 {
+  color: #ffffff !important;
+  font-size: 16px !important;
+  line-height: 1.2 !important;
+}
+.vaicar-home #praias-cobertas .grid > div p {
+  color: rgba(255,255,255,.88) !important;
+  font-size: 11px !important;
+}
+.vaicar-home #praias-cobertas .grid > div > div:last-child > div > span:last-child {
+  color: #ffffff !important;
+}
+.vaicar-home #praias-cobertas .mt-6 {
+  color: #526b60 !important;
+  border-color: #e3ece6 !important;
+}
+.vaicar-home #praias-cobertas .mt-6 svg {
+  color: #087f5b !important;
+}
+@media (max-width: 900px) {
+  .vaicar-home #praias-cobertas .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+  .vaicar-home #praias-cobertas .grid > div { min-height: 190px !important; }
+}
+@media (max-width: 520px) {
+  .vaicar-home #servicos-principais { padding-block: 34px !important; }
+  .vaicar-home .vaicar-audience-card { min-height: 76px !important; padding: 13px !important; }
+  .vaicar-home #praias-cobertas { padding-block: 42px !important; }
+  .vaicar-home #praias-cobertas .grid { gap: 9px !important; }
+  .vaicar-home #praias-cobertas .grid > div { min-height: 164px !important; border-radius: 14px !important; }
+  .vaicar-home #praias-cobertas .grid > div > div:last-child { padding: 11px !important; }
+  .vaicar-home #praias-cobertas .grid > div h3 { font-size: 13px !important; }
+  .vaicar-home #praias-cobertas .grid > div p { font-size: 10px !important; }
+}
