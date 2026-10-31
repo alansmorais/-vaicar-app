@@ -339,6 +339,7 @@ export const MapDisplay: React.FC<MapProps> = ({
   compactPins = false,
   onRouteInfoChange,
 }) => {
+  const safeDrivers: PublicDriverMarker[] = Array.isArray(drivers) ? drivers : [];
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
@@ -601,7 +602,7 @@ export const MapDisplay: React.FC<MapProps> = ({
 
     layer.clearLayers();
 
-    drivers.forEach((d) => {
+    safeDrivers.forEach((d) => {
       if (d.currentLocation?.lat && d.currentLocation?.lng) {
         // Enforce GPS freshness: never render stale driver positions older than 60s
         if (d.currentLocation.updatedAt) {
@@ -760,9 +761,11 @@ export const MapDisplay: React.FC<MapProps> = ({
 
         if (isCancelled) return;
 
-        if (data.routes && data.routes[0]) {
+        if (Array.isArray(data?.routes) && data.routes[0] && Array.isArray(data.routes[0]?.geometry?.coordinates)) {
           const route = data.routes[0];
-          const coords: [number, number][] = route.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+          const coords: [number, number][] = route.geometry.coordinates
+            .filter((c: unknown) => Array.isArray(c) && c.length >= 2 && Number.isFinite(Number(c[0])) && Number.isFinite(Number(c[1])))
+            .map((c: [number, number]) => [c[1], c[0]]);
 
           if (routeShadowPolylineRef.current) routeShadowPolylineRef.current.remove();
           if (routePolylineRef.current) routePolylineRef.current.remove();
