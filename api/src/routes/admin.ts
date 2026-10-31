@@ -593,6 +593,7 @@ adminRouter.post('/rides/:id/approve-payment', async (req: Request, res: Respons
     };
 
     await saveRide(updatedRide);
+    if (ride.driverId) await releaseDriverRideLock(ride.driverId, ride.id);
 
     const payload = formatRidePayload(updatedRide);
     broadcastLiveEvent('RIDE_UPDATED', payload);
