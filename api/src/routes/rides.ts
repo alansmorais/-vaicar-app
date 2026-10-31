@@ -1368,6 +1368,7 @@ ridesRouter.post('/:id/cancel', async (req: Request, res: Response, next: NextFu
     };
 
     await saveRide(updatedRide);
+    if (ride.driverId) await releaseDriverRideLock(ride.driverId, ride.id);
 
     const payload = formatRidePayload(updatedRide);
     broadcastLiveEvent('RIDE_UPDATED', payload);
