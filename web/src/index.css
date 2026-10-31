@@ -3601,3 +3601,47 @@ body:has(.vaicar-home) .vaicar-reference-stage {
     align-self:start!important;
   }
 }
+
+
+/* Public information pages: light São Sebastião palette, preserving page content and flows */
+.vaicar-info-page { background:#FAF9F6!important; color:#111827!important; }
+.vaicar-info-page [class~="bg-slate-950"],
+.vaicar-info-page [class~="bg-slate-900"],
+.vaicar-info-page [class~="bg-slate-900/90"],
+.vaicar-info-page [class~="bg-slate-900/50"],
+.vaicar-info-page [class~="bg-slate-900/80"],
+.vaicar-info-page [class~="bg-slate-950/80"],
+.vaicar-info-page [class~="bg-slate-950/90"] {
+  background-color:#FFFFFF!important;
+}
+.vaicar-info-page [class~="text-white"],
+.vaicar-info-page [class~="text-slate-100"] { color:#111827!important; }
+.vaicar-info-page [class~="text-slate-300"],
+.vaicar-info-page [class~="text-slate-400"] { color:#64748B!important; }
+.vaicar-info-page [class~="text-slate-500"],
+.vaicar-info-page [class~="text-slate-600"] { color:#64748B!important; }
+.vaicar-info-page [class~="border-slate-900"],
+.vaicar-info-page [class~="border-slate-800"],
+.vaicar-info-page [class~="border-slate-700"] { border-color:#E2E8F0!important; }
+.vaicar-info-page [class~="bg-emerald-950"],
+.vaicar-info-page [class~="bg-emerald-950/80"] { background-color:#ECFDF5!important; }
+.vaicar-info-page [class~="text-emerald-400"],
+.vaicar-info-page [class~="text-emerald-300"] { color:#047857!important; }
+.vaicar-info-page [class~="border-emerald-500/30"],
+.vaicar-info-page [class~="border-emerald-500/40"],
+.vaicar-info-page [class~="border-emerald-500/50"] { border-color:#A7F3D0!important; }
+.vaicar-info-page [class~="bg-emerald-600"] { background-color:#059669!important; }
+.vaicar-info-page [class~="hover:bg-emerald-500"]:hover { background-color:#047857!important; }
+.vaicar-info-page [class~="bg-amber-950"],
+.vaicar-info-page [class~="bg-amber-950/80"] { background-color:#FFFBEB!important; }
+.vaicar-info-page [class~="text-amber-400"] { color:#B45309!important; }
+.vaicar-info-page [class~="border-amber-500/40"] { border-color:#FDE68A!important; }
+.vaicar-info-page section { border-color:#E2E8F0!important; }
+.vaicar-info-page section > div > div > div[class*="bg-slate-"] {
+  box-shadow:0 8px 24px rgba(15,23,42,.06)!important;
+}
+.vaicar-info-page .absolute.inset-0.bg-gradient-to-r,
+.vaicar-info-page .absolute.inset-0.bg-gradient-to-t {
+  background:linear-gradient(90deg,rgba(250,249,246,.88),rgba(250,249,246,.72))!important;
+}
+.vaicar-info-page img { filter:none!important; }
