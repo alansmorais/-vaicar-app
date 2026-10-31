@@ -1461,3 +1461,66 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
   display: flex !important;
 }
 
+
+
+/* =========================================================
+   TROPICAL PREMIUM — ACCESSIBILITY & INTERACTION POLISH
+   Scoped to the web passenger and driver dashboards only.
+   No application logic, API, or native Android changes.
+   ========================================================= */
+.vaicar-tropical-screen {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.vaicar-tropical-screen .text-slate-400,
+.vaicar-tropical-screen .text-slate-500,
+.vaicar-tropical-screen [class*="text-gray-400"],
+.vaicar-tropical-screen [class*="text-gray-500"] {
+  color: #52645d !important;
+}
+.vaicar-tropical-screen input:not([type="checkbox"]):not([type="radio"]),
+.vaicar-tropical-screen textarea,
+.vaicar-tropical-screen select {
+  color: #173f32 !important;
+  background-color: #ffffff !important;
+  border-color: #cbded3 !important;
+}
+.vaicar-tropical-screen input::placeholder,
+.vaicar-tropical-screen textarea::placeholder {
+  color: #71847a !important;
+  opacity: 1;
+}
+.vaicar-tropical-screen input:focus,
+.vaicar-tropical-screen textarea:focus,
+.vaicar-tropical-screen select:focus,
+.vaicar-tropical-screen button:focus-visible,
+.vaicar-tropical-screen a:focus-visible {
+  outline: 3px solid rgba(7, 150, 111, .28);
+  outline-offset: 2px;
+}
+.vaicar-tropical-screen [class*="bg-slate-950"],
+.vaicar-tropical-screen [class*="bg-slate-900"],
+.vaicar-tropical-screen [class*="bg-slate-800"] {
+  box-shadow: 0 3px 12px rgba(22, 65, 46, .045);
+}
+.vaicar-tropical-screen button:not([disabled]),
+.vaicar-tropical-screen a {
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.vaicar-tropical-screen button:disabled {
+  opacity: .58;
+  cursor: not-allowed;
+}
+.vaicar-tropical-screen .leaflet-container {
+  background: #e8f1ec;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vaicar-tropical-screen *,
+  .vaicar-tropical-screen *::before,
+  .vaicar-tropical-screen *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
