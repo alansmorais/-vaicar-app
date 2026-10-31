@@ -445,10 +445,17 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
 
       const lockedRideId = driverLockDoc.exists ? driverLockDoc.data()?.activeRideId : null;
       const activeRideStatuses = ['ACCEPTED', 'DRIVER_ARRIVING', 'ARRIVED', 'IN_PROGRESS'];
+      // A process restart or legacy terminal ride may leave an old lock behind.
+      // Verify its referenced ride before treating the lock as authoritative.
+      const lockedRideDoc = lockedRideId && lockedRideId !== offer.rideId
+        ? await transaction.get(db.collection('rides').doc(lockedRideId))
+        : null;
+      const hasStaleLock = Boolean(lockedRideId && lockedRideId !== offer.rideId &&
+        (!lockedRideDoc?.exists || !activeRideStatuses.includes(String(lockedRideDoc.data()?.status))));
       const hasOtherActiveRide = activeRidesSnapshot.docs.some(doc =>
         doc.id !== offer.rideId && activeRideStatuses.includes(String(doc.data().status))
       );
-      if ((lockedRideId && lockedRideId !== offer.rideId) || hasOtherActiveRide) {
+      if ((lockedRideId && lockedRideId !== offer.rideId && !hasStaleLock) || hasOtherActiveRide) {
         transactionError = new AppError(ErrorCode.CONFLICT, 'Você já está responsável por outra corrida.', 409);
         return;
       }
@@ -529,7 +536,13 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
   } else {
     // Reserve synchronously before the first await to serialize local accepts.
     const existingLocalLock = localDriverRideLocks.get(driver.uid);
-    if (existingLocalLock) {
+    if (existingLocalLock && existingLocalLock !== '__accepting__') {
+      const lockedRide = await getRide(existingLocalLock);
+      if (!lockedRide || !['ACCEPTED', 'DRIVER_ARRIVING', 'ARRIVED', 'IN_PROGRESS'].includes(lockedRide.status)) {
+        localDriverRideLocks.delete(driver.uid);
+      }
+    }
+    if (localDriverRideLocks.has(driver.uid)) {
       throw new AppError(ErrorCode.CONFLICT, 'Você já está responsável por outra corrida.', 409);
     }
     localDriverRideLocks.set(driver.uid, '__accepting__');
