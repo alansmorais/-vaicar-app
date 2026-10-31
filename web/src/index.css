@@ -3812,27 +3812,49 @@ body:has(.vaicar-home) .vaicar-reference-stage {
 }
 
 
-/* Homepage layering + fully transparent audience links (desktop reference fix) */
+/* Corrected homepage stack: keep the photo in its own stage and place the
+   booking panel above the navigation; remove every surface behind role links. */
 @media (min-width:768px) {
   body:has(.vaicar-home) .vaicar-reference-stage {
-    isolation:auto!important;
+    position:relative!important;
+    isolation:isolate!important;
+    z-index:20!important;
     overflow:visible!important;
+    margin-top:-82px!important;
+    padding-top:112px!important;
+    height:786px!important;
+    min-height:786px!important;
+    background:#0d526b!important;
+  }
+  body:has(.vaicar-home) .vaicar-stage-photo {
+    position:absolute!important;
+    inset:0!important;
+    z-index:-1!important;
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+  body:has(.vaicar-home) .vaicar-stage-photo img {
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
   }
   body:has(.vaicar-home) .vaicar-navbar {
-    z-index:60!important;
+    z-index:10!important;
   }
   body:has(.vaicar-home) .vaicar-stage-inner {
     position:relative!important;
-    z-index:auto!important;
+    z-index:1!important;
   }
   body:has(.vaicar-home) .vaicar-booking-panel {
     position:relative!important;
-    z-index:80!important;
+    z-index:30!important;
     isolation:isolate!important;
   }
   body:has(.vaicar-home) .vaicar-booking-card {
     position:relative!important;
-    z-index:81!important;
+    z-index:31!important;
   }
   body:has(.vaicar-home) .vaicar-audience-cards {
     position:absolute!important;
@@ -3843,6 +3865,7 @@ body:has(.vaicar-home) .vaicar-reference-stage {
     border:0!important;
     box-shadow:none!important;
     outline:0!important;
+    padding:0!important;
   }
   body:has(.vaicar-home) .vaicar-audience-cards::before,
   body:has(.vaicar-home) .vaicar-audience-cards::after,
@@ -3850,13 +3873,13 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   body:has(.vaicar-home) .vaicar-profile-card::after {
     content:none!important;
     display:none!important;
-    background:transparent!important;
-    box-shadow:none!important;
   }
-  body:has(.vaicar-home) .vaicar-audience-cards > .vaicar-profile-card,
-  body:has(.vaicar-home) .vaicar-audience-cards > a.vaicar-profile-card,
-  body:has(.vaicar-home) .vaicar-audience-cards > .vaicar-profile-card:hover,
-  body:has(.vaicar-home) .vaicar-audience-cards > a.vaicar-profile-card:hover {
+  body:has(.vaicar-home) .vaicar-audience-cards .vaicar-profile-card,
+  body:has(.vaicar-home) .vaicar-audience-cards .vaicar-profile-card:hover,
+  body:has(.vaicar-home) .vaicar-audience-cards .vaicar-profile-passenger,
+  body:has(.vaicar-home) .vaicar-audience-cards .vaicar-profile-driver,
+  body:has(.vaicar-home) .vaicar-audience-cards .vaicar-profile-delivery,
+  body:has(.vaicar-home) .vaicar-audience-cards .vaicar-profile-business {
     background:transparent!important;
     background-color:transparent!important;
     background-image:none!important;
