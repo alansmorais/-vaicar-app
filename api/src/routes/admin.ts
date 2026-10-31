@@ -31,6 +31,7 @@ import {
 } from '../services/firestore.js';
 import { sendDriverStatusEmail, sendDocumentsRequestedEmail, emailLogs, sendTransactionalEmail } from '../services/email.js';
 import { broadcastLiveEvent } from '../services/liveStream.js';
+import { releaseDriverRideLock } from '../services/dispatch.js';
 import { formatRidePayload } from './rides.js';
 import { Ride, RideStatus } from '../../../shared/src/types.js';
 import { getApkDownloadAnalytics } from '../services/apkAnalytics.js';
@@ -559,6 +560,7 @@ adminRouter.post('/rides/:id/cancel', async (req: Request, res: Response, next: 
     }
 
     await saveRide(updatedRide);
+    if (ride.driverId) await releaseDriverRideLock(ride.driverId, ride.id);
 
     const payload = formatRidePayload(updatedRide);
     broadcastLiveEvent('RIDE_UPDATED', payload);
