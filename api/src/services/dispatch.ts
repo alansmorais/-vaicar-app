@@ -339,6 +339,7 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
 
   if (db) {
     let resultRide: Ride | null = null;
+    let transactionError: AppError | null = null;
     await db.runTransaction(async (transaction) => {
       const offerRef = db.collection('ride_offers').doc(offerId);
       const offerDoc = await transaction.get(offerRef);
@@ -353,7 +354,8 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
       }
       if (new Date(offer.expiresAt).getTime() <= Date.now()) {
         transaction.update(offerRef, { status: 'EXPIRED', respondedAt: now });
-        throw new AppError(ErrorCode.GONE, 'Tempo esgotado para aceitar a oferta (limite de 20s).', 410);
+        transactionError = new AppError(ErrorCode.GONE, 'Tempo esgotado para aceitar a oferta (limite de 20s).', 410);
+        return;
       }
 
       const rideRef = db.collection('rides').doc(offer.rideId);
@@ -363,7 +365,8 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
 
       if (ride.driverId || !['REQUESTED', 'OFFERED'].includes(ride.status)) {
         transaction.update(offerRef, { status: 'EXPIRED', respondedAt: now });
-        throw new AppError(ErrorCode.CONFLICT, 'Corrida já foi aceita por outro motorista ou cancelada.', 409);
+        transactionError = new AppError(ErrorCode.CONFLICT, 'Corrida já foi aceita por outro motorista ou cancelada.', 409);
+        return;
       }
 
       transaction.update(offerRef, {
@@ -386,6 +389,9 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
       resultRide = updatedRide;
     });
 
+    // Throw only after the transaction commits: throwing inside Firestore's
+    // callback aborts writes, including the EXPIRED status updates above.
+    if (transactionError) throw transactionError;
     if (!resultRide) throw new AppError(ErrorCode.INTERNAL_ERROR, 'Falha ao aceitar oferta.', 500);
     broadcastLiveEvent('RIDE_UPDATED', resultRide);
     return resultRide;
