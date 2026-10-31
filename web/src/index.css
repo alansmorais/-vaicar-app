@@ -1991,3 +1991,145 @@ body:has(.vaicar-home) .vaicar-navbar img {
   #praias-cobertas > div > .grid {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
   #praias-cobertas > div > .grid > div {height:160px !important;min-height:160px !important;}
 }
+
+
+/* FINAL STRUCTURAL OVERRIDES — match supplied desktop composition */
+body:has(.vaicar-home) .vaicar-navbar {
+  position:absolute !important;
+  top:0;left:0;right:0;
+  z-index:50 !important;
+  width:100%;
+  background:rgba(2,35,54,.18) !important;
+  border-color:rgba(255,255,255,.12) !important;
+  box-shadow:none !important;
+  backdrop-filter:blur(5px);
+}
+body:has(.vaicar-home) .vaicar-navbar a,
+body:has(.vaicar-home) .vaicar-navbar button {color:#fff;}
+.vaicar-home-hero {min-height:790px !important;padding:158px 0 215px !important;}
+.vaicar-home-hero .vaicar-hero-image {
+  opacity:1 !important;
+  object-position:center 48% !important;
+  filter:saturate(1.12) contrast(1.04) brightness(.92);
+}
+.vaicar-home-hero .vaicar-hero-overlay {
+  background:linear-gradient(90deg,rgba(0,35,52,.42),rgba(0,42,54,.08) 58%,rgba(0,34,48,.16)) !important;
+}
+.vaicar-home-hero .vaicar-hero-vignette {
+  background:linear-gradient(180deg,rgba(0,24,43,.22),transparent 22%,transparent 72%,rgba(0,48,39,.22)) !important;
+}
+.vaicar-home-hero .vaicar-hero-glow {display:none !important;}
+.vaicar-home-hero > .relative.z-10 {max-width:1440px !important;}
+.vaicar-home-hero .vaicar-reference-layout {
+  grid-template-columns:minmax(0,1.25fr) minmax(440px,.78fr) !important;
+  gap:clamp(28px,4vw,60px) !important;
+  align-items:center !important;
+}
+.vaicar-home-hero .vaicar-hero-copy {text-align:left !important;color:#fff !important;}
+.vaicar-home-hero .vaicar-hero-copy > div:first-child,
+.vaicar-home-hero .vaicar-hero-copy > div:nth-last-child(2),
+.vaicar-home-hero .vaicar-hero-copy > div:last-child {display:none !important;}
+.vaicar-home-hero .vaicar-reference-title {
+  font-size:clamp(4.2rem,7.2vw,7.2rem) !important;
+  white-space:nowrap;
+}
+.vaicar-home-hero .vaicar-reference-subtitle {
+  max-width:620px !important;
+  font-size:clamp(1.35rem,2vw,1.9rem) !important;
+  font-weight:750 !important;
+}
+.vaicar-home-hero .vaicar-reference-features {
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:14px !important;
+  margin-top:34px !important;
+}
+.vaicar-home-hero .vaicar-reference-features > div {min-width:0;}
+.vaicar-home-hero .vaicar-reference-features svg {width:36px;height:36px;color:white;}
+.vaicar-home-hero .vaicar-reference-features strong {font-size:18px;}
+.vaicar-home-hero .vaicar-reference-features span {font-size:14px;white-space:nowrap;}
+.vaicar-home-hero .vaicar-hero-simulator > div {
+  padding:28px 24px !important;
+  border-radius:26px !important;
+  background:rgba(255,255,255,.94) !important;
+  border:1px solid rgba(255,255,255,.8) !important;
+  box-shadow:0 18px 55px rgba(0,35,45,.28) !important;
+  backdrop-filter:blur(16px);
+}
+.vaicar-home-hero .vaicar-hero-simulator h3,
+.vaicar-home-hero .vaicar-hero-simulator label {color:#123f32 !important;}
+.vaicar-home-hero .vaicar-hero-simulator select {
+  min-height:50px;
+  border-radius:28px !important;
+  background:white !important;
+  border:1px solid #d7e1e5 !important;
+  color:#425d70 !important;
+  font-size:15px !important;
+}
+.vaicar-home-hero .vaicar-hero-simulator button,
+.vaicar-home-hero .vaicar-hero-simulator a {border-radius:14px;}
+.vaicar-audience {
+  margin-top:-178px !important;
+  padding:0 0 28px !important;
+  position:relative;z-index:4;
+}
+.vaicar-audience > div {max-width:1440px !important;}
+.vaicar-audience > div > .flex {display:none !important;}
+.vaicar-audience > div > .grid {grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:16px !important;}
+.vaicar-audience-card {
+  min-height:186px !important;
+  padding:24px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-start !important;
+  justify-content:space-between !important;
+  border-radius:22px !important;
+  background:rgba(255,255,255,.96) !important;
+  box-shadow:0 12px 32px rgba(0,35,38,.18) !important;
+}
+.vaicar-audience-card:nth-child(2) {background:#fff9e9 !important;}
+.vaicar-audience-card:nth-child(4) {background:#eef5ff !important;}
+.vaicar-audience-card strong {font-size:21px !important;color:#0b4535 !important;}
+.vaicar-audience-card small {font-size:14px !important;color:#415d53 !important;}
+.vaicar-audience-icon {width:58px !important;height:58px !important;background:transparent !important;color:#07543e !important;}
+.vaicar-audience-icon svg {width:46px !important;height:46px !important;}
+.vaicar-audience-arrow {align-self:flex-end !important;width:42px !important;height:42px !important;padding:10px;border-radius:50%;background:#087c59;color:#fff !important;}
+.vaicar-destinations {background:#fff !important;padding:24px 0 38px !important;border:0 !important;}
+.vaicar-destinations > div {max-width:100% !important;padding-inline:3.2vw !important;}
+.vaicar-destinations > div > .flex {margin-bottom:12px !important;align-items:center !important;}
+.vaicar-destinations > div > .flex > div:first-child {max-width:220px;}
+.vaicar-destinations > div > .flex > div:first-child > span {display:none !important;}
+.vaicar-destinations > div > .flex h2 {font-size:30px !important;line-height:1.05 !important;color:#064532 !important;}
+.vaicar-destinations > div > .flex p {font-size:14px !important;color:#50695f !important;}
+.vaicar-destinations > div > .flex > a {display:none !important;}
+.vaicar-destinations > div > .grid {grid-template-columns:repeat(8,minmax(0,1fr)) !important;gap:10px !important;}
+.vaicar-destinations > div > .grid > div {height:190px !important;min-height:190px !important;border:0 !important;border-radius:15px !important;}
+.vaicar-destinations > div > .grid > div p {display:none !important;}
+.vaicar-destinations > div > .grid > div h3 {font-size:14px !important;}
+@media(max-width:1100px) and (min-width:768px) {
+ .vaicar-home-hero .vaicar-reference-layout {grid-template-columns:minmax(0,1fr) minmax(350px,.85fr) !important;}
+ .vaicar-home-hero .vaicar-reference-title {font-size:clamp(3.6rem,6vw,5rem) !important;}
+ .vaicar-audience > div > .grid {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+ .vaicar-destinations > div > .grid {grid-template-columns:repeat(4,minmax(0,1fr)) !important;}
+}
+@media(max-width:767px) {
+ body:has(.vaicar-home) .vaicar-navbar {position:relative !important;background:#082f34 !important;}
+ .vaicar-home-hero {min-height:0 !important;padding:38px 0 188px !important;}
+ .vaicar-home-hero .vaicar-reference-layout {grid-template-columns:1fr !important;gap:26px !important;}
+ .vaicar-home-hero .vaicar-hero-copy {text-align:left !important;}
+ .vaicar-home-hero .vaicar-reference-title {font-size:clamp(3.3rem,14vw,4.8rem) !important;white-space:normal;}
+ .vaicar-home-hero .vaicar-reference-subtitle {font-size:1.35rem !important;}
+ .vaicar-home-hero .vaicar-reference-features {grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:16px !important;margin-top:22px !important;}
+ .vaicar-home-hero .vaicar-reference-features svg {width:29px;height:29px;}
+ .vaicar-home-hero .vaicar-reference-features strong {font-size:15px;}
+ .vaicar-home-hero .vaicar-reference-features span {font-size:12px;white-space:normal;}
+ .vaicar-home-hero .vaicar-hero-simulator {width:100%;max-width:560px;margin:auto;}
+ .vaicar-audience {margin-top:-150px !important;}
+ .vaicar-audience > div > .grid {grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px !important;}
+ .vaicar-audience-card {min-height:136px !important;padding:14px !important;}
+ .vaicar-audience-card strong {font-size:14px !important;}
+ .vaicar-audience-card small {font-size:11px !important;}
+ .vaicar-audience-icon {width:42px !important;height:42px !important;}
+ .vaicar-audience-icon svg {width:34px !important;height:34px !important;}
+ .vaicar-destinations > div > .grid {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+ .vaicar-destinations > div > .grid > div {height:160px !important;min-height:160px !important;}
+}
