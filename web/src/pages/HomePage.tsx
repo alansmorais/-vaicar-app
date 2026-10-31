@@ -301,44 +301,9 @@ export const HomePage: React.FC = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          {/* Mobile Quick Action Tabs (Top of Hero on Mobile) */}
-          <div className="grid grid-cols-3 gap-2.5 pb-6 lg:hidden">
-            <Link
-              to="/passenger"
-              className="p-3 rounded-2xl bg-blue-600 text-white text-center flex flex-col items-center justify-center space-y-1 shadow-md shadow-blue-500/25 active:scale-95 transition-all"
-            >
-              <Car className="w-5 h-5 text-white" />
-              <span className="text-[11px] font-extrabold text-white leading-tight">Pedir Corrida</span>
-              <span className="text-[9px] font-bold text-blue-100 uppercase">Tarifa Justa</span>
-            </Link>
-
-            <Link
-              to="/driver/register"
-              className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95 transition-all"
-            >
-              <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">Quero Dirigir</span>
-              <span className="text-[9px] font-medium text-slate-500 dark:text-slate-400">R$ 100 ou 10%</span>
-            </Link>
-
-            <Link
-              to="/parcerias"
-              className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95 transition-all"
-            >
-              <Store className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-              <span className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">Empresas</span>
-              <span className="text-[9px] font-medium text-amber-600 dark:text-amber-400 uppercase">Parcerias</span>
-            </Link>
-          </div>
-
           <div className="vaicar-reference-layout grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content */}
             <div className="vaicar-hero-copy lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-800 text-blue-700 dark:text-blue-400 text-xs font-semibold backdrop-blur-sm">
-                <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-emerald-500 animate-pulse" />
-                Transporte 100% Local • São Sebastião - SP
-              </div>
-
               <div className="vaicar-reference-eyebrow">TRANSPORTE E ENTREGAS EM</div>
               <h1 className="vaicar-reference-title">
                 São Sebastião
@@ -353,67 +318,6 @@ export const HomePage: React.FC = () => {
                 <div><Users /><strong>Para todos</strong><span>Moradores e turistas</span></div>
               </div>
 
-              {/* CTAs */}
-              <div className="space-y-3 pt-2">
-                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3.5">
-                  <Link
-                    to="/passenger"
-                    className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-base shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2.5"
-                  >
-                    <Car className="w-5 h-5" />
-                    Pedir Corrida
-                  </Link>
-                  <Link
-                    to="/driver/register"
-                    className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 font-bold text-sm transition-all hover:scale-[1.01] flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    Quero Dirigir
-                  </Link>
-                </div>
-
-                {/* Secondary accessible options (Empresas & Entregas) without competing with primary CTA */}
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="font-medium text-slate-400 dark:text-slate-500">Outros serviços:</span>
-                  <Link
-                    to="/parcerias"
-                    className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-emerald-400 transition-colors"
-                  >
-                    <Store className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    Para Empresas
-                  </Link>
-                  <span className="text-slate-300 dark:text-slate-700">•</span>
-                  <a
-                    href="#entregas"
-                    className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-emerald-400 transition-colors"
-                  >
-                    <Package className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    Entregas locais (Em breve)
-                  </a>
-                </div>
-              </div>
-
-              {/* Key Highlights */}
-              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-200 dark:border-slate-800/80 max-w-lg mx-auto lg:mx-0 text-left">
-                <div>
-                  <span className="block text-2xl font-black text-blue-600 dark:text-emerald-400">Sem Dinâmica</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Tarifa justa em São Sebastião</span>
-                </div>
-                <div>
-                  <span className="block text-2xl font-black text-slate-900 dark:text-white">R$ 100 ou 10%</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Planos alternativos</span>
-                </div>
-                <div>
-                  <span className="block text-2xl font-black text-emerald-600 dark:text-emerald-400">100% Direto</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Pix ou dinheiro ao condutor</span>
-                </div>
-              </div>
-
-              {/* Location Badge */}
-              <div className="pt-2 flex items-center justify-center lg:justify-start gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400 shrink-0" />
-                <span>Atendimento de Boracéia à Enseada • Conexão Costa Sul, Centro e Balsa</span>
-              </div>
             </div>
 
             {/* Compact booking panel — reference HTML layout */}
@@ -479,49 +383,76 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* DIRECT SERVICE ENTRY POINTS */}
-      <section id="servicos-principais" className="vaicar-audience py-10 sm:py-14 border-b">
+      {/* Operating Zones & Beaches Showcase with Real Photography */}
+      <section id="praias-cobertas" className="vaicar-destinations py-20 bg-slate-950 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-4">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider">Mobilidade local</span>
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight mt-1">O que você precisa fazer hoje?</h2>
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-emerald-400 px-3 py-1 rounded-full bg-blue-50 dark:bg-emerald-950/80 border border-blue-200 dark:border-emerald-500/30">
+                Cobertura Geográfica Real • São Sebastião
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mt-2.5">
+                Principais Rotas & Praias Cobertas
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+                Mobilidade porta a porta em todo o município de São Sebastião — da Costa Sul ao Centro Histórico, travessia da balsa e cachoeiras da Mata Atlântica.
+              </p>
             </div>
-            <p className="text-sm max-w-md">Um só lugar para viagens, trabalho e entregas em São Sebastião.</p>
+            <Link
+              to="/passenger"
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white dark:bg-slate-900 dark:hover:bg-slate-800 dark:border dark:border-slate-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 shadow-sm"
+            >
+              Pedir Corrida pelo Mapa <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Link to="/passenger" className="vaicar-audience-card group">
-              <span className="vaicar-audience-icon"><Car className="w-5 h-5" /></span>
-              <span className="flex-1 min-w-0">
-                <strong>Sou passageiro</strong>
-                <small>Peça uma corrida</small>
-              </span>
-              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
-            </Link>
-            <Link to="/driver/register" className="vaicar-audience-card group">
-              <span className="vaicar-audience-icon"><DollarSign className="w-5 h-5" /></span>
-              <span className="flex-1 min-w-0">
-                <strong>Quero dirigir</strong>
-                <small>Seja motorista parceiro</small>
-              </span>
-              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
-            </Link>
-            <a href="#lista-espera" className="vaicar-audience-card group">
-              <span className="vaicar-audience-icon"><Bike className="w-5 h-5" /></span>
-              <span className="flex-1 min-w-0">
-                <strong>Quero entregar</strong>
-                <small>Cadastre seu interesse · em breve</small>
-              </span>
-              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
-            </a>
-            <Link to="/parcerias" className="vaicar-audience-card group">
-              <span className="vaicar-audience-icon"><Store className="w-5 h-5" /></span>
-              <span className="flex-1 min-w-0">
-                <strong>Tenho um negócio</strong>
-                <small>Restaurantes e comércios</small>
-              </span>
-              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
-            </Link>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {DESTINATION_CARDS.map((dest) => (
+              <div
+                key={dest.name}
+                onClick={() => handleSelectDestination(dest.searchKey)}
+                className="group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800/90 hover:border-blue-500/60 dark:hover:border-emerald-500/60 bg-slate-900 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer flex flex-col justify-end"
+                style={{ minHeight: '220px' }}
+              >
+                {/* Authentic Location Photo */}
+                <img
+                  src={dest.image}
+                  alt={dest.alt}
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                {/* Gradient Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
+                <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-transparent transition-colors" />
+
+                {/* Content Overlay */}
+                <div className="relative z-10 p-4 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300 dark:text-emerald-400 bg-slate-950/85 px-2 py-0.5 rounded-md border border-blue-500/30 dark:border-emerald-500/30 backdrop-blur-sm flex items-center gap-1">
+                      <MapPin className="w-2.5 h-2.5 text-blue-400 dark:text-emerald-400" /> {dest.zone}
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-200 bg-slate-900/80 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                      Simular rota →
+                    </span>
+                  </div>
+                  <h3 className="text-base font-black text-white group-hover:text-blue-200 dark:group-hover:text-emerald-300 transition-colors">
+                    {dest.name}
+                  </h3>
+                  <p className="text-[11px] text-slate-300 font-medium leading-tight">
+                    {dest.label}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-800 gap-2">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400" /> Mais de 30 praias e bairros atendidos com raio de busca de até 15 km
+            </span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+              Dica: Clique em qualquer praia para selecionar como destino no simulador
+            </span>
           </div>
         </div>
       </section>
@@ -1121,80 +1052,6 @@ export const HomePage: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      </section>
-
-      {/* Operating Zones & Beaches Showcase with Real Photography */}
-      <section id="praias-cobertas" className="vaicar-destinations py-20 bg-slate-950 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-4">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-emerald-400 px-3 py-1 rounded-full bg-blue-50 dark:bg-emerald-950/80 border border-blue-200 dark:border-emerald-500/30">
-                Cobertura Geográfica Real • São Sebastião
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mt-2.5">
-                Principais Rotas & Praias Cobertas
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
-                Mobilidade porta a porta em todo o município de São Sebastião — da Costa Sul ao Centro Histórico, travessia da balsa e cachoeiras da Mata Atlântica.
-              </p>
-            </div>
-            <Link
-              to="/passenger"
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white dark:bg-slate-900 dark:hover:bg-slate-800 dark:border dark:border-slate-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 shadow-sm"
-            >
-              Pedir Corrida pelo Mapa <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {DESTINATION_CARDS.map((dest) => (
-              <div
-                key={dest.name}
-                onClick={() => handleSelectDestination(dest.searchKey)}
-                className="group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800/90 hover:border-blue-500/60 dark:hover:border-emerald-500/60 bg-slate-900 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer flex flex-col justify-end"
-                style={{ minHeight: '220px' }}
-              >
-                {/* Authentic Location Photo */}
-                <img
-                  src={dest.image}
-                  alt={dest.alt}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                {/* Gradient Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-                <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-transparent transition-colors" />
-
-                {/* Content Overlay */}
-                <div className="relative z-10 p-4 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300 dark:text-emerald-400 bg-slate-950/85 px-2 py-0.5 rounded-md border border-blue-500/30 dark:border-emerald-500/30 backdrop-blur-sm flex items-center gap-1">
-                      <MapPin className="w-2.5 h-2.5 text-blue-400 dark:text-emerald-400" /> {dest.zone}
-                    </span>
-                    <span className="text-[10px] font-semibold text-slate-200 bg-slate-900/80 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                      Simular rota →
-                    </span>
-                  </div>
-                  <h3 className="text-base font-black text-white group-hover:text-blue-200 dark:group-hover:text-emerald-300 transition-colors">
-                    {dest.name}
-                  </h3>
-                  <p className="text-[11px] text-slate-300 font-medium leading-tight">
-                    {dest.label}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-800 gap-2">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400" /> Mais de 30 praias e bairros atendidos com raio de busca de até 15 km
-            </span>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">
-              Dica: Clique em qualquer praia para selecionar como destino no simulador
-            </span>
           </div>
         </div>
       </section>
