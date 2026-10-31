@@ -1844,3 +1844,150 @@ body:has(.vaicar-home) .vaicar-navbar img {
   #praias-cobertas > div > .grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   #praias-cobertas > div > .grid > div { min-height:160px !important; }
 }
+
+
+/* PIXEL-DIRECTION MATCH: supplied VaiCar homepage reference */
+.vaicar-home > .bg-blue-50\/70 { display:none !important; }
+.vaicar-home-hero {
+  min-height: 790px !important;
+  padding-top: 150px !important;
+  padding-bottom: 225px !important;
+}
+.vaicar-home-hero > .relative.z-10 > .grid {
+  grid-template-columns:minmax(0,1.2fr) minmax(440px,.8fr) !important;
+  align-items:center !important;
+  gap:clamp(28px,4vw,60px) !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] > div.inline-flex { display:none !important; }
+.vaicar-reference-eyebrow {
+  color:rgba(235,255,247,.88);
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+.vaicar-reference-title {
+  margin:8px 0 0 !important;
+  color:#fff !important;
+  font-size:clamp(4.4rem,7.3vw,7.3rem) !important;
+  line-height:.92 !important;
+  letter-spacing:-.065em !important;
+  font-weight:950 !important;
+  text-shadow:0 4px 26px rgba(0,0,0,.24);
+}
+.vaicar-reference-subtitle {
+  margin-top:10px !important;
+  color:#fff !important;
+  font-size:clamp(1.35rem,2.2vw,2rem) !important;
+  line-height:1.18 !important;
+  font-weight:750 !important;
+  max-width:620px !important;
+}
+.vaicar-reference-features {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:18px;
+  margin-top:34px;
+  color:#fff;
+}
+.vaicar-reference-features > div {
+  display:grid;
+  grid-template-columns:1fr;
+  gap:4px;
+  justify-items:start;
+}
+.vaicar-reference-features svg {
+  width:36px;height:36px;
+  stroke-width:2.8;
+  margin-bottom:4px;
+}
+.vaicar-reference-features strong {font-size:18px;font-weight:850;color:#fff;}
+.vaicar-reference-features span {font-size:14px;color:rgba(255,255,255,.9);}
+.vaicar-home-hero #simulador > div {
+  padding:28px 26px !important;
+  border-radius:26px !important;
+}
+.vaicar-home-hero #simulador .rounded-xl.overflow-hidden {
+  border-radius:16px !important;
+}
+.vaicar-audience {
+  margin-top:-175px !important;
+  padding-bottom:28px !important;
+}
+.vaicar-audience > div > .flex {
+  display:none !important;
+}
+.vaicar-audience > div > .grid {
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:16px !important;
+}
+.vaicar-audience-card {
+  min-height:180px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:flex-start !important;
+  justify-content:space-between !important;
+  gap:10px !important;
+  padding:24px !important;
+  border-radius:22px !important;
+  box-shadow:0 14px 38px rgba(0,42,37,.18) !important;
+}
+.vaicar-audience-icon {width:54px !important;height:54px !important;}
+.vaicar-audience-card strong {font-size:20px !important;}
+.vaicar-audience-card small {font-size:14px !important;}
+.vaicar-audience-arrow {align-self:flex-end;}
+#praias-cobertas {padding:22px 0 34px !important;background:#fff !important;}
+#praias-cobertas > div {
+  max-width:100% !important;
+  padding-left:3.2vw !important;
+  padding-right:3.2vw !important;
+}
+#praias-cobertas > div > .flex {
+  align-items:center !important;
+  margin-bottom:12px !important;
+}
+#praias-cobertas > div > .flex > div:first-child {max-width:220px;}
+#praias-cobertas > div > .flex h2 {
+  color:#073e30 !important;
+  font-size:30px !important;
+  line-height:1.05 !important;
+}
+#praias-cobertas > div > .flex p {color:#526c62 !important;}
+#praias-cobertas > div > .flex > a {display:none !important;}
+#praias-cobertas > div > .grid {
+  grid-template-columns:repeat(8,minmax(0,1fr)) !important;
+  gap:10px !important;
+}
+#praias-cobertas > div > .grid > div {
+  min-height:190px !important;
+  height:190px !important;
+  border:0 !important;
+  border-radius:15px !important;
+}
+#praias-cobertas > div > .grid > div p {display:none !important;}
+#praias-cobertas > div > .grid > div h3 {font-size:14px !important;}
+@media(max-width:1100px) and (min-width:768px) {
+  .vaicar-home-hero > .relative.z-10 > .grid {grid-template-columns:minmax(0,1fr) minmax(350px,.9fr) !important;}
+  .vaicar-reference-title {font-size:clamp(3.7rem,7vw,5.4rem) !important;}
+  .vaicar-audience > div > .grid {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+  #praias-cobertas > div > .grid {grid-template-columns:repeat(4,minmax(0,1fr)) !important;}
+}
+@media(max-width:767px) {
+  .vaicar-home-hero {padding-top:34px !important;padding-bottom:195px !important;min-height:0 !important;}
+  .vaicar-home-hero > .relative.z-10 > .grid {grid-template-columns:1fr !important;gap:24px !important;}
+  .vaicar-reference-eyebrow {font-size:11px;}
+  .vaicar-reference-title {font-size:clamp(3.5rem,15vw,5rem) !important;}
+  .vaicar-reference-subtitle {font-size:1.35rem !important;}
+  .vaicar-reference-features {grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px;}
+  .vaicar-reference-features svg {width:29px;height:29px;}
+  .vaicar-reference-features strong {font-size:15px;}
+  .vaicar-reference-features span {font-size:12px;}
+  .vaicar-audience {margin-top:-155px !important;}
+  .vaicar-audience > div > .grid {grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px !important;}
+  .vaicar-audience-card {min-height:132px !important;padding:14px !important;}
+  .vaicar-audience-card strong {font-size:14px !important;}
+  .vaicar-audience-card small {font-size:11px !important;}
+  .vaicar-audience-icon {width:42px !important;height:42px !important;}
+  #praias-cobertas > div > .grid {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+  #praias-cobertas > div > .grid > div {height:160px !important;min-height:160px !important;}
+}
