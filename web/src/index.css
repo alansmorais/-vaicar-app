@@ -2251,3 +2251,74 @@ body:has(.vaicar-home) .vaicar-navbar button {color:#fff;}
  .vaicar-destinations > div > .grid {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
  .vaicar-destinations > div > .grid > div {height:160px !important;min-height:160px !important;}
 }
+
+
+/* Compact booking panel matching the supplied HTML reference */
+.vaicar-booking-panel {width:100%;max-width:526px;justify-self:end;align-self:start;}
+.vaicar-booking-card {
+  padding:14px 20px 16px !important;
+  border-radius:22px !important;
+  background:rgba(255,255,255,.96) !important;
+  border:1px solid rgba(255,255,255,.85) !important;
+  color:#0d3b2a !important;
+  box-shadow:0 18px 48px rgba(0,0,0,.23) !important;
+}
+.vaicar-booking-tabs {
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  border-bottom:1px solid #e3e8e5;
+}
+.vaicar-booking-tab {
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;min-height:72px;padding:8px 5px 10px;
+  color:#61736b;text-decoration:none;font-size:14px;font-weight:600;
+  border-bottom:3px solid transparent;white-space:nowrap;
+}
+.vaicar-booking-tab svg {width:27px;height:27px;stroke-width:2.5;}
+.vaicar-booking-tab.is-active {color:#0b5a36;border-color:#0b8a58;}
+.vaicar-booking-fields {display:grid;gap:0;}
+.vaicar-booking-field {
+  height:52px;display:flex;align-items:center;gap:13px;
+  margin-top:14px;padding:0 16px;border:1px solid #e0e6e3;
+  border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.045);
+}
+.vaicar-booking-field svg {width:19px;height:19px;flex:none;color:#2fbf6c;}
+.vaicar-booking-field.is-destination svg {color:#e0524a;}
+.vaicar-booking-field select {
+  appearance:auto;width:100%;min-width:0;height:100%;padding:0 4px;
+  border:0!important;outline:0!important;box-shadow:none!important;
+  background:transparent!important;color:#526b63!important;
+  font-size:14px!important;font-weight:500!important;
+}
+.vaicar-booking-submit {
+  height:54px;width:100%;margin-top:17px;padding:0 20px;
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  border-radius:999px;background:#086443;color:#fff!important;
+  font-size:15px;font-weight:700;text-decoration:none;
+  box-shadow:0 7px 16px rgba(11,90,54,.25);
+  transition:background .18s ease,transform .18s ease;
+}
+.vaicar-booking-submit:hover {background:#0b7a52;transform:translateY(-1px);}
+.vaicar-booking-submit svg {width:19px;height:19px;}
+.vaicar-booking-safe {
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  margin:11px 0 0;color:#0b5a36;font-size:12px;font-weight:500;
+}
+.vaicar-booking-safe svg {width:17px;height:17px;}
+@media(min-width:1101px) {
+ .vaicar-home-hero {min-height:790px !important;padding-top:150px !important;padding-bottom:215px !important;}
+ .vaicar-home-hero .vaicar-reference-layout {
+   grid-template-columns:minmax(0,1fr) 526px !important;
+   gap:30px !important;align-items:start !important;
+ }
+ .vaicar-home-hero .vaicar-hero-copy {padding-top:12px;}
+}
+@media(max-width:1100px) {
+ .vaicar-booking-panel {justify-self:center;max-width:560px;}
+ .vaicar-booking-card {padding:12px 16px 14px !important;}
+ .vaicar-booking-tab {font-size:13px;min-height:66px;}
+}
+@media(max-width:480px) {
+ .vaicar-booking-tab {font-size:11px;white-space:normal;text-align:center;}
+ .vaicar-booking-field {height:49px;margin-top:11px;}
+ .vaicar-booking-submit {height:50px;font-size:14px;}
+}
