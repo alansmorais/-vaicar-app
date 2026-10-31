@@ -1236,3 +1236,65 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
     color: #86520c !important;
   }
 }
+
+
+/* Tropical Premium homepage — finish hero hierarchy and remove blue accents */
+.vaicar-home-hero [class~="lg:col-span-7"] > div.inline-flex {
+  background: rgba(7, 50, 43, .76) !important;
+  border: 1px solid rgba(186, 243, 223, .34) !important;
+  color: #d9fff0 !important;
+  box-shadow: 0 8px 24px rgba(3, 25, 28, .16);
+}
+.vaicar-home-hero [class~="lg:col-span-7"] > div.inline-flex > span:first-child {
+  background: #34d399 !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] .flex.flex-wrap.items-center.justify-center {
+  color: rgba(255,255,255,.78) !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] .flex.flex-wrap.items-center.justify-center > span,
+.vaicar-home-hero [class~="lg:col-span-7"] .flex.flex-wrap.items-center.justify-center > a,
+.vaicar-home-hero [class~="lg:col-span-7"] .flex.flex-wrap.items-center.justify-center > a * {
+  color: #f3fff9 !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] .flex.flex-wrap.items-center.justify-center > a svg {
+  color: #f5c45e !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] .pt-2.flex.items-center {
+  color: #f1fbf6 !important;
+  text-shadow: 0 1px 7px rgba(0,0,0,.55);
+}
+.vaicar-home-hero [class~="lg:col-span-7"] .pt-2.flex.items-center svg {
+  color: #75e0bd !important;
+}
+.vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a:first-child {
+  background: linear-gradient(135deg, #0b9b70, #087653) !important;
+  box-shadow: 0 8px 18px rgba(8,118,83,.22) !important;
+}
+.vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a:first-child span:last-child {
+  color: #e0fff2 !important;
+}
+.vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a:nth-child(2),
+.vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a:nth-child(3) {
+  background: #ffffff !important;
+  border-color: #d7e7de !important;
+}
+.vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a:nth-child(2) span,
+.vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a:nth-child(3) span {
+  color: #244b3d !important;
+}
+.vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a:nth-child(2) span:last-child {
+  color: #526b60 !important;
+}
+.vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a:nth-child(3) span:last-child {
+  color: #895b17 !important;
+}
+@media (max-width: 760px) {
+  .vaicar-home-hero [class~="lg:col-span-7"] > div.inline-flex {
+    max-width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+  .vaicar-home-hero [class~="lg:col-span-7"] .flex.flex-wrap.items-center.justify-center {
+    row-gap: 8px !important;
+  }
+}
