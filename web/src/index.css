@@ -2378,3 +2378,53 @@ body:has(.vaicar-home) .vaicar-navbar button {color:#fff;}
  .vaicar-destinations > div > .grid {gap:8px !important;}
  .vaicar-destinations > div > .grid > div {height:142px !important;min-height:142px !important;}
 }
+
+
+/* Service shortcut cards — compact footprint, keep all four in one visual row */
+.vaicar-audience {
+  margin-top:-112px !important;
+  padding:0 0 14px !important;
+}
+.vaicar-audience > div {max-width:1240px !important;}
+.vaicar-audience > div > .grid {
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:10px !important;
+}
+.vaicar-audience-card {
+  min-height:0 !important;
+  height:104px !important;
+  padding:12px 14px !important;
+  display:grid !important;
+  grid-template-columns:36px minmax(0,1fr) 26px !important;
+  align-items:center !important;
+  gap:10px !important;
+  border-radius:14px !important;
+  box-shadow:0 5px 16px rgba(0,35,38,.12) !important;
+}
+.vaicar-audience-card > span.flex-1 {min-width:0;display:flex;flex-direction:column;gap:3px;}
+.vaicar-audience-icon {
+  width:34px !important;height:34px !important;
+  display:flex !important;align-items:center !important;justify-content:center !important;
+}
+.vaicar-audience-icon svg {width:25px !important;height:25px !important;}
+.vaicar-audience-card strong {font-size:14px !important;line-height:1.1 !important;}
+.vaicar-audience-card small {font-size:10px !important;line-height:1.15 !important;}
+.vaicar-audience-arrow {
+  width:26px !important;height:26px !important;
+  padding:6px !important;justify-self:end !important;
+}
+@media(max-width:767px) {
+ .vaicar-audience {margin-top:-96px !important;padding-bottom:12px !important;}
+ .vaicar-audience > div {padding-left:14px !important;padding-right:14px !important;}
+ .vaicar-audience > div > .grid {grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:8px !important;}
+ .vaicar-audience-card {
+   height:82px !important;min-height:82px !important;
+   padding:9px !important;grid-template-columns:28px minmax(0,1fr) 20px !important;gap:6px !important;
+   border-radius:12px !important;
+ }
+ .vaicar-audience-icon {width:28px !important;height:28px !important;}
+ .vaicar-audience-icon svg {width:21px !important;height:21px !important;}
+ .vaicar-audience-card strong {font-size:12px !important;}
+ .vaicar-audience-card small {font-size:9px !important;}
+ .vaicar-audience-arrow {width:20px !important;height:20px !important;padding:4px !important;}
+}
