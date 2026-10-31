@@ -112,7 +112,7 @@ export const BusinessPartnershipsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="vaicar-info-page min-h-screen bg-slate-50 text-slate-900">
       {/* Centralized sub-header notification */}
       <div className="bg-slate-900/90 border-b border-slate-800/80 py-2.5 px-4 text-center">
         <p className="text-xs sm:text-sm font-medium text-slate-300 max-w-4xl mx-auto flex items-center justify-center gap-2 flex-wrap">
