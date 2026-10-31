@@ -212,12 +212,12 @@ describe('VaiCar — APK Download Analytics & Delivery Waitlist Suite', () => {
   });
 
   describe('4. Delivery Service Waiting List (Real Data Handling)', () => {
-    it('GET /api/v1/deliveries/info returns public status COMING_SOON and modalities', async () => {
+    it('GET /api/v1/deliveries/info returns public status AVAILABLE and modalities', async () => {
       const res = await request(app).get('/api/v1/deliveries/info');
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.status).toBe('COMING_SOON');
-      expect(res.body.label).toBe('Em Breve');
+      expect(res.body.status).toBe('AVAILABLE');
+      expect(res.body.label).toBe('Disponível');
       expect(res.body.modalities).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ type: 'motorcycle' }),
