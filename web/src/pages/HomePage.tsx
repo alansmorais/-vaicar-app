@@ -311,6 +311,11 @@ export const HomePage: React.FC = () => {
               <p className="vaicar-reference-subtitle">
                 Peça sua corrida em poucos passos. Simples, rápido e feito para São Sebastião.
               </p>
+              <div className="vaicar-mobility-steps" aria-label="Como pedir uma corrida">
+                <span><b>1</b> Informe o local de partida</span>
+                <span><b>2</b> Escolha o destino</span>
+                <span><b>3</b> Veja os motoristas disponíveis</span>
+              </div>
               <div className="vaicar-reference-features">
                 <div><Car /><strong>Corridas</strong><span>Carro particular</span></div>
                 <div><Bike /><strong>Entregas</strong><span>Moto e Bike</span></div>
