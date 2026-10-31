@@ -11,7 +11,6 @@ import {
 } from './firestore.js';
 import { Ride, RideOffer, DriverProfile } from '../../../shared/src/types.js';
 import { AppError, ErrorCode } from '../middleware/errorHandler.js';
-import { config } from '../config/index.js';
 import { broadcastLiveEvent } from './liveStream.js';
 
 export const OFFER_TIMEOUT_SECONDS = 20; // STRICT: exactly 20 seconds server-authoritative timer
@@ -155,7 +154,7 @@ export async function findEligibleCandidates(ride: Ride): Promise<CandidateDrive
       ride.origin.lat,
       ride.origin.lng
     );
-    if (!config.testMode && dist > MAX_DISPATCH_RADIUS_KM) {
+    if (dist > MAX_DISPATCH_RADIUS_KM) {
       continue;
     }
 
