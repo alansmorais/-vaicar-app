@@ -2957,3 +2957,62 @@ body:has(.vaicar-home) .vaicar-home-hero{
    width:100%!important;max-width:560px!important;margin-left:auto!important;margin-right:auto!important;
  }
 }
+
+/* Mobility-first homepage: natural panoramic photo, no tint/contrast layers */
+body:has(.vaicar-home) .vaicar-home-hero{
+  background:#2b7180!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero>.absolute.inset-0.z-0{
+  background:transparent!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-image{
+  filter:none!important;
+  opacity:1!important;
+  mix-blend-mode:normal!important;
+  object-fit:cover!important;
+  object-position:center 52%!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-overlay,
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-vignette,
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-glow{
+  display:none!important;
+  background:none!important;
+  opacity:0!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-reference-layout{
+  grid-template-columns:minmax(0,1fr) minmax(440px,526px)!important;
+  gap:clamp(28px,4vw,64px)!important;
+  align-items:center!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-copy{
+  max-width:650px!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-reference-eyebrow{
+  letter-spacing:.12em!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-reference-title{
+  font-size:clamp(3.5rem,6vw,5.8rem)!important;
+  line-height:.98!important;
+  letter-spacing:-.045em!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-reference-subtitle{
+  font-size:clamp(1.15rem,1.6vw,1.4rem)!important;
+  max-width:500px!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-reference-features{
+  display:none!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-panel{
+  width:100%!important;
+  max-width:526px!important;
+  justify-self:end!important;
+  margin-left:auto!important;
+  margin-right:0!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-card{
+  box-shadow:0 18px 48px rgba(7,35,42,.16)!important;
+}
+@media(max-width:1023px){
+ body:has(.vaicar-home) .vaicar-home-hero .vaicar-reference-layout{grid-template-columns:1fr!important}
+ body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-panel{max-width:560px!important;margin:0 auto!important}
+}
