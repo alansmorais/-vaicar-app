@@ -1513,6 +1513,27 @@ describe('VaiCar Platform - API Automated Tests', () => {
         .send({ lat: -23.8060, lng: -45.4015 });
     });
 
+    it('prevents a bicycle courier from accepting a passenger ride through the legacy accept endpoint', async () => {
+      const rideRes = await request(app)
+        .post('/api/v1/rides/request')
+        .set('Authorization', `Bearer ${stage1PassToken}`)
+        .send({
+          origin: { address: 'Centro, São Sebastião - SP', lat: -23.8055, lng: -45.4011 },
+          destination: { address: 'Porto Grande, São Sebastião - SP', lat: -23.8000, lng: -45.3900 },
+          paymentMethod: 'PIX',
+          serviceType: 'ride',
+        });
+
+      expect(rideRes.status).toBe(201);
+
+      const acceptRes = await request(app)
+        .post(`/api/v1/rides/${rideRes.body.data.id}/accept`)
+        .set('Authorization', `Bearer ${stage1BikeToken}`);
+
+      expect(acceptRes.status).toBe(403);
+      expect(acceptRes.body.error.message).toContain('não está habilitado');
+    });
+
     it('allows driver to configure custom delivery pricing and validates platform floor', async () => {
       // 1. Rejects delivery pricing below platform floor (R$ 10 min, R$ 2/km)
       const invalidRes = await request(app)
