@@ -280,7 +280,7 @@ export const HomePage: React.FC = () => {
       {/* Reference-matched São Sebastião landing composition */}
       <section className="vaicar-reference-stage">
         <div className="vaicar-stage-photo" aria-hidden="true">
-          <img src="/images/sao-sebastiao/community-canal.jpg" alt="" />
+          <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcA43ZPlwVIFHC8tBj1EqV6n_NrzcNeE1ISggVP91fSsJV36ellPBw1sYTaaPu8Pd97fDg1PHxJ4m3IoIntQUXnTtLvUVOnIPY6TH-kN-sBHg4HN53lZ3wbgz6379qfCSu4tee9EihyFmDc7ro5L0Cxt3SnCkKEBDZzccCHGmyebqZJ-BuvkHIIQWZ453QFyA-t_Mb6ERHfXDe_O-a4s0IdbHM-e0G7oM0zr_6E-R5" alt="Panorâmica aérea de São Sebastião" />
         </div>
 
         <div className="vaicar-stage-inner">
