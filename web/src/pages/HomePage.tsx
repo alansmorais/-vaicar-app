@@ -277,236 +277,96 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="vaicar-home min-h-screen flex flex-col">
-      {/* Centralized sub-header banner */}
-      <div className="bg-blue-50/70 dark:bg-slate-900/90 border-b border-blue-200/60 dark:border-slate-800/80 py-2.5 px-4 text-center">
-        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 max-w-4xl mx-auto flex items-center justify-center gap-2 flex-wrap">
-          <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-emerald-500 inline-block animate-pulse shrink-0" />
-          <span>
-            Mobilidade justa em São Sebastião: <strong className="text-blue-700 dark:text-emerald-400">Corridas ativas</strong> com pagamento direto • <span className="text-blue-700 dark:text-emerald-400 font-semibold">Sem tarifa dinâmica</span> • <span className="text-amber-700 dark:text-amber-400 font-semibold">Entregas em breve!</span>
-          </span>
-        </p>
-      </div>
-
-      {/* Hero Section */}
-      <section className="vaicar-home-hero relative overflow-hidden pt-8 pb-16 lg:py-20 border-b border-slate-200 dark:border-slate-900 bg-slate-950">
-        <div className="absolute inset-0 z-0">
-          <img
-            src="/images/sao-sebastiao/community-canal.jpg"
-            alt="Vista aérea da costa de São Sebastião, com mar, praias e Mata Atlântica"
-            className="vaicar-hero-image w-full h-full object-cover object-center pointer-events-none"
-          />
-          <div className="vaicar-hero-overlay absolute inset-0" />
-          <div className="vaicar-hero-vignette absolute inset-0" />
-          <div className="vaicar-hero-glow absolute inset-0 pointer-events-none" />
+      {/* Reference-matched São Sebastião landing composition */}
+      <section className="vaicar-reference-stage">
+        <div className="vaicar-stage-photo" aria-hidden="true">
+          <img src="/images/sao-sebastiao/community-canal.jpg" alt="" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="vaicar-reference-layout grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Content */}
-            <div className="vaicar-hero-copy lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="vaicar-reference-eyebrow">MOBILIDADE LOCAL • LITORAL NORTE</div>
-              <h1 className="vaicar-reference-title">
-                Corridas e entregas<br />em São Sebastião.
-              </h1>
-              <p className="vaicar-reference-subtitle">
-                Uma plataforma local que conecta passageiros, motoristas, clientes e entregadores, tornando a mobilidade na cidade mais simples, rápida e acessível.
-              </p>
-              <div className="vaicar-mobility-steps" aria-label="Como pedir uma corrida">
-                <span><b>1</b> Informe o local de partida</span>
-                <span><b>2</b> Escolha o destino</span>
-                <span><b>3</b> Veja os motoristas disponíveis</span>
-              </div>
+        <div className="vaicar-stage-inner">
+          <div className="vaicar-reference-layout">
+            <div className="vaicar-hero-copy">
+              <div className="vaicar-reference-eyebrow">TRANSPORTE E ENTREGAS EM</div>
+              <h1 className="vaicar-reference-title">São Sebastião</h1>
+              <p className="vaicar-reference-subtitle">Mobilidade local com mais oportunidades<br className="desktop-break" /> para a nossa cidade.</p>
               <div className="vaicar-reference-features">
                 <div><Car /><strong>Corridas</strong><span>Carro particular</span></div>
                 <div><Bike /><strong>Entregas</strong><span>Moto e Bike</span></div>
                 <div><MapPin /><strong>Local</strong><span>São Sebastião - SP</span></div>
                 <div><Users /><strong>Para todos</strong><span>Moradores e turistas</span></div>
               </div>
-
             </div>
 
-            {/* Compact booking panel — reference HTML layout */}
-            <div className="vaicar-hero-simulator vaicar-booking-panel lg:col-span-5" id="simulador">
+            <div className="vaicar-booking-panel" id="simulador">
               <div className="vaicar-booking-card">
                 <div className="vaicar-booking-tabs" role="navigation" aria-label="Serviços VaiCar">
-                  <Link to="/passenger" className="vaicar-booking-tab is-active">
-                    <Car aria-hidden="true" />
-                    <span>Pedir Corrida</span>
-                  </Link>
-                  <a href="#lista-espera" className="vaicar-booking-tab">
-                    <Bike aria-hidden="true" />
-                    <span>Entregar</span>
-                  </a>
-                  <Link to="/parcerias" className="vaicar-booking-tab">
-                    <Store aria-hidden="true" />
-                    <span>Para Empresas</span>
-                  </Link>
+                  <Link to="/passenger" className="vaicar-booking-tab is-active"><Car aria-hidden="true" /><span>Pedir Corrida</span></Link>
+                  <a href="#lista-espera" className="vaicar-booking-tab"><Bike aria-hidden="true" /><span>Entregar</span></a>
+                  <Link to="/parcerias" className="vaicar-booking-tab"><Store aria-hidden="true" /><span>Para Empresas</span></Link>
                 </div>
-
                 <div className="vaicar-booking-fields">
                   <label className="vaicar-booking-field">
                     <MapPin aria-hidden="true" />
                     <span className="sr-only">Ponto de Partida</span>
-                    <select
-                      aria-label="Onde você está?"
-                      value={originIndex}
-                      onChange={(e) => setOriginIndex(Number(e.target.value))}
-                    >
+                    <select aria-label="Onde você está?" value={originIndex} onChange={(e) => setOriginIndex(Number(e.target.value))}>
                       <option value="" disabled>Onde você está?</option>
-                      {popularPlaces.map((p, idx) => (
-                        <option key={p.name} value={idx}>{p.name}</option>
-                      ))}
+                      {popularPlaces.map((p, idx) => <option key={p.name} value={idx}>{p.name}</option>)}
                     </select>
                   </label>
                   <label className="vaicar-booking-field is-destination">
                     <MapPin aria-hidden="true" />
                     <span className="sr-only">Ponto de Destino</span>
-                    <select
-                      aria-label="Para onde vai?"
-                      value={destinationIndex}
-                      onChange={(e) => setDestinationIndex(Number(e.target.value))}
-                    >
+                    <select aria-label="Para onde vai?" value={destinationIndex} onChange={(e) => setDestinationIndex(Number(e.target.value))}>
                       <option value="" disabled>Para onde vai?</option>
-                      {popularPlaces.map((p, idx) => (
-                        <option key={p.name} value={idx}>{p.name}</option>
-                      ))}
+                      {popularPlaces.map((p, idx) => <option key={p.name} value={idx}>{p.name}</option>)}
                     </select>
                   </label>
                 </div>
-
-                <Link to="/passenger" className="vaicar-booking-submit">
-                  <span>Ver Motoristas Disponíveis</span>
-                  <ArrowRight aria-hidden="true" />
-                </Link>
-                <p className="vaicar-booking-safe">
-                  <ShieldCheck aria-hidden="true" />
-                  Pagamento 100% seguro no app
-                </p>
+                <Link to="/passenger" className="vaicar-booking-submit"><span>Ver Motoristas Disponíveis</span><ArrowRight aria-hidden="true" /></Link>
+                <p className="vaicar-booking-safe"><ShieldCheck aria-hidden="true" />Pagamento 100% seguro no app</p>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* DIRECT SERVICE ENTRY POINTS */}
-      <section id="servicos-principais" className="vaicar-audience border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider">Mobilidade local</span>
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight mt-1">O que você precisa fazer hoje?</h2>
-            </div>
-            <p className="text-sm max-w-md">Um só lugar para viagens, trabalho e entregas em São Sebastião.</p>
+          <div className="vaicar-reference-signature" aria-label="São Sebastião, nossa casa">
+            São Sebastião<br />Nossa Casa <span>♡</span><i />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Link to="/passenger" className="vaicar-audience-card group">
-              <span className="vaicar-audience-icon"><Car className="w-5 h-5" /></span>
-              <span className="flex-1 min-w-0">
-                <strong>Sou Passageiro</strong>
-                <small>Peça uma corrida</small>
-              </span>
-              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
+
+          <div className="vaicar-audience-cards" id="servicos-principais">
+            <Link to="/passenger" className="vaicar-profile-card vaicar-profile-passenger">
+              <Car /><strong>Sou Passageiro</strong><span>Peça sua corrida com<br /> segurança e rapidez.</span><i><ArrowRight /></i>
             </Link>
-            <Link to="/driver/register" className="vaicar-audience-card group">
-              <span className="vaicar-audience-icon"><DollarSign className="w-5 h-5" /></span>
-              <span className="flex-1 min-w-0">
-                <strong>Sou Motorista</strong>
-                <small>Seja motorista parceiro</small>
-              </span>
-              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
+            <Link to="/driver/register" className="vaicar-profile-card vaicar-profile-driver">
+              <Bike /><strong>Sou Motorista</strong><span>Mais ganhos e<br /> flexibilidade.</span><i><ArrowRight /></i>
             </Link>
-            <a href="#lista-espera" className="vaicar-audience-card group">
-              <span className="vaicar-audience-icon"><Bike className="w-5 h-5" /></span>
-              <span className="flex-1 min-w-0">
-                <strong>Sou Entregador</strong>
-                <small>Cadastre seu interesse · em breve</small>
-              </span>
-              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
+            <a href="#lista-espera" className="vaicar-profile-card vaicar-profile-delivery">
+              <Bike /><strong>Sou Entregador</strong><span>Entregas locais para<br /> a cidade e região.</span><i><ArrowRight /></i>
             </a>
-            <Link to="/parcerias" className="vaicar-audience-card group">
-              <span className="vaicar-audience-icon"><Store className="w-5 h-5" /></span>
-              <span className="flex-1 min-w-0">
-                <strong>Sou Comércio</strong>
-                <small>Cadastre seu estabelecimento</small>
-              </span>
-              <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
+            <Link to="/parcerias" className="vaicar-profile-card vaicar-profile-business">
+              <Store /><strong>Para Empresas</strong><span>Soluções de mobilidade<br /> para hotéis, pousadas,<br /> restaurantes e comércio.</span><i><ArrowRight /></i>
             </Link>
           </div>
-          <div className="vaicar-reference-signature" aria-label="São Sebastião, nossa casa">São Sebastião<br/>Nossa Casa <span>♡</span><i /></div>
         </div>
       </section>
 
-      {/* Operating Zones & Beaches Showcase with Real Photography */}
-      <section id="praias-cobertas" className="vaicar-destinations py-20 bg-slate-950 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-4">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-emerald-400 px-3 py-1 rounded-full bg-blue-50 dark:bg-emerald-950/80 border border-blue-200 dark:border-emerald-500/30">
-                Cobertura Geográfica Real • São Sebastião
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mt-2.5">
-                Principais Rotas & Praias Cobertas
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
-                Mobilidade porta a porta em todo o município de São Sebastião — da Costa Sul ao Centro Histórico, travessia da balsa e cachoeiras da Mata Atlântica.
-              </p>
-            </div>
-            <Link
-              to="/passenger"
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white dark:bg-slate-900 dark:hover:bg-slate-800 dark:border dark:border-slate-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 shadow-sm"
-            >
-              Pedir Corrida pelo Mapa <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {DESTINATION_CARDS.map((dest) => (
-              <div
-                key={dest.name}
-                onClick={() => handleSelectDestination(dest.searchKey)}
-                className="group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800/90 hover:border-blue-500/60 dark:hover:border-emerald-500/60 bg-slate-900 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer flex flex-col justify-end"
-                style={{ minHeight: '220px' }}
-              >
-                {/* Authentic Location Photo */}
-                <img
-                  src={dest.image}
-                  alt={dest.alt}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                {/* Gradient Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-                <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-transparent transition-colors" />
-
-                {/* Content Overlay */}
-                <div className="relative z-10 p-4 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300 dark:text-emerald-400 bg-slate-950/85 px-2 py-0.5 rounded-md border border-blue-500/30 dark:border-emerald-500/30 backdrop-blur-sm flex items-center gap-1">
-                      <MapPin className="w-2.5 h-2.5 text-blue-400 dark:text-emerald-400" /> {dest.zone}
-                    </span>
-                    <span className="text-[10px] font-semibold text-slate-200 bg-slate-900/80 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                      Simular rota →
-                    </span>
-                  </div>
-                  <h3 className="text-base font-black text-white group-hover:text-blue-200 dark:group-hover:text-emerald-300 transition-colors">
-                    {dest.name}
-                  </h3>
-                  <p className="text-[11px] text-slate-300 font-medium leading-tight">
-                    {dest.label}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-800 gap-2">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-emerald-400" /> Mais de 30 praias e bairros atendidos com raio de busca de até 15 km
-            </span>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">
-              Dica: Clique em qualquer praia para selecionar como destino no simulador
-            </span>
-          </div>
+      {/* Compact destination strip matching the supplied São Sebastião reference */}
+      <section id="praias-cobertas" className="vaicar-city-strip">
+        <div className="vaicar-city-intro">
+          <h2>Nossa Cidade</h2>
+          <h3>São Sebastião - SP</h3>
+          <p>Praias, natureza, cultura e pessoas incríveis. O VaiCar é da nossa cidade, para a nossa gente.</p>
+          <a href="#lista-espera">Conheça São Sebastião <ArrowRight /></a>
+        </div>
+        <div className="vaicar-city-gallery">
+          {DESTINATION_CARDS.map((dest, index) => {
+            const labels = ['Maresias', 'Juquehy', 'Boiçucanga', 'Camburi', 'Guaecá', 'Centro Histórico', 'Cachoeiras', 'Toque-Toque'];
+            return (
+              <button type="button" key={dest.name} className="vaicar-city-photo" onClick={() => handleSelectDestination(dest.searchKey)} aria-label={`Selecionar destino ${labels[index]}`}>
+                <img src={dest.image} alt={dest.alt} loading="lazy" />
+                <span>{labels[index]}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
