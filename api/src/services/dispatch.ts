@@ -507,10 +507,11 @@ export async function declineOffer(offerId: string, driverUid: string): Promise<
       }
       if (offer.status !== 'PENDING') return;
 
-      transaction.update(offerRef, { status: 'DECLINED', respondedAt: now });
-
       const rideRef = db.collection('rides').doc(offer.rideId);
+      // Firestore transactions require every read to finish before the first write.
       const rideDoc = await transaction.get(rideRef);
+
+      transaction.update(offerRef, { status: 'DECLINED', respondedAt: now });
       if (rideDoc.exists) {
         const ride = rideDoc.data() as Ride;
         const declined = ride.declinedDriverIds || [];
@@ -587,10 +588,11 @@ export async function expireOffer(offerId: string): Promise<void> {
 
       if (offer.status !== 'PENDING') return;
 
-      transaction.update(offerRef, { status: 'EXPIRED', respondedAt: now });
-
       const rideRef = db.collection('rides').doc(offer.rideId);
+      // Read both documents before writing, as required by Firestore transactions.
       const rideDoc = await transaction.get(rideRef);
+
+      transaction.update(offerRef, { status: 'EXPIRED', respondedAt: now });
       if (rideDoc.exists) {
         const ride = rideDoc.data() as Ride;
         const declined = ride.declinedDriverIds || [];
