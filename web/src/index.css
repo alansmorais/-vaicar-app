@@ -3810,3 +3810,59 @@ body:has(.vaicar-home) .vaicar-reference-stage {
     min-height:786px!important;
   }
 }
+
+
+/* Homepage layering + fully transparent audience links (desktop reference fix) */
+@media (min-width:768px) {
+  body:has(.vaicar-home) .vaicar-reference-stage {
+    isolation:auto!important;
+    overflow:visible!important;
+  }
+  body:has(.vaicar-home) .vaicar-navbar {
+    z-index:60!important;
+  }
+  body:has(.vaicar-home) .vaicar-stage-inner {
+    position:relative!important;
+    z-index:auto!important;
+  }
+  body:has(.vaicar-home) .vaicar-booking-panel {
+    position:relative!important;
+    z-index:80!important;
+    isolation:isolate!important;
+  }
+  body:has(.vaicar-home) .vaicar-booking-card {
+    position:relative!important;
+    z-index:81!important;
+  }
+  body:has(.vaicar-home) .vaicar-audience-cards {
+    position:absolute!important;
+    z-index:4!important;
+    background:transparent!important;
+    background-color:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    box-shadow:none!important;
+    outline:0!important;
+  }
+  body:has(.vaicar-home) .vaicar-audience-cards::before,
+  body:has(.vaicar-home) .vaicar-audience-cards::after,
+  body:has(.vaicar-home) .vaicar-profile-card::before,
+  body:has(.vaicar-home) .vaicar-profile-card::after {
+    content:none!important;
+    display:none!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  body:has(.vaicar-home) .vaicar-audience-cards > .vaicar-profile-card,
+  body:has(.vaicar-home) .vaicar-audience-cards > a.vaicar-profile-card,
+  body:has(.vaicar-home) .vaicar-audience-cards > .vaicar-profile-card:hover,
+  body:has(.vaicar-home) .vaicar-audience-cards > a.vaicar-profile-card:hover {
+    background:transparent!important;
+    background-color:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    outline:0!important;
+    box-shadow:none!important;
+    border-radius:0!important;
+  }
+}
