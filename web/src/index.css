@@ -3141,3 +3141,225 @@ body:has(.vaicar-home) .vaicar-navbar a.bg-blue-600 * {
 body:has(.vaicar-home) .vaicar-navbar .vaicar-mobile-drawer {
   color: #111827 !important;
 }
+
+
+/* =========================================================
+   VAICAR REFERENCE HOMEPAGE — structural layout reconstruction
+   Scoped to homepage. Public app flows and route logic unchanged.
+   ========================================================= */
+body:has(.vaicar-home) .vaicar-navbar {
+  position:absolute!important; top:0!important; left:0!important; right:0!important;
+  width:100%!important; z-index:60!important; background:rgba(5,48,68,.18)!important;
+  border:0!important; box-shadow:none!important; backdrop-filter:none!important;
+  color:#fff!important;
+}
+body:has(.vaicar-home) .vaicar-navbar > div { max-width:1480px!important; }
+body:has(.vaicar-home) .vaicar-navbar .h-20 { height:94px!important; }
+body:has(.vaicar-home) .vaicar-navbar a,
+body:has(.vaicar-home) .vaicar-navbar button { color:#fff!important; }
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav { gap:2px!important; }
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a {
+  border:0!important; border-radius:0!important; background:transparent!important;
+  padding:12px 11px!important; font-size:15px!important; font-weight:500!important;
+  white-space:nowrap!important;
+}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a:hover { color:#b9f2d6!important; background:transparent!important; }
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a:first-child {
+  border-bottom:2px solid #20b77b!important; color:#fff!important;
+}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions .vaicar-theme-toggle,
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions > a:first-of-type { display:none!important; }
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions button {
+  background:#08764e!important; border-radius:13px!important; padding:12px 28px!important;
+}
+body:has(.vaicar-home) .vaicar-navbar img { height:58px!important; background:transparent!important; }
+body:has(.vaicar-home) .vaicar-navbar .text-2xl { font-size:34px!important; color:#fff!important; }
+body:has(.vaicar-home) .vaicar-navbar .text-blue-600,
+body:has(.vaicar-home) .vaicar-navbar .text-emerald-400 { color:#56d17f!important; }
+body:has(.vaicar-home) .vaicar-navbar .text-\[10px\] { color:rgba(255,255,255,.78)!important; }
+
+body:has(.vaicar-home) .vaicar-reference-stage {
+  position:relative!important; isolation:isolate!important; height:786px!important;
+  min-height:786px!important; margin-top:-80px!important; padding-top:145px!important;
+  overflow:hidden!important; color:#fff!important; background:#0d526b!important;
+}
+.vaicar-stage-photo { position:absolute; inset:0; z-index:-1; overflow:hidden; }
+.vaicar-stage-photo img { width:100%; height:100%; object-fit:cover; object-position:center 49%; display:block; }
+.vaicar-stage-photo:after {
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(90deg,rgba(0,28,39,.38),rgba(0,36,48,.12) 55%,rgba(0,30,42,.05)),
+             linear-gradient(180deg,rgba(0,24,38,.20),transparent 28%,transparent 72%,rgba(0,35,42,.14));
+}
+.vaicar-stage-inner { position:relative; width:min(1400px,calc(100% - 80px)); height:100%; margin:0 auto; }
+.vaicar-reference-layout {
+  display:grid!important; grid-template-columns:minmax(0,1fr) 526px!important;
+  gap:40px!important; align-items:start!important;
+}
+.vaicar-hero-copy { max-width:760px!important; text-align:left!important; padding-top:25px!important; }
+.vaicar-reference-eyebrow {
+  color:#e6f4f4!important; font-size:16px!important; line-height:1.2!important;
+  font-weight:700!important; letter-spacing:.13em!important; margin-bottom:12px!important;
+}
+.vaicar-reference-title {
+  color:#fff!important; font-size:clamp(64px,6.25vw,96px)!important;
+  line-height:.98!important; letter-spacing:-.055em!important; font-weight:900!important;
+  margin:0!important; text-shadow:0 2px 14px rgba(0,0,0,.16)!important;
+}
+.vaicar-reference-subtitle {
+  color:#fff!important; font-size:25px!important; line-height:1.25!important;
+  font-weight:700!important; max-width:590px!important; margin:8px 0 34px!important;
+}
+.vaicar-reference-features {
+  display:grid!important; grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:22px!important; max-width:650px!important;
+}
+.vaicar-reference-features > div { display:grid!important; grid-template-rows:38px auto auto; gap:4px!important; color:#fff!important; }
+.vaicar-reference-features svg { width:35px!important; height:35px!important; stroke-width:2.5!important; color:#fff!important; }
+.vaicar-reference-features strong { color:#fff!important; font-size:18px!important; line-height:1.15!important; }
+.vaicar-reference-features span { color:rgba(255,255,255,.94)!important; font-size:15px!important; line-height:1.25!important; }
+.vaicar-booking-panel { width:100%!important; max-width:526px!important; margin:14px 0 0 auto!important; }
+.vaicar-booking-card {
+  background:rgba(255,255,255,.94)!important; border:1px solid rgba(255,255,255,.8)!important;
+  border-radius:22px!important; padding:22px 24px 17px!important;
+  box-shadow:0 14px 40px rgba(0,30,45,.18)!important; backdrop-filter:blur(9px)!important;
+}
+.vaicar-booking-tabs { display:grid!important; grid-template-columns:repeat(3,1fr)!important; border-bottom:1px solid #dce5e9!important; margin-bottom:16px!important; }
+.vaicar-booking-tab {
+  min-height:64px!important; display:flex!important; flex-direction:column!important;
+  align-items:center!important; justify-content:center!important; gap:5px!important;
+  color:#536b86!important; border:0!important; border-bottom:3px solid transparent!important;
+  font-size:15px!important; font-weight:700!important; background:transparent!important;
+}
+.vaicar-booking-tab svg { width:26px!important; height:26px!important; }
+.vaicar-booking-tab.is-active { color:#064d37!important; border-bottom-color:#07845b!important; background:transparent!important; }
+.vaicar-booking-fields { display:grid!important; gap:14px!important; }
+.vaicar-booking-field {
+  min-height:52px!important; border:1px solid #d6dfe6!important; border-radius:999px!important;
+  display:flex!important; align-items:center!important; gap:12px!important; padding:0 16px!important;
+  background:#fff!important; color:#64748b!important;
+}
+.vaicar-booking-field svg { width:23px!important; height:23px!important; color:#30ad82!important; flex:none!important; }
+.vaicar-booking-field.is-destination svg { color:#df5960!important; }
+.vaicar-booking-field select {
+  width:100%!important; border:0!important; outline:0!important; background:transparent!important;
+  color:#64748b!important; font-size:15px!important; box-shadow:none!important;
+}
+.vaicar-booking-submit {
+  min-height:55px!important; margin-top:17px!important; border-radius:999px!important;
+  background:#006b49!important; color:#fff!important; display:flex!important;
+  align-items:center!important; justify-content:center!important; gap:12px!important;
+  font-size:16px!important; font-weight:800!important; box-shadow:0 6px 14px rgba(0,92,62,.2)!important;
+}
+.vaicar-booking-submit:hover { background:#087c57!important; }
+.vaicar-booking-safe {
+  display:flex!important; justify-content:center!important; align-items:center!important; gap:7px!important;
+  margin:13px 0 0!important; color:#075b43!important; font-size:13px!important;
+}
+.vaicar-booking-safe svg { width:19px!important; height:19px!important; }
+
+.vaicar-audience-cards {
+  position:absolute!important; left:0!important; bottom:24px!important;
+  width:calc(100% - 285px)!important; display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important; gap:18px!important; z-index:4!important;
+}
+.vaicar-profile-card {
+  position:relative!important; min-height:187px!important; border-radius:19px!important;
+  padding:20px 34px 16px!important; display:flex!important; flex-direction:column!important;
+  align-items:flex-start!important; justify-content:flex-start!important; text-decoration:none!important;
+  box-shadow:0 7px 22px rgba(0,30,30,.12)!important; transition:transform .18s ease,box-shadow .18s ease!important;
+}
+.vaicar-profile-card:hover { transform:translateY(-4px)!important; box-shadow:0 12px 28px rgba(0,30,30,.18)!important; }
+.vaicar-profile-card > svg { width:58px!important; height:50px!important; stroke-width:2.7!important; margin-bottom:7px!important; }
+.vaicar-profile-card strong { font-size:21px!important; line-height:1.15!important; font-weight:850!important; }
+.vaicar-profile-card > span { font-size:14px!important; line-height:1.3!important; margin-top:6px!important; color:#344c45!important; }
+.vaicar-profile-card i {
+  position:absolute!important; right:12px!important; bottom:24px!important; width:42px!important; height:42px!important;
+  border-radius:50%!important; display:grid!important; place-items:center!important; color:#fff!important; font-style:normal!important;
+}
+.vaicar-profile-card i svg { width:22px!important; height:22px!important; }
+.vaicar-profile-passenger,.vaicar-profile-delivery { background:#eaf6ef!important; color:#064a36!important; }
+.vaicar-profile-driver { background:#fff7e7!important; color:#064a36!important; }
+.vaicar-profile-business { background:#e9f2fb!important; color:#064765!important; }
+.vaicar-profile-passenger i,.vaicar-profile-delivery i { background:#07845b!important; }
+.vaicar-profile-driver i { background:#e5a000!important; }
+.vaicar-profile-business i { background:#2473d5!important; }
+.vaicar-profile-business > svg { color:#1768b7!important; fill:rgba(23,104,183,.12)!important; }
+.vaicar-profile-passenger > svg,.vaicar-profile-driver > svg,.vaicar-profile-delivery > svg { color:#064a36!important; }
+
+.vaicar-reference-signature {
+  position:absolute!important; right:-8px!important; bottom:132px!important; width:230px!important;
+  color:#fff!important; font-family:cursive!important; font-size:31px!important; line-height:1.05!important;
+  font-style:italic!important; text-align:center!important; transform:rotate(-8deg)!important;
+  text-shadow:0 2px 8px rgba(0,0,0,.22)!important; z-index:3!important;
+}
+.vaicar-reference-signature span { font-size:48px!important; }
+.vaicar-reference-signature i {
+  display:block!important; width:150px!important; height:12px!important; margin:7px auto 0!important;
+  background:#39c77d!important; transform:rotate(-12deg)!important; clip-path:polygon(0 40%,100% 0,88% 100%,5% 85%)!important;
+}
+
+.vaicar-city-strip {
+  min-height:238px!important; display:grid!important; grid-template-columns:220px minmax(0,1fr)!important;
+  gap:16px!important; align-items:stretch!important; padding:15px 48px 17px!important;
+  background:#fff!important; border:0!important;
+}
+.vaicar-city-intro { display:flex!important; flex-direction:column!important; align-items:flex-start!important; justify-content:center!important; }
+.vaicar-city-intro h2 { color:#064b38!important; font-size:30px!important; font-weight:850!important; line-height:1.05!important; margin:0 0 2px!important; letter-spacing:-.04em!important; }
+.vaicar-city-intro h3 { color:#064b38!important; font-size:20px!important; font-weight:500!important; margin:0 0 8px!important; }
+.vaicar-city-intro p { color:#526b68!important; font-size:14px!important; line-height:1.35!important; margin:0 0 12px!important; }
+.vaicar-city-intro a {
+  display:inline-flex!important; align-items:center!important; gap:8px!important; border:1px solid #08764e!important;
+  color:#075b43!important; border-radius:999px!important; padding:9px 15px!important; font-size:13px!important; font-weight:700!important;
+}
+.vaicar-city-intro a svg { width:15px!important; height:15px!important; }
+.vaicar-city-gallery { display:grid!important; grid-template-columns:repeat(8,minmax(0,1fr))!important; gap:10px!important; min-width:0!important; }
+.vaicar-city-photo {
+  position:relative!important; display:block!important; overflow:hidden!important; min-width:0!important;
+  height:190px!important; border:0!important; border-radius:14px!important; padding:0!important; background:#e6eee9!important;
+}
+.vaicar-city-photo img { width:100%!important; height:100%!important; object-fit:cover!important; display:block!important; transition:transform .25s ease!important; }
+.vaicar-city-photo:hover img { transform:scale(1.05)!important; }
+.vaicar-city-photo:after { content:""; position:absolute!important; inset:45% 0 0!important; background:linear-gradient(transparent,rgba(0,0,0,.72))!important; }
+.vaicar-city-photo span { position:absolute!important; left:12px!important; bottom:10px!important; z-index:2!important; color:#fff!important; font-size:15px!important; line-height:1.1!important; font-weight:750!important; text-align:left!important; white-space:nowrap!important; }
+
+@media(max-width:1100px) {
+  body:has(.vaicar-home) .vaicar-reference-stage { height:auto!important; min-height:940px!important; padding-top:125px!important; padding-bottom:28px!important; margin-top:-80px!important; }
+  .vaicar-stage-inner { width:calc(100% - 40px)!important; }
+  .vaicar-reference-layout { grid-template-columns:minmax(0,1fr) 430px!important; gap:24px!important; }
+  .vaicar-reference-title { font-size:clamp(52px,6vw,72px)!important; }
+  .vaicar-reference-subtitle { font-size:20px!important; }
+  .vaicar-audience-cards { width:100%!important; bottom:22px!important; gap:12px!important; }
+  .vaicar-profile-card { padding:17px!important; }
+  .vaicar-profile-card strong { font-size:17px!important; }
+  .vaicar-reference-signature { display:none!important; }
+  .vaicar-city-strip { grid-template-columns:190px minmax(0,1fr)!important; padding:16px 24px!important; }
+  .vaicar-city-gallery { grid-template-columns:repeat(4,minmax(0,1fr))!important; }
+  .vaicar-city-photo:nth-child(n+5) { display:none!important; }
+}
+@media(max-width:767px) {
+  body:has(.vaicar-home) .vaicar-navbar { background:rgba(255,255,255,.96)!important; position:relative!important; }
+  body:has(.vaicar-home) .vaicar-navbar a,body:has(.vaicar-home) .vaicar-navbar button { color:#173f42!important; }
+  body:has(.vaicar-home) .vaicar-navbar .h-20 { height:72px!important; }
+  body:has(.vaicar-home) .vaicar-reference-stage { margin-top:0!important; padding-top:30px!important; min-height:0!important; height:auto!important; padding-bottom:24px!important; }
+  .vaicar-stage-inner { width:calc(100% - 32px)!important; }
+  .vaicar-reference-layout { grid-template-columns:1fr!important; gap:22px!important; }
+  .vaicar-hero-copy { padding-top:0!important; }
+  .vaicar-reference-eyebrow { font-size:12px!important; }
+  .vaicar-reference-title { font-size:clamp(46px,13vw,66px)!important; }
+  .vaicar-reference-subtitle { font-size:18px!important; margin-bottom:22px!important; }
+  .vaicar-reference-features { grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:18px!important; }
+  .vaicar-booking-panel { margin:0!important; max-width:none!important; }
+  .vaicar-booking-card { padding:14px!important; }
+  .vaicar-audience-cards { position:relative!important; bottom:auto!important; margin-top:22px!important; grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+  .vaicar-profile-card { min-height:160px!important; padding:14px!important; }
+  .vaicar-profile-card > svg { width:42px!important; height:40px!important; }
+  .vaicar-profile-card strong { font-size:15px!important; }
+  .vaicar-profile-card > span { font-size:12px!important; }
+  .vaicar-profile-card i { width:32px!important; height:32px!important; right:8px!important; bottom:12px!important; }
+  .vaicar-reference-signature { display:none!important; }
+  .vaicar-city-strip { display:block!important; padding:22px 16px!important; }
+  .vaicar-city-intro { margin-bottom:18px!important; }
+  .vaicar-city-gallery { display:flex!important; overflow-x:auto!important; gap:10px!important; padding-bottom:8px!important; }
+  .vaicar-city-photo,.vaicar-city-photo:nth-child(n+5) { display:block!important; flex:0 0 145px!important; height:180px!important; }
+  .vaicar-city-photo span { font-size:13px!important; left:9px!important; }
+}
