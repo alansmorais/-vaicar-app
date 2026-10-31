@@ -32,8 +32,13 @@ export class ApiError extends Error {
   }
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (window.location.hostname.endsWith('.pages.dev')
+  ? 'https://vaicar-app-770203144889.southamerica-east1.run.app'
+  : '');
+
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = endpoint.startsWith('/api/') ? endpoint : `/api/v1${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  const apiPath = endpoint.startsWith('/api/') ? endpoint : `/api/v1${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  const url = API_BASE_URL ? `${API_BASE_URL.replace(/\\/$/, '')}${apiPath}` : apiPath;
   const token = getAuthToken();
 
   const headers: Record<string, string> = {
