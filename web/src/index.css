@@ -3111,3 +3111,33 @@ body:has(.vaicar-home) .vaicar-audience-arrow {
 body:has(.vaicar-home) .vaicar-audience-card:hover .vaicar-audience-arrow {
   background:#2563EB!important;
 }
+
+
+/* Homepage header readability: solid light surface and high-contrast brand/navigation.
+   Keep the logo, brand blue and existing primary CTA styling intact. */
+body:has(.vaicar-home) .vaicar-navbar {
+  position: sticky !important;
+  top: 0 !important;
+  background: rgba(255,255,255,.98) !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  box-shadow: 0 2px 12px rgba(15,23,42,.06) !important;
+  backdrop-filter: blur(14px) !important;
+}
+body:has(.vaicar-home) .vaicar-navbar a:not(.bg-blue-600),
+body:has(.vaicar-home) .vaicar-navbar button:not(.bg-blue-600) {
+  color: #334155 !important;
+}
+body:has(.vaicar-home) .vaicar-navbar a span,
+body:has(.vaicar-home) .vaicar-navbar a div > span:first-child {
+  color: #111827 !important;
+}
+body:has(.vaicar-home) .vaicar-navbar a div > span:nth-child(2) {
+  color: #155DFC !important;
+}
+body:has(.vaicar-home) .vaicar-navbar a.bg-blue-600,
+body:has(.vaicar-home) .vaicar-navbar a.bg-blue-600 * {
+  color: #FFFFFF !important;
+}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-mobile-drawer {
+  color: #111827 !important;
+}
