@@ -3725,3 +3725,58 @@ body:has(.vaicar-home) .vaicar-reference-stage {
 .vaicar-footer .text-emerald-500 { color:#047857!important; }
 .vaicar-footer [class*="bg-slate-900"] { background:#F8FAFC!important; }
 .vaicar-footer [class*="border-slate-900"] { border-color:#E2E8F0!important; }
+
+
+/* Correct homepage layering: keep navigation outside the hero photograph.
+   The booking panel and four role cards float independently over the photo;
+   no shared white strip or wrapper background behind the cards. */
+body:has(.vaicar-home) .vaicar-navbar {
+  position:relative!important;
+  inset:auto!important;
+  z-index:60!important;
+  background:#ffffff!important;
+  border:0!important;
+  border-bottom:1px solid #e5ece8!important;
+  box-shadow:0 3px 14px rgba(15,45,42,.08)!important;
+  backdrop-filter:none!important;
+}
+body:has(.vaicar-home) .vaicar-navbar a,
+body:has(.vaicar-home) .vaicar-navbar button,
+body:has(.vaicar-home) .vaicar-navbar span {
+  color:#17463b!important;
+  text-shadow:none!important;
+}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-name,
+body:has(.vaicar-home) .vaicar-navbar .text-2xl {color:#123f39!important;}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a:first-child {
+  color:#087b58!important;
+  border-bottom:2px solid #20b77b!important;
+}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-location {color:#155fd1!important;}
+body:has(.vaicar-home) .vaicar-reference-stage {
+  margin-top:0!important;
+  padding-top:54px!important;
+  height:690px!important;
+  min-height:690px!important;
+}
+.vaicar-stage-photo {inset:0!important;}
+.vaicar-audience-cards {
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  padding:0!important;
+  border-radius:0!important;
+}
+.vaicar-profile-card {
+  background-clip:padding-box!important;
+  border:1px solid rgba(255,255,255,.82)!important;
+  box-shadow:0 14px 30px rgba(0,30,30,.22)!important;
+}
+@media (min-width:768px) {
+  body:has(.vaicar-home) .vaicar-reference-stage {
+    margin-top:0!important;
+    padding-top:54px!important;
+    height:690px!important;
+    min-height:690px!important;
+  }
+}
