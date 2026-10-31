@@ -1644,3 +1644,203 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
   .vaicar-home-hero .grid.grid-cols-3.gap-2\.5 > a { min-height: 92px; }
   .vaicar-home-hero #simulador > div { padding: 18px !important; border-radius: 20px !important; }
 }
+
+
+/* =========================================================
+   HOMEPAGE REDESIGN — visual direction from Alan's reference
+   Desktop: transparent nav, panoramic hero, booking panel,
+   overlapping service cards and horizontal destination strip.
+   Mobile: stacked, readable layout with the same local identity.
+   ========================================================= */
+body:has(.vaicar-home) .vaicar-navbar {
+  position: absolute !important;
+  inset: 0 0 auto 0;
+  width: 100%;
+  background: rgba(3, 31, 39, .24) !important;
+  border-color: rgba(255,255,255,.18) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(12px);
+}
+body:has(.vaicar-home) .vaicar-navbar > div {
+  max-width: 100%;
+}
+body:has(.vaicar-home) .vaicar-navbar a,
+body:has(.vaicar-home) .vaicar-navbar button,
+body:has(.vaicar-home) .vaicar-navbar span {
+  color: #fff;
+}
+body:has(.vaicar-home) .vaicar-navbar img {
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.22));
+}
+.vaicar-home-hero {
+  min-height: 790px;
+  padding-top: 150px !important;
+  padding-bottom: 230px !important;
+  background: #073d48 !important;
+  border: 0 !important;
+}
+.vaicar-home-hero > .absolute.inset-0.z-0 > img {
+  opacity: 1 !important;
+  object-position: center 48% !important;
+  filter: saturate(1.12) contrast(1.04);
+}
+.vaicar-home-hero > .absolute.inset-0.z-0 > div:nth-child(2) {
+  background: linear-gradient(90deg,rgba(2,31,43,.62) 0%,rgba(2,43,52,.36) 48%,rgba(2,43,52,.10) 100%) !important;
+}
+.vaicar-home-hero > .absolute.inset-0.z-0 > div:nth-child(3) {
+  background: linear-gradient(0deg,rgba(2,36,39,.44),transparent 45%,rgba(2,36,39,.08)) !important;
+}
+.vaicar-home-hero > .absolute.inset-0.z-0 > div:nth-child(4) { display:none; }
+.vaicar-home-hero > .relative.z-10 {
+  max-width: 1440px;
+}
+.vaicar-home-hero > .relative.z-10 > .grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(420px, .85fr);
+  gap: clamp(28px,4vw,64px);
+}
+.vaicar-home-hero [class~="lg:col-span-7"] {
+  color:#fff !important;
+  text-align:left !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] > div.inline-flex {
+  background:rgba(5,75,71,.58) !important;
+  color:#e9fff6 !important;
+  border:1px solid rgba(220,255,239,.34) !important;
+  backdrop-filter:blur(10px);
+}
+.vaicar-home-hero [class~="lg:col-span-7"] h1 {
+  max-width: 760px;
+  font-size:clamp(3.4rem,6.2vw,6.3rem) !important;
+  line-height:.98 !important;
+  letter-spacing:-.055em !important;
+  color:#fff !important;
+  text-shadow:0 3px 24px rgba(0,0,0,.2);
+}
+.vaicar-home-hero [class~="lg:col-span-7"] h1 span { color:#91efb9 !important; }
+.vaicar-home-hero [class~="lg:col-span-7"] p,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-slate-500,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-slate-400,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-slate-600,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-slate-700 {
+  color:rgba(255,255,255,.92) !important;
+}
+.vaicar-home-hero [class~="lg:col-span-7"] .border-t { border-color:rgba(255,255,255,.28) !important; }
+.vaicar-home-hero [class~="lg:col-span-7"] .text-blue-600,
+.vaicar-home-hero [class~="lg:col-span-7"] .text-emerald-600 { color:#9af0c2 !important; }
+.vaicar-home-hero [class~="lg:col-span-7"] a:first-child {
+  background:linear-gradient(135deg,#079767,#006b4c) !important;
+  box-shadow:0 12px 28px rgba(0,50,38,.3) !important;
+}
+.vaicar-home-hero #simulador > div {
+  padding:clamp(22px,2.2vw,34px) !important;
+  background:rgba(255,255,255,.96) !important;
+  border:1px solid rgba(255,255,255,.78) !important;
+  border-radius:26px !important;
+  box-shadow:0 24px 70px rgba(0,35,38,.3) !important;
+  backdrop-filter:blur(18px);
+  color:#174638 !important;
+}
+.vaicar-home-hero #simulador h3,
+.vaicar-home-hero #simulador label { color:#174638 !important; }
+.vaicar-home-hero #simulador select { background:#fff !important;color:#174638 !important;border-color:#d4e3dc !important; }
+.vaicar-home-hero #simulador .bg-blue-50\/60 { background:#e8f6ee !important; }
+.vaicar-home-hero #simulador .bg-blue-50\/60 * { color:#087653 !important; }
+.vaicar-audience {
+  position:relative;
+  z-index:3;
+  margin-top:-178px;
+  padding-top:0 !important;
+  padding-bottom:36px !important;
+  background:transparent !important;
+  border:0 !important;
+}
+.vaicar-audience > div > .flex {
+  display:none !important;
+}
+.vaicar-audience > div > .grid {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+}
+.vaicar-audience-card {
+  min-height:174px;
+  padding:24px !important;
+  border-radius:22px !important;
+  background:rgba(255,255,255,.96) !important;
+  border:1px solid rgba(255,255,255,.82) !important;
+  box-shadow:0 14px 38px rgba(0,42,37,.16) !important;
+  backdrop-filter:blur(14px);
+  display:flex;
+  align-items:center;
+  gap:16px;
+  color:#164b39 !important;
+}
+.vaicar-audience-card strong { color:#164b39 !important;font-size:18px !important; }
+.vaicar-audience-card small { color:#536b60 !important;font-size:13px !important; }
+.vaicar-audience-icon { width:54px !important;height:54px !important;border-radius:16px !important;background:#e5f5ec !important;color:#087653 !important; }
+.vaicar-audience-arrow { color:#07845d !important; }
+#praias-cobertas {
+  background:#fff !important;
+  border:0 !important;
+  padding:26px 0 42px !important;
+}
+#praias-cobertas > div > .flex { margin-bottom:18px !important; }
+#praias-cobertas > div > .flex > div:first-child { max-width:250px; }
+#praias-cobertas > div > .flex h2 { color:#104735 !important;font-size:30px !important; }
+#praias-cobertas > div > .flex p { color:#63796e !important; }
+#praias-cobertas > div > .grid {
+  display:grid;
+  grid-template-columns:repeat(8,minmax(0,1fr));
+  gap:10px;
+}
+#praias-cobertas > div > .grid > div {
+  min-height:190px !important;
+  border-radius:16px !important;
+}
+#praias-cobertas > div > .grid > div p { display:none; }
+#praias-cobertas > div > .grid > div h3 { font-size:14px !important; }
+@media (max-width:1100px) and (min-width:768px) {
+  .vaicar-home-hero > .relative.z-10 > .grid { grid-template-columns:minmax(0,1fr) minmax(340px,.85fr); }
+  .vaicar-audience > div > .grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #praias-cobertas > div > .grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+}
+@media (max-width:767px) {
+  body:has(.vaicar-home) .vaicar-navbar {
+    position:sticky !important;
+    background:rgba(5,37,40,.96) !important;
+    backdrop-filter:blur(14px);
+  }
+  .vaicar-home-hero {
+    min-height:0;
+    padding-top:30px !important;
+    padding-bottom:205px !important;
+  }
+  .vaicar-home-hero > .absolute.inset-0.z-0 > img {
+    opacity:.78 !important;
+    object-position:center center !important;
+  }
+  .vaicar-home-hero > .absolute.inset-0.z-0 > div:nth-child(2) {
+    background:linear-gradient(180deg,rgba(2,35,42,.70),rgba(2,39,43,.65)) !important;
+  }
+  .vaicar-home-hero > .relative.z-10 > .grid {
+    grid-template-columns:minmax(0,1fr);
+    gap:26px;
+  }
+  .vaicar-home-hero [class~="lg:col-span-7"] { text-align:center !important; }
+  .vaicar-home-hero [class~="lg:col-span-7"] h1 {
+    font-size:clamp(2.5rem,9vw,3.8rem) !important;
+    line-height:1.02 !important;
+  }
+  .vaicar-home-hero [class~="lg:col-span-7"] > div.inline-flex { margin-inline:auto; }
+  .vaicar-home-hero [class~="lg:col-span-7"] .max-w-lg { margin-inline:auto; }
+  .vaicar-home-hero #simulador { max-width:560px;margin-inline:auto;width:100%; }
+  .vaicar-audience { margin-top:-158px;padding-bottom:24px !important; }
+  .vaicar-audience > div > .grid { grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
+  .vaicar-audience-card { min-height:110px;padding:14px !important;gap:10px; }
+  .vaicar-audience-card strong { font-size:14px !important; }
+  .vaicar-audience-card small { font-size:11px !important; }
+  .vaicar-audience-icon { width:42px !important;height:42px !important; }
+  #praias-cobertas { padding:24px 0 32px !important; }
+  #praias-cobertas > div > .flex > div:first-child { max-width:none; }
+  #praias-cobertas > div > .grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #praias-cobertas > div > .grid > div { min-height:160px !important; }
+}
