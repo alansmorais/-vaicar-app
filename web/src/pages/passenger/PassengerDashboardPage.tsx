@@ -176,10 +176,22 @@ export const PassengerDashboardPage: React.FC = () => {
 
   // Load locations and active ride on mount
   useEffect(() => {
-    mapsApi.getPopularPlaces().then(setPopularPlaces).catch(console.error);
+    mapsApi.getPopularPlaces().then((payload) => {
+      const places = Array.isArray(payload) ? payload : (payload as any)?.places;
+      setPopularPlaces(Array.isArray(places) ? places : []);
+    }).catch((error) => {
+      console.error('[PassengerDashboard] Could not load popular places:', error);
+      setPopularPlaces([]);
+    });
 
     const fetchDrivers = () => {
-      driversApi.getOnlineDrivers().then(setOnlineDrivers).catch(console.error);
+      driversApi.getOnlineDrivers().then((payload) => {
+        const drivers = Array.isArray(payload) ? payload : (payload as any)?.drivers;
+        setOnlineDrivers(Array.isArray(drivers) ? drivers : []);
+      }).catch((error) => {
+        console.error('[PassengerDashboard] Could not load online drivers:', error);
+        setOnlineDrivers([]);
+      });
     };
     fetchDrivers();
     const intervalDrivers = setInterval(fetchDrivers, 10000);
@@ -350,7 +362,7 @@ export const PassengerDashboardPage: React.FC = () => {
         ]);
 
         setActiveRide(updated);
-        setOnlineDrivers(drivers);
+        setOnlineDrivers(Array.isArray(drivers) ? drivers : (Array.isArray((drivers as any)?.drivers) ? (drivers as any).drivers : []));
 
         // State-change notification trigger (fires once per state change, never duplicates on poll)
         if (lastNotifiedStatusRef.current !== updated.status) {
@@ -1494,7 +1506,7 @@ export const PassengerDashboardPage: React.FC = () => {
                     </div>
 
                     {/* If estimate with availableDrivers is loaded, show each driver with their individual fare */}
-                    {estimate?.availableDrivers && estimate.availableDrivers.length > 0 ? (
+                    {Array.isArray(estimate?.availableDrivers) && estimate.availableDrivers.length > 0 ? (
                       estimate.availableDrivers.map((d) => {
                         const isSelected = selectedDriverId === d.driverId;
                         const isBike = d.vehicle?.type === 'bicycle';
@@ -2298,7 +2310,7 @@ export const PassengerDashboardPage: React.FC = () => {
                       </div>
                     ) : (
                       <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {referralSummary.referrals.map((ref) => (
+                        {(Array.isArray(referralSummary.referrals) ? referralSummary.referrals : []).map((ref) => (
                           <div
                             key={ref.id}
                             className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
