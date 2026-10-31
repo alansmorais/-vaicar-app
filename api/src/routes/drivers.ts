@@ -97,7 +97,6 @@ driversRouter.get('/online', async (req: Request, res: Response, next: NextFunct
         brand: d.vehicle?.brand || 'Veículo',
         model: d.vehicle?.model || 'Padrão',
         color: d.vehicle?.color || 'Branco',
-        plate: d.vehicle?.plate || '',
       },
       currentLocation: d.currentLocation,
       rating: d.rating || 5.0,
