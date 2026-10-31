@@ -4153,7 +4153,7 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   }
 }
 
-/* Official VaiCar logo — circular framed treatment */
+/* Official VaiCar logo — circular image crop inside a separate round frame */
 .vaicar-navbar .vaicar-brand-logo {
   display:block !important;
   width:76px !important;
@@ -4161,13 +4161,14 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   max-width:76px !important;
   aspect-ratio:1 / 1 !important;
   box-sizing:border-box !important;
-  object-fit:contain !important;
+  object-fit:cover !important;
   object-position:center !important;
-  padding:4px !important;
-  border:3px solid rgba(255,255,255,.96) !important;
+  padding:0 !important;
+  border:3px solid rgba(255,255,255,.98) !important;
   border-radius:50% !important;
-  background:rgba(4,55,45,.78) !important;
-  box-shadow:0 4px 16px rgba(0,0,0,.24), 0 0 0 2px rgba(16,185,129,.34) !important;
+  background:#ffffff !important;
+  box-shadow:0 4px 16px rgba(0,0,0,.24), 0 0 0 3px rgba(16,185,129,.42) !important;
+  overflow:hidden !important;
   filter:none !important;
 }
 @media (max-width:767px) {
@@ -4175,7 +4176,7 @@ body:has(.vaicar-home) .vaicar-reference-stage {
     width:58px !important;
     height:58px !important;
     max-width:58px !important;
-    padding:3px !important;
+    padding:0 !important;
     border-width:2px !important;
   }
 }
