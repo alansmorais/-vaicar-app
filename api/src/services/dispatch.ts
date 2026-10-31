@@ -425,10 +425,14 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
       const driverLockRef = db.collection('driver_ride_locks').doc(driver.uid);
       // Re-read the driver's authoritative approval state inside the same
       // transaction as assignment, so a concurrent suspension/rejection wins.
-      const [rideDoc, driverDoc, driverLockDoc] = await Promise.all([
+      const activeRidesQuery = db.collection('rides')
+        .where('driverId', '==', driver.uid)
+        .where('status', 'in', ['ACCEPTED', 'DRIVER_ARRIVING', 'ARRIVED', 'IN_PROGRESS']);
+      const [rideDoc, driverDoc, driverLockDoc, activeRidesSnapshot] = await Promise.all([
         transaction.get(rideRef),
         transaction.get(driverRef),
         transaction.get(driverLockRef),
+        transaction.get(activeRidesQuery),
       ]);
       let latestDriver = driverDoc.exists ? driverDoc.data() as DriverProfile : null;
       if (!latestDriver) {
@@ -442,7 +446,8 @@ export async function acceptOffer(offerId: string, driverUid: string): Promise<R
       const ride = rideDoc.data() as Ride;
 
       const lockedRideId = driverLockDoc.exists ? driverLockDoc.data()?.activeRideId : null;
-      if (lockedRideId && lockedRideId !== offer.rideId) {
+      const hasOtherActiveRide = activeRidesSnapshot.docs.some(doc => doc.id !== offer.rideId);
+      if ((lockedRideId && lockedRideId !== offer.rideId) || hasOtherActiveRide) {
         transactionError = new AppError(ErrorCode.CONFLICT, 'Você já está responsável por outra corrida.', 409);
         return;
       }
