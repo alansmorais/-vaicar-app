@@ -3377,6 +3377,54 @@ describe('VaiCar Platform - API Automated Tests', () => {
 
       const busyUids = busyCandidates.map((c) => c.driver.uid);
       expect(busyUids).not.toContain(drv1Uid); // Driver 1 is busy with active ride
+
+      // Even if an old/pending offer is presented directly, the server-side
+      // reservation must prevent the same driver accepting a second ride.
+      const blockedRideId = 'dispatch-driver-lock-blocked-ride';
+      const blockedOfferId = 'dispatch-driver-lock-blocked-offer';
+      const now = new Date().toISOString();
+      const blockedRide: Ride = {
+        id: blockedRideId,
+        passengerId: passengerUid,
+        passengerName: 'Passageiro Lock Test',
+        passengerPhone: '(12) 99111-2233',
+        origin: { address: 'Centro, São Sebastião', lat: -23.8055, lng: -45.4011 },
+        destination: { address: 'Barequeçaba, São Sebastião', lat: -23.8266, lng: -45.4389 },
+        distanceKm: 2,
+        fareAmount: 25,
+        fareBrl: 25,
+        estimatedPrice: 25,
+        status: 'OFFERED',
+        serviceType: 'ride',
+        paymentMethod: 'PIX',
+        declinedDriverIds: [],
+        currentOfferId: blockedOfferId,
+        createdAt: now,
+      };
+      await saveRide(blockedRide);
+      await saveRideOffer({
+        id: blockedOfferId,
+        rideId: blockedRideId,
+        driverId: drv1Uid,
+        status: 'PENDING',
+        createdAt: now,
+        expiresAt: new Date(Date.now() + 20_000).toISOString(),
+        distanceKm: 1,
+        fareAmount: 25,
+        origin: blockedRide.origin,
+        destination: blockedRide.destination,
+        serviceType: 'ride',
+      } as any);
+
+      const blockedAccept = await request(app)
+        .post(`/api/v1/drivers/offers/${blockedOfferId}/accept`)
+        .set('Authorization', `Bearer ${drv1Token}`);
+      expect(blockedAccept.status).toBe(409);
+      expect(blockedAccept.body.error.code).toBe('CONFLICT');
+      expect((await getRide(blockedRideId))?.driverId).toBeUndefined();
+
+      await saveRideOffer({ ...(await getRideOffer(blockedOfferId))!, status: 'DECLINED', respondedAt: new Date().toISOString() });
+      await saveRide({ ...blockedRide, status: 'CANCELLED_BY_SYSTEM', currentOfferId: undefined });
     });
 
     it('16. Real customer fare (e.g. R$ 37,85) is preserved through the entire dispatch lifecycle', async () => {
