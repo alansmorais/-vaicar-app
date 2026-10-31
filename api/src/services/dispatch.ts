@@ -243,22 +243,68 @@ export async function dispatchNextCandidate(rideId: string): Promise<RideOffer |
     notes: currentRide.notes || currentRide.deliveryDetails?.packageNotes,
   };
 
-  await saveRideOffer(offer);
+  const db = getFirebaseAdminFirestore();
+  let committedOffer: RideOffer | null = null;
 
-  const updatedRide: Ride = {
-    ...currentRide,
-    status: 'OFFERED',
-    currentOfferId: offer.id,
-  };
-  await saveRide(updatedRide);
+  if (db) {
+    // Serialize offer creation against the ride document. If two dispatch
+    // workers race, Firestore retries one transaction and it observes the
+    // first worker's currentOfferId instead of creating a second offer.
+    await db.runTransaction(async (transaction) => {
+      const rideRef = db.collection('rides').doc(currentRide.id);
+      const rideDoc = await transaction.get(rideRef);
+      if (!rideDoc.exists) return;
 
-  // Send account-specific FCM push notification to target driver
-  await sendTargetedOfferNotification(chosen.driver, offer);
+      const latestRide = rideDoc.data() as Ride;
+      if (latestRide.driverId || !['REQUESTED', 'OFFERED'].includes(latestRide.status)) return;
 
-  // Set timeout optimization to wake server after 20 seconds
-  scheduleOfferTimeout(offer.id, OFFER_TIMEOUT_SECONDS * 1000);
+      if (latestRide.currentOfferId) {
+        const existingRef = db.collection('ride_offers').doc(latestRide.currentOfferId);
+        const existingDoc = await transaction.get(existingRef);
+        if (existingDoc.exists) {
+          const existing = existingDoc.data() as RideOffer;
+          if (existing.status === 'PENDING' && new Date(existing.expiresAt).getTime() > Date.now()) {
+            committedOffer = existing;
+            return;
+          }
+        }
+      }
 
-  return offer;
+      const offerRef = db.collection('ride_offers').doc(offer.id);
+      transaction.create(offerRef, offer);
+      transaction.update(rideRef, {
+        status: 'OFFERED',
+        currentOfferId: offer.id,
+      });
+      committedOffer = offer;
+    });
+  } else {
+    // Local in-memory fallback for tests and development.
+    const latestRide = await getRide(currentRide.id);
+    if (!latestRide || latestRide.driverId || !['REQUESTED', 'OFFERED'].includes(latestRide.status)) {
+      return null;
+    }
+    if (latestRide.currentOfferId) {
+      const existing = await getRideOffer(latestRide.currentOfferId);
+      if (existing?.status === 'PENDING' && new Date(existing.expiresAt).getTime() > Date.now()) {
+        return existing;
+      }
+    }
+    await saveRideOffer(offer);
+    await saveRide({ ...latestRide, status: 'OFFERED', currentOfferId: offer.id });
+    committedOffer = offer;
+  }
+
+  if (!committedOffer) return null;
+
+  // Notify only when this invocation created the offer; an already-active
+  // offer returned by a concurrent dispatch must not generate duplicate pushes.
+  if (committedOffer.id === offer.id) {
+    await sendTargetedOfferNotification(chosen.driver, committedOffer);
+    scheduleOfferTimeout(committedOffer.id, OFFER_TIMEOUT_SECONDS * 1000);
+  }
+
+  return committedOffer;
 }
 
 /**
