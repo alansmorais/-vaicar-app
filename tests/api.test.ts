@@ -3018,6 +3018,67 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(candidateUids).not.toContain(drvCourierUid);
     });
 
+    it('keeps a newer targeted offer when an older offer is declined late', async () => {
+      const rideId = 'dispatch-stale-decline-regression';
+      const oldOfferId = 'dispatch-stale-offer-old';
+      const currentOfferId = 'dispatch-stale-offer-current';
+      const now = new Date().toISOString();
+      const baseRide: Ride = {
+        id: rideId,
+        passengerId: passengerUid,
+        passengerName: 'Passageiro Test',
+        passengerPhone: '(12) 99111-2233',
+        origin: { address: 'Centro Histórico, São Sebastião', lat: -23.8055, lng: -45.4011 },
+        destination: { address: 'Praia Grande, São Sebastião', lat: -23.8200, lng: -45.4100 },
+        distanceKm: 2,
+        fareAmount: 25,
+        fareBrl: 25,
+        estimatedPrice: 25,
+        status: 'OFFERED',
+        serviceType: 'ride',
+        paymentMethod: 'PIX',
+        declinedDriverIds: [],
+        currentOfferId,
+        createdAt: now,
+      };
+      await saveRide(baseRide);
+      await saveRideOffer({
+        id: oldOfferId,
+        rideId,
+        driverId: drv1Uid,
+        status: 'PENDING',
+        createdAt: now,
+        expiresAt: new Date(Date.now() + 20_000).toISOString(),
+        distanceKm: 1,
+        fareAmount: 25,
+        origin: baseRide.origin,
+        destination: baseRide.destination,
+        serviceType: 'ride',
+      } as any);
+      await saveRideOffer({
+        id: currentOfferId,
+        rideId,
+        driverId: drv2Uid,
+        status: 'PENDING',
+        createdAt: now,
+        expiresAt: new Date(Date.now() + 20_000).toISOString(),
+        distanceKm: 2,
+        fareAmount: 25,
+        origin: baseRide.origin,
+        destination: baseRide.destination,
+        serviceType: 'ride',
+      } as any);
+
+      await declineOffer(oldOfferId, drv1Uid);
+
+      const unchangedRide = await getRide(rideId);
+      expect(unchangedRide?.currentOfferId).toBe(currentOfferId);
+      expect(unchangedRide?.status).toBe('OFFERED');
+      expect(unchangedRide?.declinedDriverIds).toContain(drv1Uid);
+      expect((await getRideOffer(oldOfferId))?.status).toBe('DECLINED');
+      expect((await getRideOffer(currentOfferId))?.status).toBe('PENDING');
+    });
+
     it('2. findEligibleCandidates sorts candidates nearest first by Haversine distance', async () => {
       const mockRide: Ride = {
         id: 'mock-ride-sort',
