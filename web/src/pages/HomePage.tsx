@@ -421,8 +421,8 @@ export const HomePage: React.FC = () => {
             <Link to="/parcerias" className="vaicar-audience-card group">
               <span className="vaicar-audience-icon"><Store className="w-5 h-5" /></span>
               <span className="flex-1 min-w-0">
-                <strong>Para Empresas</strong>
-                <small>Restaurantes e comércios</small>
+                <strong>Sou Comércio</strong>
+                <small>Cadastre seu estabelecimento</small>
               </span>
               <ArrowRight className="vaicar-audience-arrow w-4 h-4" />
             </Link>
