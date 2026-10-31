@@ -293,11 +293,11 @@ export const HomePage: React.FC = () => {
           <img
             src="/images/sao-sebastiao/hero-rio-santos.jpg"
             alt="Vista aérea da costa de São Sebastião, com mar, praias e Mata Atlântica"
-            className="w-full h-full object-cover object-center opacity-15 lg:opacity-25 dark:opacity-25 pointer-events-none"
+            className="vaicar-hero-image w-full h-full object-cover object-center pointer-events-none"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/90 to-white/70 dark:from-slate-950 dark:via-slate-950/95 dark:to-slate-950/75" />
-          <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-white/60 dark:from-slate-950 dark:via-transparent dark:to-slate-950/80" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(21,93,252,0.08),transparent)] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.15),transparent)] pointer-events-none" />
+          <div className="vaicar-hero-overlay absolute inset-0" />
+          <div className="vaicar-hero-vignette absolute inset-0" />
+          <div className="vaicar-hero-glow absolute inset-0 pointer-events-none" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -331,9 +331,9 @@ export const HomePage: React.FC = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="vaicar-reference-layout grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+            <div className="vaicar-hero-copy lg:col-span-7 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-800 text-blue-700 dark:text-blue-400 text-xs font-semibold backdrop-blur-sm">
                 <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-emerald-500 animate-pulse" />
                 Transporte 100% Local • São Sebastião - SP
@@ -417,7 +417,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* Right Simulator Card */}
-            <div className="lg:col-span-5" id="simulador">
+            <div className="vaicar-hero-simulator lg:col-span-5" id="simulador">
               <div className="bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-md dark:shadow-2xl space-y-5">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
                   <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1245,7 +1245,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Operating Zones & Beaches Showcase with Real Photography */}
-      <section id="praias-cobertas" className="py-20 bg-slate-950 border-b border-slate-800">
+      <section id="praias-cobertas" className="vaicar-destinations py-20 bg-slate-950 border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-4">
             <div>
