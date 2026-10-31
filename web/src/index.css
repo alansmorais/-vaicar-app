@@ -3571,3 +3571,33 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   .vaicar-booking-field { min-height:42px!important; }
   .vaicar-booking-submit { min-height:44px!important; font-size:14px!important; }
 }
+
+
+/* Structural correction from 07:37 tablet screenshot.
+   The navbar is absolutely over the hero; the previous -80px stage offset
+   plus -18px inner transform pushed both title and booking card underneath it. */
+@media (min-width:768px) and (max-width:1360px) {
+  body:has(.vaicar-home) .vaicar-reference-stage {
+    margin-top:0!important;
+    padding-top:96px!important;
+    height:630px!important;
+    min-height:630px!important;
+  }
+  body:has(.vaicar-home) .vaicar-stage-inner {
+    transform:none!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-layout {
+    padding-top:0!important;
+    margin-top:0!important;
+    align-items:start!important;
+  }
+  body:has(.vaicar-home) .vaicar-hero-copy {
+    padding-top:0!important;
+    margin-top:0!important;
+  }
+  body:has(.vaicar-home) .vaicar-booking-panel {
+    margin-top:0!important;
+    transform:none!important;
+    align-self:start!important;
+  }
+}
