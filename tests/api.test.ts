@@ -1532,6 +1532,14 @@ describe('VaiCar Platform - API Automated Tests', () => {
 
       expect(acceptRes.status).toBe(403);
       expect(acceptRes.body.error.message).toContain('não está habilitado');
+
+      // Keep this negative authorization test isolated: release the passenger's
+      // active-ride slot so later tests can create their own requests.
+      const cancelRes = await request(app)
+        .post(`/api/v1/rides/${rideRes.body.data.id}/cancel`)
+        .set('Authorization', `Bearer ${stage1PassToken}`)
+        .send({ reason: 'Limpeza do teste de compatibilidade de veículo' });
+      expect(cancelRes.status).toBe(200);
     });
 
     it('allows driver to configure custom delivery pricing and validates platform floor', async () => {
