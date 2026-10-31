@@ -1,13 +1,25 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { AppError } from '../middleware/errorHandler.js';
+import { authenticate } from '../middleware/auth.js';
 import { ErrorCode } from '../../../shared/src/errors.js';
 import { validateImageBuffer, storeImage } from '../services/storage.js';
 
 export const storageRouter = Router();
 
+// Uploads contain identity and vehicle documents; require a verified account token.
+storageRouter.use(authenticate);
+
 storageRouter.post('/upload', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { fileData, pathPrefix, uid } = req.body;
+    const authenticatedUid = req.user!.uid;
+    const allowedFolders = new Set(['users', 'drivers']);
+    if (typeof uid !== 'string' || (uid !== authenticatedUid && !uid.startsWith(`${authenticatedUid}_`))) {
+      throw new AppError(ErrorCode.FORBIDDEN, 'Você só pode enviar arquivos para sua própria conta.', 403);
+    }
+    if (pathPrefix !== undefined && !allowedFolders.has(pathPrefix)) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Pasta de destino inválida.', 400);
+    }
     if (!fileData || typeof fileData !== 'string') {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Dados do arquivo de imagem não fornecidos.', 400);
     }
@@ -46,8 +58,8 @@ storageRouter.post('/upload', async (req: Request, res: Response, next: NextFunc
       ? 'png'
       : 'webp';
 
-    const folder = pathPrefix ? pathPrefix.replace(/^\/|\/$/g, '') : 'users';
-    const userPart = uid || `anon-${Date.now()}`;
+    const folder = pathPrefix || 'users';
+    const userPart = uid;
     const storagePath = `${folder}/${userPart}/file.${ext}`;
 
     const uploadResult = await storeImage(storagePath, buffer, validation.mimeType);
