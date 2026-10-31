@@ -780,12 +780,35 @@ ridesRouter.post('/:id/accept', async (req: Request, res: Response, next: NextFu
       throw new AppError(ErrorCode.INVALID_RIDE_STATE, `Esta corrida não está mais disponível (status: ${ride.status}).`, 409);
     }
 
+    // Enforce service/vehicle eligibility at the acceptance boundary too.
+    // Dispatch filtering alone is not sufficient: this endpoint must not allow
+    // a driver to accept a ride or delivery that was not intended for them.
+    const vehicleType = driver.vehicle?.type || (driver.isCourier ? 'motorcycle' : 'car');
+    const services = driver.servicesOffered?.length
+      ? driver.servicesOffered
+      : (driver.isCourier || vehicleType === 'bicycle' ? ['delivery'] : ['ride']);
+    const requestedService = ride.serviceType || 'ride';
+    if (!services.includes(requestedService as any)) {
+      throw new AppError(ErrorCode.FORBIDDEN, 'Seu cadastro não está habilitado para este tipo de serviço.', 403);
+    }
+    if (requestedService === 'delivery') {
+      if (!['car', 'motorcycle', 'van', 'bicycle'].includes(vehicleType)) {
+        throw new AppError(ErrorCode.FORBIDDEN, 'Seu veículo não está habilitado para entregas.', 403);
+      }
+    } else if (vehicleType === 'bicycle' || !['car', 'motorcycle', 'van'].includes(vehicleType)) {
+      throw new AppError(ErrorCode.FORBIDDEN, 'Este veículo não está habilitado para corridas de passageiros.', 403);
+    }
+
     const now = new Date().toISOString();
     if (ride.currentOfferId) {
       const offer = await getRideOffer(ride.currentOfferId);
-      if (offer && offer.status === 'PENDING') {
-        await saveRideOffer({ ...offer, status: 'ACCEPTED', respondedAt: now });
+      if (!offer || offer.status !== 'PENDING' || offer.driverId !== driver.uid) {
+        throw new AppError(ErrorCode.FORBIDDEN, 'Esta solicitação não foi direcionada para você ou a oferta não está mais válida.', 403);
       }
+      if (new Date(offer.expiresAt).getTime() <= Date.now()) {
+        throw new AppError(ErrorCode.GONE, 'O tempo para aceitar esta oferta terminou.', 410);
+      }
+      await saveRideOffer({ ...offer, status: 'ACCEPTED', respondedAt: now });
     }
     const pixInfo = getDriverPixInfo(driver);
     const updatedRide: Ride = {
