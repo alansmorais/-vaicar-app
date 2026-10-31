@@ -333,15 +333,15 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div className="vaicar-audience-cards" id="servicos-principais">
-            <Link to="/passenger" className="vaicar-profile-card vaicar-profile-passenger">
+            <Link to="/como-funciona/passageiro" className="vaicar-profile-card vaicar-profile-passenger">
               <Car /><strong>Sou Passageiro</strong><span>Peça sua corrida com<br /> segurança e rapidez.</span><i><ArrowRight /></i>
             </Link>
-            <Link to="/driver/register" className="vaicar-profile-card vaicar-profile-driver">
+            <Link to="/como-funciona/motorista" className="vaicar-profile-card vaicar-profile-driver">
               <Bike /><strong>Sou Motorista</strong><span>Mais ganhos e<br /> flexibilidade.</span><i><ArrowRight /></i>
             </Link>
-            <a href="#lista-espera" className="vaicar-profile-card vaicar-profile-delivery">
+            <Link to="/como-funciona/entregador" className="vaicar-profile-card vaicar-profile-delivery">
               <Bike /><strong>Sou Entregador</strong><span>Entregas locais para<br /> a cidade e região.</span><i><ArrowRight /></i>
-            </a>
+            </Link>
             <Link to="/parcerias" className="vaicar-profile-card vaicar-profile-business">
               <Store /><strong>Para Empresas</strong><span>Soluções de mobilidade<br /> para hotéis, pousadas,<br /> restaurantes e comércio.</span><i><ArrowRight /></i>
             </Link>
