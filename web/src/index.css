@@ -4166,7 +4166,7 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   padding:0 !important;
   border:3px solid rgba(255,255,255,.98) !important;
   border-radius:50% !important;
-  background:#ffffff !important;
+  background:transparent !important;
   box-shadow:0 4px 16px rgba(0,0,0,.24), 0 0 0 3px rgba(16,185,129,.42) !important;
   overflow:hidden !important;
   filter:none !important;
