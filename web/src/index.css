@@ -2908,3 +2908,52 @@ body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-vignette{
   opacity:0!important;
   display:none!important;
 }
+
+/* Final hero correction: original photo colors + booking panel anchored right */
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-image{
+  opacity:1!important;
+  filter:none!important;
+  mix-blend-mode:normal!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-overlay,
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-vignette,
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-glow{
+  display:none!important;
+  opacity:0!important;
+  background:none!important;
+  filter:none!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero{
+  background:#174b59!important;
+}
+@media(min-width:1024px){
+ body:has(.vaicar-home) .vaicar-home-hero>.relative.z-10{
+   width:100%!important;max-width:1440px!important;margin-left:auto!important;margin-right:auto!important;
+ }
+ body:has(.vaicar-home) .vaicar-home-hero .vaicar-reference-layout{
+   display:grid!important;
+   grid-template-columns:minmax(0,1fr) minmax(440px,526px)!important;
+   gap:clamp(28px,4vw,64px)!important;
+   align-items:center!important;
+ }
+ body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-copy,
+ body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-panel{
+   grid-column:auto!important;
+   width:100%!important;
+ }
+ body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-panel{
+   max-width:526px!important;
+   justify-self:end!important;
+   margin-left:auto!important;
+   margin-right:0!important;
+   align-self:center!important;
+ }
+}
+@media(max-width:1023px){
+ body:has(.vaicar-home) .vaicar-home-hero .vaicar-reference-layout{
+   grid-template-columns:minmax(0,1fr)!important;
+ }
+ body:has(.vaicar-home) .vaicar-home-hero .vaicar-booking-panel{
+   width:100%!important;max-width:560px!important;margin-left:auto!important;margin-right:auto!important;
+ }
+}
