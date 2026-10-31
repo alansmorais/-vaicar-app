@@ -1374,46 +1374,7 @@ ridesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => 
       }
       return res.json({ success: true, requestId: req.id, data: [formatRidePayload(offeredRide)] });
 
-      const allRides = await listAllRides();
-      const isBicycle = driver.vehicle?.type === 'bicycle';
-      const servicesOffered = driver.servicesOffered || (driver.isCourier || isBicycle ? ['delivery'] : ['ride']);
-      const offersDelivery = servicesOffered.includes('delivery');
-      const offersRide = !isBicycle && servicesOffered.includes('ride');
 
-      const now = Date.now();
-      const MAX_AGE_MS = 10 * 60 * 1000;
-
-      const available = allRides.filter((r) => {
-        if (r.status !== 'REQUESTED') return false;
-        if (r.driverId && r.driverId !== driver.uid) return false;
-        if (r.declinedDriverIds && r.declinedDriverIds.includes(driver.uid)) return false;
-
-        // Auto-expire stale ride
-        const reqTime = new Date(r.requestedAt || (r as any).createdAt || 0).getTime();
-        if (now - reqTime > MAX_AGE_MS) {
-          saveRide({
-            ...r,
-            status: 'CANCELLED_BY_SYSTEM',
-            cancelledAt: new Date().toISOString(),
-            cancelledBy: 'system',
-            cancelReason: 'Tempo limite de busca expirado.',
-          }).catch(console.error);
-          return false;
-        }
-
-        // Distance matching (unless testMode is active)
-        if (!config.testMode && driver.currentLocation?.lat && r.origin?.lat) {
-          const dist = calculateDistanceKm(driver.currentLocation.lat, driver.currentLocation.lng, r.origin.lat, r.origin.lng);
-          if (dist > 15.0) return false;
-        }
-
-        const rideService = r.serviceType || 'ride';
-        if (rideService === 'delivery' && !offersDelivery) return false;
-        if (rideService === 'ride' && !offersRide) return false;
-        return true;
-      });
-
-      return res.json({ success: true, requestId: req.id, data: available.map(formatRidePayload) });
     }
 
     const active = await getActiveRideForUser(req.user!.uid, 'passenger');
