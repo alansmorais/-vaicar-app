@@ -4152,3 +4152,21 @@ body:has(.vaicar-home) .vaicar-reference-stage {
     padding: 0 !important;
   }
 }
+
+/* Supplied official VaiCar brand asset */
+.vaicar-navbar .vaicar-brand-logo {
+  display:block !important;
+  width:auto !important;
+  height:58px !important;
+  max-width:190px !important;
+  object-fit:contain !important;
+  object-position:left center !important;
+  background:transparent !important;
+  filter:none !important;
+}
+@media (max-width:767px) {
+  .vaicar-navbar .vaicar-brand-logo {
+    height:46px !important;
+    max-width:160px !important;
+  }
+}
