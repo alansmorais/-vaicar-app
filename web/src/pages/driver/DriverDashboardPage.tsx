@@ -409,7 +409,10 @@ export const DriverDashboardPage: React.FC = () => {
     const timer = setInterval(() => {
       setIncomingCountdown((prev) => {
         if (prev <= 1) {
-          handleDeclineRide(incomingRide.id);
+          // The server owns offer expiry. Do not send a decline after the
+          // deadline; clear the local alert and let the authoritative poll refresh.
+          setPendingOfferId(null);
+          setAvailableRides((current) => current.filter((ride) => ride.id !== incomingRide.id));
           return 0;
         }
         return prev - 1;
