@@ -1460,3 +1460,114 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
 .vaicar-home #praias-cobertas .grid > div:nth-child(n+5) {
   display: flex !important;
 }
+
+
+/* Tropical Premium app dashboards — preserve behavior, modernize only surfaces */
+.vaicar-passenger-dashboard {
+  background: #f4f8f5 !important;
+  color: #193b30 !important;
+}
+.vaicar-passenger-dashboard > header {
+  background: #ffffff !important;
+  border-color: #dce9e1 !important;
+  box-shadow: 0 2px 14px rgba(20,65,48,.06);
+}
+.vaicar-passenger-dashboard > header .text-white { color: #173f32 !important; }
+.vaicar-passenger-dashboard > header .text-emerald-400 { color: #087f5b !important; }
+.vaicar-passenger-dashboard > header .bg-slate-800 {
+  background: #edf5f0 !important;
+  color: #214a3a !important;
+}
+.vaicar-passenger-dashboard > main {
+  color: #23483a !important;
+}
+.vaicar-passenger-dashboard > main .bg-slate-950,
+.vaicar-passenger-dashboard > main .bg-slate-900,
+.vaicar-passenger-dashboard > main .bg-slate-950\/80,
+.vaicar-passenger-dashboard > main .bg-slate-950\/70,
+.vaicar-passenger-dashboard > main .bg-slate-900\/80 {
+  background: #ffffff !important;
+  border-color: #dce9e1 !important;
+  box-shadow: 0 4px 16px rgba(20,65,48,.045);
+}
+.vaicar-passenger-dashboard > main .text-white { color: #173f32 !important; }
+.vaicar-passenger-dashboard > main .text-slate-100,
+.vaicar-passenger-dashboard > main .text-slate-200,
+.vaicar-passenger-dashboard > main .text-slate-300,
+.vaicar-passenger-dashboard > main .text-slate-400 { color: #52685e !important; }
+.vaicar-passenger-dashboard > main .text-slate-500 { color: #71857b !important; }
+.vaicar-passenger-dashboard > main .border-slate-800,
+.vaicar-passenger-dashboard > main .border-slate-700 { border-color: #dce9e1 !important; }
+.vaicar-passenger-dashboard > main input:not([type="checkbox"]),
+.vaicar-passenger-dashboard > main select,
+.vaicar-passenger-dashboard > main textarea {
+  background: #fbfdfb !important;
+  color: #193b30 !important;
+  border-color: #cbded2 !important;
+}
+.vaicar-passenger-dashboard > main input::placeholder,
+.vaicar-passenger-dashboard > main textarea::placeholder { color: #84978d !important; }
+.vaicar-passenger-dashboard > main .bg-emerald-950,
+.vaicar-passenger-dashboard > main .bg-emerald-950\/70,
+.vaicar-passenger-dashboard > main .bg-emerald-950\/50 {
+  background: #e8f6ee !important;
+  border-color: #b8dfc8 !important;
+}
+.vaicar-passenger-dashboard > main .text-emerald-300,
+.vaicar-passenger-dashboard > main .text-emerald-400 { color: #087f5b !important; }
+.vaicar-passenger-dashboard > main .text-rose-200,
+.vaicar-passenger-dashboard > main .text-rose-300 { color: #a52d42 !important; }
+.vaicar-passenger-dashboard > main .bg-rose-950\/80,
+.vaicar-passenger-dashboard > main .bg-rose-950\/60 { background: #fff1f2 !important; }
+.vaicar-passenger-dashboard > main .bg-amber-950\/70 { background: #fff8e7 !important; }
+.vaicar-passenger-dashboard > main .text-amber-200 { color: #80540d !important; }
+
+/* Driver cockpit keeps the live map full-screen; only floating UI panels become light */
+.vaicar-driver-dashboard > :not(:first-child) {
+  color: #214638;
+}
+.vaicar-driver-dashboard .bg-slate-950,
+.vaicar-driver-dashboard .bg-slate-900,
+.vaicar-driver-dashboard .bg-slate-950\/95,
+.vaicar-driver-dashboard .bg-slate-900\/95,
+.vaicar-driver-dashboard .bg-slate-900\/90 {
+  background-color: #ffffff !important;
+  border-color: #dce9e1 !important;
+  color: #24483b !important;
+  box-shadow: 0 8px 28px rgba(12,55,39,.12);
+}
+.vaicar-driver-dashboard .text-white,
+.vaicar-driver-dashboard .text-slate-100,
+.vaicar-driver-dashboard .text-slate-200 { color: #173f32 !important; }
+.vaicar-driver-dashboard .text-slate-300,
+.vaicar-driver-dashboard .text-slate-400 { color: #52685e !important; }
+.vaicar-driver-dashboard .text-slate-500 { color: #71857b !important; }
+.vaicar-driver-dashboard .border-slate-800,
+.vaicar-driver-dashboard .border-slate-700 { border-color: #dce9e1 !important; }
+.vaicar-driver-dashboard .bg-emerald-950,
+.vaicar-driver-dashboard .bg-emerald-950\/80,
+.vaicar-driver-dashboard .bg-emerald-950\/70,
+.vaicar-driver-dashboard .bg-emerald-950\/50 {
+  background: #e8f6ee !important;
+  border-color: #b8dfc8 !important;
+}
+.vaicar-driver-dashboard .text-emerald-300,
+.vaicar-driver-dashboard .text-emerald-400 { color: #087f5b !important; }
+.vaicar-driver-dashboard input:not([type="checkbox"]),
+.vaicar-driver-dashboard select,
+.vaicar-driver-dashboard textarea {
+  background: #fbfdfb !important;
+  color: #193b30 !important;
+  border-color: #cbded2 !important;
+}
+.vaicar-driver-dashboard input::placeholder,
+.vaicar-driver-dashboard textarea::placeholder { color: #84978d !important; }
+.vaicar-driver-dashboard button.bg-emerald-600,
+.vaicar-driver-dashboard a.bg-emerald-600 {
+  background: #087f5b !important;
+  color: #ffffff !important;
+}
+@media (max-width: 640px) {
+  .vaicar-passenger-dashboard > main { padding: 12px !important; gap: 16px !important; }
+  .vaicar-passenger-dashboard > header { padding: 11px 13px !important; }
+}
