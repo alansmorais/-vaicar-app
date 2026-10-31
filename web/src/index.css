@@ -3960,3 +3960,70 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   .vaicar-city-gallery {display:flex!important;overflow-x:auto!important;gap:10px!important;padding-bottom:8px!important;}
   .vaicar-city-photo,.vaicar-city-photo:nth-child(n+6) {display:block!important;flex:0 0 150px!important;height:180px!important;}
 }
+
+
+/* FINAL USER FEEDBACK FIX — separate floating cards and clear booking header */
+@media (min-width:768px) {
+  body:has(.vaicar-home) .vaicar-reference-stage {
+    min-height:920px!important;
+    height:920px!important;
+    padding-top:190px!important;
+  }
+  body:has(.vaicar-home) .vaicar-booking-panel {
+    position:relative!important;
+    z-index:5!important;
+    margin-top:12px!important;
+  }
+  body:has(.vaicar-home) .vaicar-booking-card {
+    position:relative!important;
+    z-index:5!important;
+    margin-top:0!important;
+  }
+  body:has(.vaicar-home) .vaicar-audience-cards {
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:20px!important;
+    width:calc(100% - 260px)!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    padding:0!important;
+    align-items:start!important;
+  }
+  body:has(.vaicar-home) .vaicar-profile-card {
+    display:flex!important;
+    position:relative!important;
+    width:100%!important;
+    min-width:0!important;
+    height:220px!important;
+    min-height:220px!important;
+    max-height:220px!important;
+    margin:0!important;
+    padding:18px!important;
+    border:1px solid rgba(226,232,240,.95)!important;
+    border-radius:17px!important;
+    background:#fff!important;
+    box-shadow:0 12px 28px rgba(15,23,42,.13)!important;
+    isolation:isolate!important;
+    z-index:1!important;
+  }
+  body:has(.vaicar-home) .vaicar-profile-card:nth-child(even) {
+    transform:translateY(18px)!important;
+  }
+  body:has(.vaicar-home) .vaicar-profile-card:nth-child(odd) {
+    transform:translateY(0)!important;
+  }
+  body:has(.vaicar-home) .vaicar-profile-card:nth-child(even):hover {
+    transform:translateY(12px)!important;
+  }
+  body:has(.vaicar-home) .vaicar-profile-card:nth-child(odd):hover {
+    transform:translateY(-6px)!important;
+  }
+}
+@media (min-width:768px) and (max-width:1100px) {
+  body:has(.vaicar-home) .vaicar-reference-stage {
+    min-height:940px!important;height:940px!important;padding-top:180px!important;
+  }
+  body:has(.vaicar-home) .vaicar-audience-cards {width:100%!important;gap:14px!important;}
+  body:has(.vaicar-home) .vaicar-profile-card {height:205px!important;min-height:205px!important;}
+}
