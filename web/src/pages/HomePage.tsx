@@ -474,7 +474,7 @@ export const HomePage: React.FC = () => {
                   Pagamento 100% seguro no app
                 </p>
               </div>
-            </div>>
+            </div>
           </div>
         </div>
       </section>
