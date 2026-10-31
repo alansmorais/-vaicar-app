@@ -249,6 +249,20 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(res.body.data.lat).toBe(-23.8055);
       expect(res.body.data.lng).toBe(-45.4011);
     });
+
+    it('does not expose vehicle plates in the public online-driver directory', async () => {
+      const res = await request(app).get('/api/v1/drivers/online');
+
+      expect(res.status).toBe(200);
+      const publicDriver = res.body.data.find((driver: { uid: string }) => driver.uid === 'test-driv-01');
+      expect(publicDriver).toBeDefined();
+      expect(publicDriver.vehicle).toMatchObject({
+        brand: 'Chevrolet',
+        model: 'Onix Plus',
+        color: 'Branco',
+      });
+      expect(publicDriver.vehicle).not.toHaveProperty('plate');
+    });
   });
 
   describe('Ride State Machine & Fare Calculation', () => {
