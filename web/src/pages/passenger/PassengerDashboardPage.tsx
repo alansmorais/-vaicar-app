@@ -1551,7 +1551,7 @@ export const PassengerDashboardPage: React.FC = () => {
                                 <span className="text-[10px] text-slate-400 block truncate max-w-[180px]">
                                   {isBike
                                     ? 'Entrega de Bicicleta'
-                                    : `${d.vehicle?.brand || ''} ${d.vehicle?.model || ''} (${d.vehicle?.color || ''})${d.vehicle?.plate ? ` • ${d.vehicle.plate}` : ''}`}
+                                    : `${d.vehicle?.brand || ''} ${d.vehicle?.model || ''} (${d.vehicle?.color || ''})`}
                                 </span>
                                 <span className="text-[10px] text-emerald-400 font-medium block">
                                   📍 {d.distanceToPickupKm.toFixed(1)} km • ~{d.etaMinutes} min até você
@@ -1621,7 +1621,6 @@ export const PassengerDashboardPage: React.FC = () => {
                                 </div>
                                 <span className="text-[10px] text-slate-400 block truncate max-w-[200px]">
                                   {isBike ? 'Entrega de Bicicleta' : `${d.vehicle.brand} ${d.vehicle.model} (${d.vehicle.color})`}
-                                  {d.vehicle.plate ? ` • ${d.vehicle.plate}` : ''}
                                 </span>
                                 <span className="text-[9px] text-slate-500 block">
                                   Digite o destino para ver a tarifa deste profissional
