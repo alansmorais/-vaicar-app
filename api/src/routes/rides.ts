@@ -1405,48 +1405,20 @@ ridesRouter.get('/', async (req: Request, res: Response, next: NextFunction) => 
  */
 ridesRouter.all('/:id/status', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { status, cancellationReason } = req.body;
-    const rideId = String(req.params.id);
-    const ride = await getRide(rideId);
-    if (!ride) throw new AppError(ErrorCode.NOT_FOUND, 'Corrida não encontrada.', 404);
-
+    const { status } = req.body || {};
     if (status === 'ACCEPTED' || status === 'DRIVER_ARRIVING') {
-      const driver = await resolveDriverProfile(req.user!.uid, req.user!.email);
-      if (!driver || driver.status !== 'APPROVED') {
-        throw new AppError(ErrorCode.FORBIDDEN, 'Apenas motoristas aprovados podem aceitar corridas.', 403);
-      }
-      if (!driver.isOnline) {
-        throw new AppError(ErrorCode.FORBIDDEN, 'Você deve estar online para aceitar corridas.', 403);
-      }
-      const pixInfo = getDriverPixInfo(driver);
-      const updatedRide: Ride = {
-        ...ride,
-        driverId: driver.uid,
-        driverName: driver.name,
-        driverPhone: driver.whatsapp,
-        driverPhotoUrl: driver.photoUrl,
-        vehicle: driver.vehicle,
-        driverPixKey: pixInfo.pixKey,
-        driverPixName: pixInfo.pixName,
-        driverPixKeyType: pixInfo.pixKeyType,
-        status: 'DRIVER_ARRIVING',
-        acceptedAt: new Date().toISOString(),
-      };
-      await saveRide(updatedRide);
-      const payload = formatRidePayload(updatedRide);
-      broadcastLiveEvent('RIDE_UPDATED', payload);
-      return res.json({ success: true, requestId: req.id, data: payload, ride: payload, ...payload });
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        'A aceitação deve ocorrer por uma oferta direcionada à conta do motorista.',
+        403
+      );
     }
 
-    const updatedRide: Ride = {
-      ...ride,
-      status: status || ride.status,
-      cancelReason: cancellationReason || ride.cancelReason,
-    };
-    await saveRide(updatedRide);
-    const payload = formatRidePayload(updatedRide);
-    broadcastLiveEvent('RIDE_UPDATED', payload);
-    res.json({ success: true, requestId: req.id, data: payload, ride: payload, ...payload });
+    throw new AppError(
+      ErrorCode.VALIDATION_ERROR,
+      'Use o endpoint específico da transição (arrived, start, complete ou cancel).',
+      400
+    );
   } catch (error) {
     next(error);
   }
