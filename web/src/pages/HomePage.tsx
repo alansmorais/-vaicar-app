@@ -304,12 +304,12 @@ export const HomePage: React.FC = () => {
           <div className="vaicar-reference-layout grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Content */}
             <div className="vaicar-hero-copy lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="vaicar-reference-eyebrow">TRANSPORTE E ENTREGAS EM</div>
+              <div className="vaicar-reference-eyebrow">MOBILIDADE LOCAL • LITORAL NORTE</div>
               <h1 className="vaicar-reference-title">
-                São Sebastião
+                Sua cidade.<br />Seu caminho.
               </h1>
               <p className="vaicar-reference-subtitle">
-                Mobilidade local com mais oportunidades<br className="hidden sm:block" /> para a nossa cidade.
+                Peça sua corrida em poucos passos. Simples, rápido e feito para São Sebastião.
               </p>
               <div className="vaicar-reference-features">
                 <div><Car /><strong>Corridas</strong><span>Carro particular</span></div>
