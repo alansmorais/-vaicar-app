@@ -44,7 +44,7 @@ export const DeliveryInfoPage: React.FC = () => {
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 text-xs font-bold"><Bike className="w-4 h-4"/> VAICAR ENTREGAS • SÃO SEBASTIÃO</span>
           <h1 className="mt-5 max-w-3xl text-4xl sm:text-5xl font-black tracking-tight text-slate-900">Seja entregador parceiro na sua cidade.</h1>
-          <p className="mt-4 max-w-2xl text-base sm:text-lg leading-relaxed text-slate-700">Conecte-se a oportunidades locais de entregas de moto e bicicleta em São Sebastião. Cadastre seu interesse e acompanhe a estruturação do serviço.</p>
+          <p className="mt-4 max-w-2xl text-base sm:text-lg leading-relaxed text-slate-700">Conecte-se às oportunidades locais de entregas de moto e bicicleta em São Sebastião. Cadastre seu interesse para atuar como parceiro; a ativação depende da validação do cadastro e da disponibilidade na região.</p>
           <div className="mt-7 flex flex-wrap gap-3">
             <a href="#lista-espera-entregador" className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-white font-bold">Entrar na lista de espera <ArrowRight className="w-4 h-4"/></a>
             <Link to="/como-funciona/motorista" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-slate-800 font-bold">Conhecer vagas para motoristas</Link>
@@ -62,7 +62,7 @@ export const DeliveryInfoPage: React.FC = () => {
 
       <section id="lista-espera-entregador" className="py-12 sm:py-16 bg-emerald-50/60 border-y border-emerald-100">
         <div className="max-w-2xl mx-auto px-4">
-          <div className="text-center mb-7"><span className="text-xs font-bold uppercase tracking-wider text-emerald-800">Lista de espera</span><h2 className="mt-2 text-2xl sm:text-3xl font-black">Quero ser entregador VaiCar</h2><p className="mt-2 text-sm text-slate-600">Preencha seus dados para registrar seu interesse. O serviço está em fase de estruturação.</p></div>
+          <div className="text-center mb-7"><span className="text-xs font-bold uppercase tracking-wider text-emerald-800">Lista de espera</span><h2 className="mt-2 text-2xl sm:text-3xl font-black">Quero ser entregador VaiCar</h2><p className="mt-2 text-sm text-slate-600">Preencha seus dados para registrar seu interesse. Registre seu interesse em atuar como entregador parceiro. A disponibilidade de vagas depende da região e da operação.</p></div>
           <form onSubmit={submit} className="rounded-2xl bg-white border border-slate-200 p-5 sm:p-7 shadow-sm space-y-4">
             {success && <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800"><CheckCircle2 className="inline w-4 h-4 mr-2"/>{success}</div>}
             {error && <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-sm text-rose-700">{error}</div>}
@@ -77,7 +77,7 @@ export const DeliveryInfoPage: React.FC = () => {
             </div>
             <div><label className="block text-sm font-semibold mb-1">Observações (opcional)</label><textarea rows={3} value={notes} onChange={e=>setNotes(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-3 text-sm" /></div>
             <button disabled={submitting} className="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 px-5 py-3 text-white font-bold inline-flex items-center justify-center gap-2"><Send className="w-4 h-4"/>{submitting ? 'Enviando...' : 'Registrar meu interesse'}</button>
-            <p className="text-xs text-slate-500 flex items-center gap-2"><Clock className="w-4 h-4"/>O cadastro registra interesse; não representa ativação imediata como entregador.</p>
+            <p className="text-xs text-slate-500 flex items-center gap-2"><Clock className="w-4 h-4"/>O cadastro registra seu interesse e não ativa automaticamente seu perfil de entregador.</p>
           </form>
         </div>
       </section>
