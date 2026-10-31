@@ -2893,3 +2893,18 @@ body:has(.vaicar-home) section#servicos-principais.vaicar-audience>div>.grid{
  body:has(.vaicar-home) .vaicar-home-hero>.absolute.inset-0.z-0{height:calc(100% + 180px)!important}
  body:has(.vaicar-home) section#servicos-principais.vaicar-audience{margin-top:-84px!important}
 }
+
+/* Brighten São Sebastião photo and remove the dark foreground treatment */
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-image{
+  filter:saturate(1.48) contrast(1.04) brightness(1.28)!important;
+  opacity:1!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-overlay{
+  background:linear-gradient(90deg,rgba(0,24,32,.04) 0%,rgba(0,32,42,.015) 52%,rgba(0,24,32,0) 100%)!important;
+  opacity:1!important;
+}
+body:has(.vaicar-home) .vaicar-home-hero .vaicar-hero-vignette{
+  background:none!important;
+  opacity:0!important;
+  display:none!important;
+}
