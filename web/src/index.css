@@ -3476,3 +3476,65 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-location { color:#155DFC!important; font-size:8px!important; }
   body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-name span { color:#059669!important; }
 }
+
+
+/* Compact pass requested after tablet preview review */
+@media (min-width:768px) {
+  body:has(.vaicar-home) .vaicar-navbar .h-20 { height:82px!important; }
+  body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-pin { width:46px!important; height:54px!important; }
+  body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-name { font-size:32px!important; }
+  body:has(.vaicar-home) .vaicar-navbar .vaicar-brand-location { font-size:9px!important; }
+  body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a { padding:9px 8px!important; font-size:14px!important; }
+  body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions:before { height:36px!important; min-width:88px!important; font-size:13px!important; }
+  body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-actions > div:last-child > button {
+    min-height:38px!important; min-width:88px!important; padding:9px 20px!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage {
+    height:730px!important; min-height:730px!important; padding-top:128px!important;
+  }
+  .vaicar-reference-layout { grid-template-columns:minmax(0,1fr) 470px!important; gap:28px!important; }
+  .vaicar-hero-copy { padding-top:16px!important; }
+  .vaicar-reference-eyebrow { font-size:14px!important; margin-bottom:9px!important; }
+  .vaicar-reference-title { font-size:clamp(58px,5.2vw,78px)!important; }
+  .vaicar-reference-subtitle { font-size:21px!important; margin:7px 0 24px!important; }
+  .vaicar-reference-features { max-width:590px!important; gap:16px!important; }
+  .vaicar-reference-features > div { grid-template-rows:32px auto auto!important; gap:3px!important; }
+  .vaicar-reference-features svg { width:29px!important; height:29px!important; }
+  .vaicar-reference-features strong { font-size:16px!important; }
+  .vaicar-reference-features span { font-size:13px!important; }
+  .vaicar-booking-panel { width:470px!important; max-width:470px!important; margin-top:4px!important; }
+  .vaicar-booking-card { padding:15px 18px 12px!important; border-radius:19px!important; }
+  .vaicar-booking-tab { min-height:54px!important; font-size:14px!important; }
+  .vaicar-booking-tab svg { width:22px!important; height:22px!important; }
+  .vaicar-booking-field { min-height:45px!important; }
+  .vaicar-booking-submit { min-height:48px!important; font-size:15px!important; margin-top:12px!important; }
+  .vaicar-booking-safe { margin-top:9px!important; font-size:12px!important; }
+  .vaicar-audience-cards { bottom:20px!important; width:calc(100% - 260px)!important; gap:14px!important; }
+  .vaicar-profile-card {
+    height:162px!important; min-height:162px!important; max-height:162px!important;
+    padding:15px 17px 12px!important; border-radius:16px!important;
+  }
+  .vaicar-profile-card > svg { width:44px!important; height:40px!important; margin-bottom:5px!important; }
+  .vaicar-profile-card strong { font-size:17px!important; }
+  .vaicar-profile-card > span { font-size:12px!important; line-height:1.22!important; margin-top:4px!important; }
+  .vaicar-profile-card i { width:34px!important; height:34px!important; right:10px!important; bottom:14px!important; }
+  .vaicar-reference-signature { bottom:112px!important; width:205px!important; font-size:26px!important; }
+  .vaicar-reference-signature span { font-size:40px!important; }
+  .vaicar-city-strip { min-height:205px!important; grid-template-columns:200px minmax(0,1fr)!important; padding:12px 38px 14px!important; gap:14px!important; }
+  .vaicar-city-intro h2 { font-size:26px!important; }
+  .vaicar-city-intro h3 { font-size:17px!important; }
+  .vaicar-city-intro p { font-size:12px!important; margin-bottom:9px!important; }
+  .vaicar-city-intro a { font-size:12px!important; padding:7px 12px!important; }
+  .vaicar-city-gallery { gap:8px!important; }
+  .vaicar-city-photo { height:175px!important; border-radius:12px!important; }
+  .vaicar-city-photo span { font-size:13px!important; left:9px!important; bottom:8px!important; }
+}
+@media (min-width:768px) and (max-width:1100px) {
+  .vaicar-reference-layout { grid-template-columns:minmax(0,1fr) 400px!important; gap:20px!important; }
+  .vaicar-booking-panel { width:400px!important; max-width:400px!important; }
+  .vaicar-reference-title { font-size:58px!important; }
+  .vaicar-reference-subtitle { font-size:18px!important; }
+  .vaicar-audience-cards { width:100%!important; }
+  .vaicar-profile-card { padding:13px!important; }
+  .vaicar-profile-card strong { font-size:15px!important; }
+}
