@@ -35,3 +35,6 @@ jobs:
 
       - name: Build web and type-check API
         run: npm run build
+
+      - name: Run API and business-logic tests
+        run: npm test
