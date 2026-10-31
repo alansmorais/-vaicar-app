@@ -3889,3 +3889,67 @@ body:has(.vaicar-home) .vaicar-reference-stage {
     border-radius:0!important;
   }
 }
+
+
+/* UX refinement: restore visible navigation, add breathing room below it,
+   and keep the four audience links fully visible and clickable. */
+@media (min-width:768px) {
+  body:has(.vaicar-home) .vaicar-navbar {
+    position:absolute!important;
+    top:0!important;
+    z-index:100!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage {
+    z-index:1!important;
+    margin-top:-82px!important;
+    padding-top:178px!important;
+    height:850px!important;
+    min-height:850px!important;
+    overflow:visible!important;
+  }
+  body:has(.vaicar-home) .vaicar-stage-photo {
+    z-index:-1!important;
+    pointer-events:none!important;
+  }
+  body:has(.vaicar-home) .vaicar-stage-inner {
+    z-index:2!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-layout {
+    transform:translateY(26px)!important;
+  }
+  body:has(.vaicar-home) .vaicar-booking-panel,
+  body:has(.vaicar-home) .vaicar-booking-card {
+    position:relative!important;
+    z-index:5!important;
+  }
+  body:has(.vaicar-home) .vaicar-audience-cards,
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-audience-cards {
+    bottom:18px!important;
+    z-index:8!important;
+    background:transparent!important;
+    background-color:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    box-shadow:none!important;
+    outline:0!important;
+    padding:0!important;
+    pointer-events:auto!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-audience-cards > a {
+    min-height:176px!important;
+    height:176px!important;
+    max-height:none!important;
+    overflow:visible!important;
+    pointer-events:auto!important;
+    cursor:pointer!important;
+    background:transparent!important;
+    background-color:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+  }
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-audience-cards::before,
+  body:has(.vaicar-home) .vaicar-reference-stage .vaicar-audience-cards::after {
+    display:none!important;
+    content:none!important;
+  }
+}
