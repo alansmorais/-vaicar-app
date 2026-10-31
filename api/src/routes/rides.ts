@@ -28,7 +28,7 @@ import {
   getActivePendingOfferForDriver,
 } from '../services/firestore.js';
 import { sendRideReceiptEmail } from '../services/email.js';
-import { dispatchNextCandidate, expireOffer, declineOffer, acceptOffer } from '../services/dispatch.js';
+import { dispatchNextCandidate, expireOffer, declineOffer, acceptOffer, releaseDriverRideLock } from '../services/dispatch.js';
 import { config } from '../config/index.js';
 import { broadcastLiveEvent } from '../services/liveStream.js';
 import {
@@ -857,6 +857,7 @@ ridesRouter.post('/:id/accept', async (req: Request, res: Response, next: NextFu
     };
 
     await saveRide(updatedRide);
+    if (ride.driverId) await releaseDriverRideLock(ride.driverId, ride.id);
 
     const payload = formatRidePayload(updatedRide);
     broadcastLiveEvent('RIDE_UPDATED', payload);
@@ -1064,6 +1065,7 @@ ridesRouter.post('/:id/complete', async (req: Request, res: Response, next: Next
     };
 
     await saveRide(updatedRide);
+    if (ride.driverId) await releaseDriverRideLock(ride.driverId, ride.id);
 
     // Process referral reward for qualifying first completed ride
     await processReferralRewardOnCompletion(updatedRide);
@@ -1315,6 +1317,7 @@ ridesRouter.post('/:id/cancel', async (req: Request, res: Response, next: NextFu
       };
 
       await saveRide(redispatchedRide);
+      await releaseDriverRideLock(uid, ride.id);
       const redispatchPayload = formatRidePayload(redispatchedRide);
       broadcastLiveEvent('RIDE_UPDATED', redispatchPayload);
 
