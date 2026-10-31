@@ -339,13 +339,19 @@ export const HomePage: React.FC = () => {
                 Transporte 100% Local • São Sebastião - SP
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.15]">
-                Sua corrida, do seu jeito, <span className="text-blue-600 dark:text-emerald-400">aqui em São Sebastião.</span>
+              <div className="vaicar-reference-eyebrow">TRANSPORTE E ENTREGAS EM</div>
+              <h1 className="vaicar-reference-title">
+                São Sebastião
               </h1>
-
-              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                Mobilidade prática de Boracéia à Enseada com tarifas oficiais transparentes. Peça sua corrida em instantes, viaje com motoristas parceiros locais verificados e pague direto via Pix ou dinheiro.
+              <p className="vaicar-reference-subtitle">
+                Mobilidade local com mais oportunidades<br className="hidden sm:block" /> para a nossa cidade.
               </p>
+              <div className="vaicar-reference-features">
+                <div><Car /><strong>Corridas</strong><span>Carro particular</span></div>
+                <div><Bike /><strong>Entregas</strong><span>Moto e Bike</span></div>
+                <div><MapPin /><strong>Local</strong><span>São Sebastião - SP</span></div>
+                <div><Users /><strong>Para todos</strong><span>Moradores e turistas</span></div>
+              </div>
 
               {/* CTAs */}
               <div className="space-y-3 pt-2">
