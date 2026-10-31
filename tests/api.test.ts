@@ -3077,6 +3077,11 @@ describe('VaiCar Platform - API Automated Tests', () => {
       expect(unchangedRide?.declinedDriverIds).toContain(drv1Uid);
       expect((await getRideOffer(oldOfferId))?.status).toBe('DECLINED');
       expect((await getRideOffer(currentOfferId))?.status).toBe('PENDING');
+
+      // Isolate the rest of the dispatch suite: do not leave a pending offer
+      // assigned to Driver 2 or an OFFERED ride in the shared in-memory store.
+      await saveRideOffer({ ...(await getRideOffer(currentOfferId))!, status: 'DECLINED', respondedAt: new Date().toISOString() });
+      await saveRide({ ...unchangedRide!, status: 'CANCELLED_BY_SYSTEM', currentOfferId: undefined });
     });
 
     it('2. findEligibleCandidates sorts candidates nearest first by Haversine distance', async () => {
