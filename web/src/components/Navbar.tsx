@@ -54,67 +54,15 @@ export const Navbar: React.FC = () => {
             </div>
           </Link>
 
-          {/* Desktop Nav Links */}
+          {/* Desktop navigation — homepage reference order */}
           <div className="vaicar-desktop-nav hidden md:flex items-center gap-1">
-            <Link
-              to="/"
-              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                isActive('/')
-                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-slate-800/80 border border-blue-200/50 dark:border-slate-700/60 font-bold'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Início
-            </Link>
-            <Link
-              to="/passenger"
-              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                location.pathname.startsWith('/passenger') || location.pathname.startsWith('/como-funciona/passageiro')
-                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-slate-800/80 border border-blue-200/50 dark:border-slate-700/60 font-bold'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Passageiro
-            </Link>
-            <Link
-              to="/driver"
-              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                location.pathname.startsWith('/driver') || location.pathname.startsWith('/como-funciona/motorista')
-                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-slate-800/80 border border-blue-200/50 dark:border-slate-700/60 font-bold'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Motorista & Entregador
-            </Link>
-            <Link
-              to="/parcerias"
-              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                location.pathname.startsWith('/parcerias') || location.pathname.startsWith('/empresas')
-                  ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-slate-800 border border-amber-500/30 font-bold'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Parcerias
-            </Link>
-            <Link
-              to="/admin"
-              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                location.pathname.startsWith('/admin')
-                  ? 'text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Admin
-            </Link>
-            <a
-              href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 border border-emerald-500/20"
-            >
-              <span>WhatsApp</span>
-              <span className="text-[10px]">↗</span>
-            </a>
+            <Link to="/" className={`px-3 py-2 text-sm font-semibold transition-colors ${isActive('/') ? 'is-reference-active' : ''}`}>Início</Link>
+            <a href="#como-funciona" className="px-3 py-2 text-sm font-semibold transition-colors">Como Funciona</a>
+            <Link to="/driver" className="px-3 py-2 text-sm font-semibold transition-colors">Para Motoristas</Link>
+            <Link to="/parcerias" className="px-3 py-2 text-sm font-semibold transition-colors">Para Empresas</Link>
+            <a href="#lista-espera" className="px-3 py-2 text-sm font-semibold transition-colors">Entregas</a>
+            <a href="#sobre" className="px-3 py-2 text-sm font-semibold transition-colors">Sobre</a>
+            <a href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3" target="_blank" rel="noopener noreferrer" className="px-3 py-2 text-sm font-semibold transition-colors">Contato</a>
           </div>
 
           {/* User Auth Info / Actions */}
