@@ -7,7 +7,7 @@ import { PlaceAutocompleteInput } from '../../components/PlaceAutocompleteInput.
 import { WaitingTimer } from '../../components/WaitingTimer.js';
 import { ReceiptModal } from '../../components/ReceiptModal.js';
 import { ridesApi, EstimateRideResult } from '../../api/rides.js';
-import { mapsApi, KnownLocation } from '../../api/maps.js';
+import { mapsApi } from '../../api/maps.js';
 import { driversApi, PublicDriverMarker } from '../../api/drivers.js';
 import { passengersApi } from '../../api/passengers.js';
 import { storageApi } from '../../api/storage.js';
@@ -53,7 +53,6 @@ export const PassengerDashboardPage: React.FC = () => {
   const [pickupInput, setPickupInput] = useState('');
   const [destination, setDestination] = useState<{ address: string; lat: number; lng: number } | null>(null);
   const [destinationInput, setDestinationInput] = useState('');
-  const [popularPlaces, setPopularPlaces] = useState<KnownLocation[]>([]);
 
   // State-change notification tracking (prevents duplicate notifications across polling cycles)
   const lastNotifiedStatusRef = useRef<string | null>(null);
@@ -176,14 +175,6 @@ export const PassengerDashboardPage: React.FC = () => {
 
   // Load locations and active ride on mount
   useEffect(() => {
-    mapsApi.getPopularPlaces().then((payload) => {
-      const places = Array.isArray(payload) ? payload : (payload as any)?.places;
-      setPopularPlaces(Array.isArray(places) ? places : []);
-    }).catch((error) => {
-      console.error('[PassengerDashboard] Could not load popular places:', error);
-      setPopularPlaces([]);
-    });
-
     const fetchDrivers = () => {
       driversApi.getOnlineDrivers().then((payload) => {
         const drivers = Array.isArray(payload) ? payload : (payload as any)?.drivers;
@@ -536,16 +527,6 @@ export const PassengerDashboardPage: React.FC = () => {
     setDestinationInput(finalAddress);
     setError(null);
   }, []);
-
-  const handleSelectPopular = (place: KnownLocation) => {
-    setDestination({
-      address: place.address,
-      lat: place.lat,
-      lng: place.lng,
-    });
-    setDestinationInput(place.name);
-    setError(null);
-  };
 
   const handleRequestRide = async () => {
     if (!pickup) {
@@ -1306,7 +1287,11 @@ export const PassengerDashboardPage: React.FC = () => {
                 label={serviceType === 'delivery' ? 'De onde você vai enviar a encomenda?' : 'De onde você vai?'}
                 placeholder="Digite seu local de partida, rua ou ponto de referência..."
                 value={pickupInput}
-                onChange={setPickupInput}
+                onChange={(value) => {
+                  setPickupInput(value);
+                  if (pickup?.address !== value) setPickup(null);
+                  setEstimate(null);
+                }}
                 onSelectPlace={handleSelectPickup}
                 onUseCurrentLocation={requestPassengerGps}
                 isLocating={gpsLoading}
@@ -1314,7 +1299,7 @@ export const PassengerDashboardPage: React.FC = () => {
                 helperText={
                   hasUserGps
                     ? '📍 Localização exata obtida via GPS do dispositivo.'
-                    : 'Digite o endereço ou use o GPS do dispositivo.'
+                    : 'Digite o endereço completo, use o GPS ou ajuste o pino no mapa.'
                 }
               />
               {!pickupInput.trim() && (
@@ -1335,7 +1320,11 @@ export const PassengerDashboardPage: React.FC = () => {
                 label={serviceType === 'delivery' ? 'Para onde você quer entregar?' : 'Para onde você vai?'}
                 placeholder="Digite seu destino, endereço, praia ou bairro..."
                 value={destinationInput}
-                onChange={setDestinationInput}
+                onChange={(value) => {
+                  setDestinationInput(value);
+                  if (destination?.address !== value) setDestination(null);
+                  setEstimate(null);
+                }}
                 onSelectPlace={handleSelectDestination}
                 icon="destination"
                 helperText={
@@ -1396,24 +1385,6 @@ export const PassengerDashboardPage: React.FC = () => {
                   </div>
                 </div>
               )}
-
-              {/* Quick Popular Destinos (Shortcuts) */}
-              <div>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                  Destinos Populares (Litoral Norte):
-                </span>
-                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
-                  {popularPlaces.map((place) => (
-                    <button
-                      key={place.name}
-                      onClick={() => handleSelectPopular(place)}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-emerald-950 hover:text-emerald-300 border border-slate-800 text-[11px] text-slate-300 transition-colors"
-                    >
-                      {place.name.split('(')[0]}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* Driver Selection & Price Comparison List */}
               <div className="space-y-2">
