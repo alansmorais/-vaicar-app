@@ -234,14 +234,14 @@ mapsRouter.post('/geocode', async (req: Request, res: Response, next: NextFuncti
       console.warn('[Maps Geocode] OSM Nominatim warning:', osmErr);
     }
 
-    // 3. Fallback: Return address as requested
-    res.json({
-      success: true,
+    // Never fabricate coordinates when geocoding fails. A fake São Sebastião
+    // center point could silently create a ride at the wrong pickup/destination.
+    return res.status(422).json({
+      success: false,
       requestId: req.id,
-      data: {
-        address,
-        lat: -23.8055,
-        lng: -45.4011,
+      error: {
+        code: 'GEOCODING_FAILED',
+        message: 'Não foi possível localizar este endereço. Escolha uma sugestão válida ou ajuste o ponto diretamente no mapa.',
       },
     });
   } catch (error) {
