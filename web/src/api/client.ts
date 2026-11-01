@@ -76,7 +76,9 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
       throw new ApiError(code, message, json.error?.details, json.requestId);
     }
 
-    return json.data as T;
+    // Some legacy endpoints (including /auth/login) return the payload at the top level,
+    // while newer endpoints use the standard { success, data } envelope.
+    return (json.data ?? json) as T;
   } catch (err: unknown) {
     if (err instanceof ApiError) {
       throw err;
