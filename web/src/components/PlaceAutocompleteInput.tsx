@@ -30,6 +30,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceTimerRef = useRef<any>(null);
 
@@ -115,6 +116,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
+    setGeocodeError(null);
     onChange(val);
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -125,6 +127,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
 
   const handleSelectPrediction = async (item: PlacePrediction) => {
     setIsOpen(false);
+    setGeocodeError(null);
     lastSelectedAddressRef.current = item.description;
     onChange(item.description);
 
@@ -139,8 +142,9 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
       const geocoded = await mapsApi.geocode(item.description);
       lastSelectedAddressRef.current = geocoded.address;
       onSelectPlace(geocoded);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to geocode selected prediction:', err);
+      setGeocodeError(err?.message || 'Não foi possível localizar este endereço. Escolha outra sugestão ou ajuste o ponto no mapa.');
     } finally {
       setLoading(false);
     }
@@ -150,14 +154,16 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
     const trimmed = text.trim();
     if (!trimmed || trimmed === lastSelectedAddressRef.current) return;
     setIsOpen(false);
+    setGeocodeError(null);
     setLoading(true);
     try {
       const geocoded = await mapsApi.geocode(trimmed);
       lastSelectedAddressRef.current = geocoded.address;
       onChange(geocoded.address);
       onSelectPlace(geocoded);
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Geocoding fallback notice:', err);
+      setGeocodeError(err?.message || 'Não foi possível localizar este endereço. Escolha outra sugestão ou ajuste o ponto no mapa.');
     } finally {
       setLoading(false);
     }
@@ -185,6 +191,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
 
   const handleClear = () => {
     lastSelectedAddressRef.current = '';
+    setGeocodeError(null);
     onChange('');
     setPredictions([]);
     setIsOpen(false);
@@ -250,6 +257,7 @@ export const PlaceAutocompleteInput: React.FC<PlaceAutocompleteInputProps> = ({
         )}
       </div>
 
+      {geocodeError && <span role="alert" className="text-[10px] text-rose-300 block leading-tight">{geocodeError}</span>}
       {helperText && <span className="text-[10px] text-slate-500 block leading-tight">{helperText}</span>}
 
       {/* Predictive Autocomplete Dropdown */}
