@@ -143,6 +143,7 @@ export const PassengerDashboardPage: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editWhatsapp, setEditWhatsapp] = useState('');
   const [editPhotoUrl, setEditPhotoUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
   // Emergency cancellation state
   const [showEmergencyCancelModal, setShowEmergencyCancelModal] = useState(false);
   const [emergencyReasonType, setEmergencyReasonType] = useState('Pane mecânica no veículo');
