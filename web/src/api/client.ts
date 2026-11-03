@@ -62,10 +62,22 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 
     const isJson = response.headers.get('content-type')?.includes('application/json');
     if (!isJson) {
+      const responseText = await response.text();
       if (!response.ok) {
-        throw new ApiError(ErrorCode.INTERNAL_ERROR, `Erro na requisição (${response.status})`);
+        // Include safe request diagnostics in the visible error so tablet users
+        // can report the failing route without opening browser developer tools.
+        const preview = responseText
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\\s+/g, ' ')
+          .trim()
+          .slice(0, 180);
+        const method = (options.method || 'GET').toUpperCase();
+        throw new ApiError(
+          ErrorCode.INTERNAL_ERROR,
+          `Erro HTTP ${response.status} em ${method} ${apiPath}. Resposta: ${preview || '(resposta vazia)'}`
+        );
       }
-      return (await response.text()) as unknown as T;
+      return responseText as unknown as T;
     }
 
     const json: ApiResponse<T> = await response.json();
