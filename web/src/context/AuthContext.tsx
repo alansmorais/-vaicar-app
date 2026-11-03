@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const fetchBackendProfile = useCallback(async (token: string, uid: string, email: string) => {
+  const fetchBackendProfile = useCallback(async (token: string) => {
     setAuthToken(token);
     try {
       const data = await authApi.getMe();
@@ -49,18 +49,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setDriver(data.driver);
       setIsAdmin(Boolean(data.isAdmin || data.user?.role === 'admin'));
     } catch (err) {
-      console.warn('[AuthContext] Authoritative profile fetch notice:', err);
-      const isAdm = email.includes('admin@vaicar.app') || email.includes('vaicar@alansmsolutions.com');
-      setIsAdmin(isAdm);
-      setProfile({
-        uid,
-        email,
-        displayName: email.split('@')[0],
-        role: isAdm ? 'admin' : 'passenger',
-        isAdmin: isAdm,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+      console.error('[AuthContext] Could not load the authoritative backend profile:', err);
+      // Never infer a role or create a local profile when the backend is unavailable.
+      setProfile(null);
+      setPassenger(null);
+      setDriver(null);
+      setIsAdmin(false);
+      throw err;
     }
   }, []);
 
@@ -88,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentUser) {
         try {
           const token = await currentUser.getIdToken();
-          await fetchBackendProfile(token, currentUser.uid, currentUser.email || '');
+          await fetchBackendProfile(token);
         } catch (err) {
           console.error('[AuthContext] Error getting id token:', err);
         }
@@ -113,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (customToken && customToken.startsWith('eyJ')) {
         const cred = await signInWithCustomToken(auth, customToken);
         const token = await cred.user.getIdToken(true);
-        await fetchBackendProfile(token, cred.user.uid, cred.user.email || email);
+        await fetchBackendProfile(token);
       } else {
         setAuthToken(customToken);
         setProfile(res.user);
@@ -176,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (customToken) {
         const cred = await signInWithCustomToken(auth, customToken);
         const token = await cred.user.getIdToken(true);
-        await fetchBackendProfile(token, cred.user.uid, cred.user.email || email);
+        await fetchBackendProfile(token);
       }
     } finally {
       setLoading(false);
@@ -226,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshProfile = useCallback(async () => {
     if (auth.currentUser) {
       const token = await auth.currentUser.getIdToken(true);
-      await fetchBackendProfile(token, auth.currentUser.uid, auth.currentUser.email || '');
+      await fetchBackendProfile(token);
     } else if (getAuthToken()) {
       try {
         const data = await authApi.getMe();
