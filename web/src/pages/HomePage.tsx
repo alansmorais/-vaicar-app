@@ -33,6 +33,7 @@ import {
 import { ridesApi } from '../api/rides.js';
 import { mapsApi, KnownLocation } from '../api/maps.js';
 import { deliveriesApi } from '../api/deliveries.js';
+import { getAuthToken } from '../api/client.js';
 import { DeliveryWaitlistRole } from '../../../shared/src/types.js';
 
 interface DestinationCard {
@@ -222,6 +223,8 @@ export const HomePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const token = getAuthToken();
+    if (!token) return;
     if (popularPlaces.length >= 2 && popularPlaces[originIndex] && popularPlaces[destinationIndex]) {
       setLoadingEstimate(true);
       const origin = popularPlaces[originIndex];
@@ -231,7 +234,7 @@ export const HomePage: React.FC = () => {
         destination: { address: destination.address, lat: destination.lat, lng: destination.lng },
       })
         .then((res) => setEstimate(res))
-        .catch(console.error)
+        .catch((err) => console.debug('[HomePage] Estimate notice:', err))
         .finally(() => setLoadingEstimate(false));
     }
   }, [originIndex, destinationIndex, popularPlaces]);

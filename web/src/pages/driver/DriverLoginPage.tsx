@@ -109,7 +109,7 @@ export const DriverLoginPage: React.FC = () => {
     try {
       const res = await forgotPassword(email.trim().toLowerCase());
       setForgotPinSent(true);
-      setInfo(res.message || 'Código PIN de recuperação enviado para seu e-mail.');
+      setInfo(res?.message || 'Código PIN de recuperação enviado para seu e-mail.');
     } catch (err: any) {
       setError(err?.message || 'Não foi possível solicitar a recuperação. Verifique o e-mail informado.');
     } finally {

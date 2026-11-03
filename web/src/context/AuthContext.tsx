@@ -70,10 +70,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (existingToken) {
         try {
           const data = await authApi.getMe();
-          setProfile(data.user);
-          setPassenger(data.passenger);
-          setDriver(data.driver);
-          setIsAdmin(Boolean(data.isAdmin || data.user?.role === 'admin'));
+          const user = data?.user || (data as any)?.data?.user || null;
+          const passenger = data?.passenger || (data as any)?.data?.passenger || null;
+          const driver = data?.driver || (data as any)?.data?.driver || null;
+          const isAdmin = Boolean(
+            data?.isAdmin ||
+            (data as any)?.data?.isAdmin ||
+            user?.role === 'admin' ||
+            user?.isAdmin
+          );
+          setProfile(user);
+          setPassenger(passenger);
+          setDriver(driver);
+          setIsAdmin(isAdmin);
         } catch (err) {
           console.warn('[AuthContext] Session restore notice:', err);
         }
@@ -109,14 +118,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const res = await authApi.adminLogin({ email, password: pass });
-      const customToken = res.customToken || res.token;
-      if (customToken && customToken.startsWith('eyJ')) {
+      const customToken = res?.customToken || res?.token || (res as any)?.data?.customToken || (res as any)?.data?.token;
+      if (!customToken || typeof customToken !== 'string') {
+        throw new Error('Servidor não retornou token de autenticação administrativa válido.');
+      }
+      if (customToken.startsWith('eyJ')) {
         const cred = await signInWithCustomToken(auth, customToken);
         const token = await cred.user.getIdToken(true);
         await fetchBackendProfile(token, cred.user.uid, cred.user.email || email);
       } else {
         setAuthToken(customToken);
-        setProfile(res.user);
+        const user = res?.user || (res as any)?.data?.user;
+        if (user) setProfile(user);
         setIsAdmin(true);
       }
     } finally {
@@ -135,15 +148,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const res = await authApi.login({ email: normalized, password: pass });
-      setAuthToken(res.token);
-      setProfile(res.user);
-      setPassenger(res.passenger || null);
-      setDriver(res.driver || null);
-      setIsAdmin(Boolean(res.isAdmin || res.roles?.includes('admin')));
+      const token = res?.token || (res as any)?.data?.token;
+      if (!token || typeof token !== 'string') {
+        throw new Error('Servidor não retornou token de autenticação válido.');
+      }
+      setAuthToken(token);
 
-      if (res.customToken) {
+      const user = res?.user || (res as any)?.data?.user;
+      if (user) setProfile(user);
+
+      const passenger = res?.passenger || (res as any)?.data?.passenger || null;
+      setPassenger(passenger);
+
+      const driver = res?.driver || (res as any)?.data?.driver || null;
+      setDriver(driver);
+
+      const isAdmin = Boolean(
+        res?.isAdmin ||
+        (res as any)?.data?.isAdmin ||
+        res?.roles?.includes('admin') ||
+        (res as any)?.data?.roles?.includes('admin')
+      );
+      setIsAdmin(isAdmin);
+
+      const customToken = res?.customToken || (res as any)?.data?.customToken;
+      if (customToken && typeof customToken === 'string') {
         try {
-          const cred = await signInWithCustomToken(auth, res.customToken);
+          const cred = await signInWithCustomToken(auth, customToken);
           setUser(cred.user);
         } catch (fbErr) {
           console.warn('[AuthContext] Optional custom token sign-in notice:', fbErr);
@@ -172,8 +203,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const res = await authApi.migrateAccount({ email: email.trim(), pin: pin.trim(), password: pass });
-      const customToken = res.customToken;
-      if (customToken) {
+      const customToken = res?.customToken || (res as any)?.data?.customToken;
+      if (customToken && typeof customToken === 'string') {
         const cred = await signInWithCustomToken(auth, customToken);
         const token = await cred.user.getIdToken(true);
         await fetchBackendProfile(token, cred.user.uid, cred.user.email || email);
@@ -187,7 +218,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const res = await authApi.forgotPassword(email.trim().toLowerCase());
-      return res.data;
+      const data = (res as any)?.data || res;
+      return data;
     } finally {
       setLoading(false);
     }
@@ -201,8 +233,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         pin: pin.trim(),
         newPassword: pass,
       });
-      if (res.token) {
-        setAuthToken(res.token);
+      const token = res?.token || (res as any)?.data?.token;
+      if (token && typeof token === 'string') {
+        setAuthToken(token);
       }
     } finally {
       setLoading(false);

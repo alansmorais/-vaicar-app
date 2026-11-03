@@ -17,7 +17,7 @@ export const DeliveryInfoPage: React.FC = () => {
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(''); setSuccess('');
-    if (name.trim().length < 2 || phone.replace(/\\D/g, '').length < 10) {
+    if (name.trim().length < 2 || phone.replace(/\D/g, '').length < 10) {
       setError('Informe seu nome e um WhatsApp válido com DDD.');
       return;
     }

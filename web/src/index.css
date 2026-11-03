@@ -1235,6 +1235,32 @@ html.dark .vaicar-home-hero #simulador [class*="bg-white/85"] p {
   .vaicar-navbar .vaicar-mobile-drawer .text-amber-400 {
     color: #86520c !important;
   }
+
+  /* High-contrast styles for mobile drawer buttons and theme selector */
+  .vaicar-navbar .vaicar-mobile-drawer a.bg-emerald-600,
+  .vaicar-navbar .vaicar-mobile-drawer a.bg-emerald-600 *,
+  .vaicar-navbar .vaicar-mobile-drawer button.bg-emerald-600,
+  .vaicar-navbar .vaicar-mobile-drawer button.bg-emerald-600 *,
+  .vaicar-navbar .vaicar-mobile-drawer a.bg-blue-600,
+  .vaicar-navbar .vaicar-mobile-drawer a.bg-blue-600 * {
+    color: #ffffff !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer button[aria-pressed="true"],
+  .vaicar-navbar .vaicar-mobile-drawer button[aria-pressed="true"] * {
+    color: #ffffff !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer button[aria-pressed="false"],
+  .vaicar-navbar .vaicar-mobile-drawer button[aria-pressed="false"] * {
+    color: #24483b !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer button:not(.bg-emerald-600):not([aria-pressed="true"]) {
+    color: #047857 !important;
+  }
+  .vaicar-navbar .vaicar-mobile-drawer .grid button:not(.bg-emerald-600) {
+    background-color: #ffffff !important;
+    color: #047857 !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  }
 }
 
 
@@ -3123,15 +3149,15 @@ body:has(.vaicar-home) .vaicar-navbar {
   box-shadow: 0 2px 12px rgba(15,23,42,.06) !important;
   backdrop-filter: blur(14px) !important;
 }
-body:has(.vaicar-home) .vaicar-navbar a:not(.bg-blue-600),
-body:has(.vaicar-home) .vaicar-navbar button:not(.bg-blue-600) {
+body:has(.vaicar-home) .vaicar-navbar > div:first-child a:not(.bg-blue-600),
+body:has(.vaicar-home) .vaicar-navbar > div:first-child button:not(.bg-blue-600) {
   color: #334155 !important;
 }
-body:has(.vaicar-home) .vaicar-navbar a span,
-body:has(.vaicar-home) .vaicar-navbar a div > span:first-child {
+body:has(.vaicar-home) .vaicar-navbar > div:first-child a span,
+body:has(.vaicar-home) .vaicar-navbar > div:first-child a div > span:first-child {
   color: #111827 !important;
 }
-body:has(.vaicar-home) .vaicar-navbar a div > span:nth-child(2) {
+body:has(.vaicar-home) .vaicar-navbar > div:first-child a div > span:nth-child(2) {
   color: #155DFC !important;
 }
 body:has(.vaicar-home) .vaicar-navbar a.bg-blue-600,
@@ -3140,6 +3166,17 @@ body:has(.vaicar-home) .vaicar-navbar a.bg-blue-600 * {
 }
 body:has(.vaicar-home) .vaicar-navbar .vaicar-mobile-drawer {
   color: #111827 !important;
+}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-mobile-drawer a.bg-emerald-600,
+body:has(.vaicar-home) .vaicar-navbar .vaicar-mobile-drawer a.bg-emerald-600 *,
+body:has(.vaicar-home) .vaicar-navbar .vaicar-mobile-drawer button.bg-emerald-600,
+body:has(.vaicar-home) .vaicar-navbar .vaicar-mobile-drawer button.bg-emerald-600 * {
+  color: #FFFFFF !important;
+}
+body:has(.vaicar-home) .vaicar-navbar .vaicar-mobile-drawer .grid button:not(.bg-emerald-600) {
+  background-color: #ffffff !important;
+  color: #047857 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
 }
 
 
@@ -3708,8 +3745,35 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   background:#EFF6FF!important; color:#155DFC!important;
 }
 .vaicar-info-page a[class*="bg-emerald-500"],
+.vaicar-info-page a[class*="bg-emerald-600"],
+.vaicar-info-page a[class*="bg-amber-600"],
+.vaicar-info-page a[class*="bg-amber-500"],
+.vaicar-info-page a[class*="bg-blue-600"],
+.vaicar-info-page button[class*="bg-emerald-600"],
+.vaicar-info-page button[class*="bg-emerald-500"],
+.vaicar-info-page button[class*="bg-amber-600"],
+.vaicar-info-page button[class*="bg-amber-500"],
+.vaicar-info-page button[class*="bg-blue-600"] {
+  color: #FFFFFF !important;
+}
+.vaicar-info-page a[class*="bg-emerald-500"] *,
+.vaicar-info-page a[class*="bg-emerald-600"] *,
+.vaicar-info-page a[class*="bg-amber-600"] *,
+.vaicar-info-page a[class*="bg-amber-500"] *,
+.vaicar-info-page a[class*="bg-blue-600"] *,
+.vaicar-info-page button[class*="bg-emerald-600"] *,
+.vaicar-info-page button[class*="bg-emerald-500"] *,
+.vaicar-info-page button[class*="bg-amber-600"] *,
+.vaicar-info-page button[class*="bg-amber-500"] *,
+.vaicar-info-page button[class*="bg-blue-600"] * {
+  color: #FFFFFF !important;
+}
+.vaicar-info-page a[class*="bg-emerald-500"],
 .vaicar-info-page a[class*="bg-emerald-600"] {
-  background:#006B49!important; color:#FFFFFF!important;
+  background: #006B49 !important;
+}
+.vaicar-info-page a[class*="bg-amber-600"] {
+  background: #D97706 !important;
 }
 .vaicar-footer {
   background:#FFFFFF!important; color:#64748B!important;
