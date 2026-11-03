@@ -70,7 +70,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 
     const json: ApiResponse<T> = await response.json();
 
-    if (!response.ok || !json.success) {
+    if (!response.ok || json.success === false) {
       const code = json.error?.code || ErrorCode.INTERNAL_ERROR;
       const message = json.error?.message || getFriendlyErrorMessage(code);
       throw new ApiError(code, message, json.error?.details, json.requestId);
