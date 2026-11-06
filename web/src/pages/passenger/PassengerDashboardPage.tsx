@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { MapDisplay } from '../../components/MapDisplay.js';
 import { PlaceAutocompleteInput } from '../../components/PlaceAutocompleteInput.js';
@@ -12,7 +12,7 @@ import { driversApi, PublicDriverMarker } from '../../api/drivers.js';
 import { passengersApi } from '../../api/passengers.js';
 import { storageApi } from '../../api/storage.js';
 import { processImageFile } from '../../utils/imageUtils.js';
-import { Ride, PaymentMethod, Receipt, ServiceType, PassengerReferralSummary } from '../../../../shared/src/types.js';
+import { Ride, RideStatus, PaymentMethod, Receipt, ServiceType, PassengerReferralSummary } from '../../../../shared/src/types.js';
 import {
   MapPin,
   Navigation,
@@ -30,6 +30,7 @@ import {
   AlertCircle,
   User,
   CheckCircle,
+  CheckCircle2,
   FileText,
   MessageSquare,
   Camera,
@@ -41,12 +42,17 @@ import {
   Copy,
   Check,
   Share2,
+  Mail,
+  Phone,
+  Calendar,
+  Sparkles,
 } from 'lucide-react';
 import { ReportModal } from '../../components/ReportModal.js';
 
 export const PassengerDashboardPage: React.FC = () => {
-  const { user, profile, passenger, logout } = useAuth();
+  const { user, profile, passenger, logout, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Locations state: clean initial state with zero preset/hardcoded coordinates
   const [pickup, setPickup] = useState<{ address: string; lat: number; lng: number } | null>(null);
@@ -143,6 +149,11 @@ export const PassengerDashboardPage: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editWhatsapp, setEditWhatsapp] = useState('');
   const [editPhotoUrl, setEditPhotoUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
+  const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
+
   // Emergency cancellation state
   const [showEmergencyCancelModal, setShowEmergencyCancelModal] = useState(false);
   const [emergencyReasonType, setEmergencyReasonType] = useState('Pane mecânica no veículo');
@@ -155,6 +166,7 @@ export const PassengerDashboardPage: React.FC = () => {
   const [referralLoading, setReferralLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [useReferralCredit, setUseReferralCredit] = useState(false);
 
   const loadReferralSummary = useCallback(async () => {
@@ -168,6 +180,17 @@ export const PassengerDashboardPage: React.FC = () => {
       setReferralLoading(false);
     }
   }, []);
+
+  // Handle URL deep links like ?modal=profile or ?modal=referral
+  useEffect(() => {
+    const modalParam = searchParams.get('modal');
+    if (modalParam === 'profile') {
+      setShowProfileModal(true);
+    } else if (modalParam === 'referral') {
+      setShowReferralModal(true);
+      loadReferralSummary();
+    }
+  }, [searchParams, loadReferralSummary]);
 
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -219,7 +242,7 @@ export const PassengerDashboardPage: React.FC = () => {
       // Ignored
     }
 
-    if (!user) {
+    if (!user && !profile && !passenger) {
       setActiveRide(null);
       setPickup(null);
       setPickupInput('');
@@ -273,7 +296,7 @@ export const PassengerDashboardPage: React.FC = () => {
       setEstimate(null);
       lastNotifiedStatusRef.current = null;
     }
-  }, [user]);
+  }, [user, profile, passenger]);
 
   useEffect(() => {
     refreshActiveRide();
@@ -545,7 +568,7 @@ export const PassengerDashboardPage: React.FC = () => {
       );
       return;
     }
-    if (!user) {
+    if (!user && !profile && !passenger) {
       navigate('/passenger/login');
       return;
     }
@@ -679,33 +702,115 @@ export const PassengerDashboardPage: React.FC = () => {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editName.trim()) {
+      setProfileErrorMsg('Por favor, informe seu nome completo.');
+      return;
+    }
+    if (!editWhatsapp.trim()) {
+      setProfileErrorMsg('Por favor, informe seu WhatsApp de contato.');
+      return;
+    }
+
+    setProfileSaving(true);
+    setProfileSuccessMsg(null);
+    setProfileErrorMsg(null);
     try {
       await passengersApi.updateMe({
-        name: editName,
-        whatsapp: editWhatsapp,
+        name: editName.trim(),
+        whatsapp: editWhatsapp.trim(),
         photoUrl: editPhotoUrl || undefined,
       });
-      setShowProfileModal(false);
-      alert('Perfil atualizado com sucesso!');
+      await refreshProfile();
+      setProfileSuccessMsg('Dados do perfil salvos e sincronizados com sucesso!');
+      setTimeout(() => {
+        setProfileSuccessMsg(null);
+      }, 4000);
     } catch (err: any) {
-      setError(err.message || 'Falha ao atualizar perfil.');
+      setProfileErrorMsg(err?.message || 'Falha ao atualizar dados do perfil.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
   const handleUploadPassengerPhoto = async (file: File) => {
-    if (!user) return;
+    const activeUid = user?.uid || profile?.uid || passenger?.uid;
+    if (!activeUid) return;
     setPhotoUploading(true);
-    setError(null);
+    setProfileSuccessMsg(null);
+    setProfileErrorMsg(null);
     try {
       const base64Data = await processImageFile(file);
-      const res = await storageApi.uploadImage(base64Data, 'passengers', `${user.uid}_foto`);
+      const res = await storageApi.uploadImage(base64Data, 'passengers', `${activeUid}_foto`);
       setEditPhotoUrl(res.url);
       await passengersApi.updateMe({ photoUrl: res.url });
+      await refreshProfile();
+      setProfileSuccessMsg('Foto de perfil atualizada com sucesso!');
+      setTimeout(() => setProfileSuccessMsg(null), 4000);
     } catch (err: any) {
-      setError(err?.message || 'Falha ao enviar foto de perfil.');
+      setProfileErrorMsg(err?.message || 'Falha ao enviar foto de perfil.');
     } finally {
       setPhotoUploading(false);
     }
+  };
+
+  const getCanonicalReferralUrl = useCallback(() => {
+    const code = referralSummary?.referralCode || passenger?.referralCode || '';
+    if (!code) return '';
+    return referralSummary?.shareUrl || `https://vaicar.app/passenger/register?ref=${code}`;
+  }, [referralSummary, passenger]);
+
+  const handleCopyReferralLink = async () => {
+    const url = getCanonicalReferralUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setShareFeedback('Link completo copiado para a área de transferência!');
+      setTimeout(() => {
+        setCopiedLink(false);
+        setShareFeedback(null);
+      }, 3000);
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+    }
+  };
+
+  const handleCopyReferralCode = async () => {
+    const code = referralSummary?.referralCode || passenger?.referralCode || '';
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2500);
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+    }
+  };
+
+  const handleShareReferralLink = async () => {
+    const code = referralSummary?.referralCode || passenger?.referralCode || '';
+    const url = getCanonicalReferralUrl();
+    if (!url) return;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'VaiCar São Sebastião',
+          text: `Use meu código de indicação ${code} no VaiCar São Sebastião e ganhe R$ 5,00 de desconto na sua primeira corrida:`,
+          url: url,
+        });
+        setShareFeedback('Link compartilhado com sucesso!');
+        setTimeout(() => setShareFeedback(null), 3000);
+        return;
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.warn('Erro ao compartilhar via Web Share:', err);
+        }
+      }
+    }
+
+    // Fallback: copia para a área de transferência
+    await handleCopyReferralLink();
   };
 
   // Filter for valid GPS and strict telemetry freshness (<= 60 seconds)
@@ -753,7 +858,7 @@ export const PassengerDashboardPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {user && (
+          {(user || profile || passenger) && (
             <button
               onClick={() => {
                 setShowReferralModal(true);
@@ -768,13 +873,22 @@ export const PassengerDashboardPage: React.FC = () => {
             </button>
           )}
 
-          {user ? (
+          {(user || profile || passenger) ? (
             <button
               onClick={() => setShowProfileModal(true)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white transition-colors"
+              title="Ver e editar meu perfil"
             >
-              <User className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{passenger?.name || profile?.displayName || 'Meu Perfil'}</span>
+              {passenger?.photoUrl || profile?.photoUrl ? (
+                <img
+                  src={passenger?.photoUrl || profile?.photoUrl}
+                  alt={passenger?.name || profile?.displayName || 'Perfil'}
+                  className="w-5 h-5 rounded-full object-cover border border-emerald-400"
+                />
+              ) : (
+                <User className="w-3.5 h-3.5 text-emerald-400" />
+              )}
+              <span className="max-w-[110px] sm:max-w-none truncate">{passenger?.name || profile?.displayName || user?.displayName || 'Meu Perfil'}</span>
             </button>
           ) : (
             <Link
@@ -1932,103 +2046,268 @@ export const PassengerDashboardPage: React.FC = () => {
       {/* RECEIPT MODAL */}
       {receiptToShow && <ReceiptModal receipt={receiptToShow} onClose={() => setReceiptToShow(null)} />}
 
-      {/* PROFILE EDIT MODAL */}
+      {/* PROFILE VIEW & EDIT MODAL */}
       {showProfileModal &&
         typeof document !== 'undefined' &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] overflow-y-auto bg-black/80 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
+            className="fixed inset-0 z-[9999] overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
             onClick={() => setShowProfileModal(false)}
           >
             <div
-              className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 relative my-auto animate-in zoom-in-95 duration-150 shadow-2xl"
+              className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-5 sm:p-7 space-y-5 relative my-auto animate-in zoom-in-95 duration-150 shadow-2xl max-h-[92vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                <h3 className="text-base font-bold text-white">Editar Perfil do Passageiro</h3>
+              {/* Header */}
+              <div className="flex justify-between items-start pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white leading-tight">Perfil do Passageiro</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Visualização e dados cadastrais no VaiCar</p>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowProfileModal(false)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition-colors"
+                  aria-label="Fechar"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleSaveProfile} className="space-y-4">
-                {/* Photo Upload Section */}
-                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-800 border-2 border-emerald-500 flex items-center justify-center text-emerald-400 overflow-hidden shrink-0">
+              {/* Feedback messages */}
+              {profileSuccessMsg && (
+                <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/60 text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>{profileSuccessMsg}</span>
+                </div>
+              )}
+              {profileErrorMsg && (
+                <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/60 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>{profileErrorMsg}</span>
+                </div>
+              )}
+
+              {/* Photo & Identity Section */}
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5 w-full sm:w-auto">
+                  <div className="relative group shrink-0">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-800 border-2 border-emerald-500 flex items-center justify-center text-emerald-400 overflow-hidden shadow-lg">
                       {editPhotoUrl ? (
                         <img src={editPhotoUrl} alt={editName} className="w-full h-full object-cover" />
                       ) : (
-                        <User className="w-6 h-6" />
+                        <User className="w-8 h-8 text-emerald-400/70" />
                       )}
                     </div>
+                    {photoUploading && (
+                      <div className="absolute inset-0 bg-black/70 rounded-2xl flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-emerald-400 animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-extrabold text-white block">
+                        {editName || passenger?.name || profile?.displayName || 'Passageiro'}
+                      </span>
+                      {passenger?.isBlocked ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-600/50">
+                          Bloqueado
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Ativo
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-400 block mt-0.5 font-mono">
+                      {passenger?.email || profile?.email || user?.email || 'Sem e-mail'}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      Foto pública visível para os motoristas no embarque
+                    </span>
+                  </div>
+                </div>
+
+                <div className="w-full sm:w-auto flex justify-end">
+                  <label
+                    htmlFor="passenger-photo-upload"
+                    className="w-full sm:w-auto py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700 transition-colors shadow-sm"
+                  >
+                    <Camera className="w-4 h-4 text-emerald-400" />
+                    {photoUploading ? 'Enviando...' : 'Alterar Foto'}
+                  </label>
+                  <input
+                    id="passenger-photo-upload"
+                    type="file"
+                    accept="image/*"
+                    disabled={photoUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadPassengerPhoto(file);
+                    }}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Statistics & Badges Grid */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-center space-y-0.5">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Avaliação</span>
+                  <div className="text-sm font-extrabold text-amber-400 flex items-center justify-center gap-1">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span>{(passenger?.rating || 5.0).toFixed(1)}</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-center space-y-0.5">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Viagens Feitas</span>
+                  <span className="text-sm font-extrabold text-white block">
+                    {passenger?.totalRides || 0}
+                  </span>
+                </div>
+
+                <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-center space-y-0.5">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Créditos</span>
+                  <span className="text-sm font-extrabold text-emerald-400 block">
+                    R$ {(referralSummary?.referralCreditBalance ?? passenger?.referralCreditBalance ?? 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Edit Form */}
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Nome Completo <span className="text-emerald-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Seu nome completo"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-medium pl-9"
+                    />
+                    <User className="w-4 h-4 text-slate-500 absolute left-3 top-3.5" />
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">Como o motorista identificará você ao chegar no ponto de embarque.</span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-300">
+                    WhatsApp / Celular <span className="text-emerald-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={editWhatsapp}
+                      onChange={(e) => setEditWhatsapp(e.target.value)}
+                      placeholder="(12) 99999-9999"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-medium pl-9"
+                    />
+                    <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-3.5" />
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">Formato: DDD + 9 dígitos (ex: 12 99999-9999). Contato direto no embarque.</span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-400">
+                      E-mail da Conta
+                    </label>
+                    <span className="text-[10px] font-semibold text-slate-500">Não editável • Login</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      readOnly
+                      disabled
+                      value={passenger?.email || profile?.email || user?.email || ''}
+                      className="w-full bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 text-xs text-slate-400 font-mono pl-9 cursor-not-allowed"
+                    />
+                    <Mail className="w-4 h-4 text-slate-600 absolute left-3 top-3.5" />
+                  </div>
+                </div>
+
+                {/* Account Details Footer */}
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span>Membro da comunidade desde:</span>
+                    <span className="font-semibold text-slate-300">
+                      {passenger?.createdAt || profile?.createdAt
+                        ? new Date(passenger?.createdAt || profile?.createdAt!).toLocaleDateString('pt-BR')
+                        : 'São Sebastião / SP'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Termos de Uso e Regulamentação:</span>
+                    <span className="font-semibold text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Aceitos e Ativos
+                    </span>
+                  </div>
+                </div>
+
+                {/* Referral Quick Card inside Profile */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-950 to-slate-950 border border-emerald-500/30 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                      <Gift className="w-4 h-4" />
+                    </div>
                     <div>
-                      <span className="text-xs font-bold text-white block">Foto de Perfil</span>
-                      <span className="text-[10px] text-slate-400">Visível para motoristas</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white">Código de Indicação:</span>
+                        <span className="font-mono text-xs font-extrabold text-emerald-400">
+                          {referralSummary?.referralCode || passenger?.referralCode || '...'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 block">Indique amigos e ganhe R$ 5,00 por indicação</span>
                     </div>
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="passenger-photo-upload"
-                      className="py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-[11px] flex items-center gap-1.5 cursor-pointer border border-slate-700 transition-colors"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-emerald-400" />
-                      {photoUploading ? 'Salvando...' : 'Alterar Foto'}
-                    </label>
-                    <input
-                      id="passenger-photo-upload"
-                      type="file"
-                      accept="image/*"
-                      disabled={photoUploading}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleUploadPassengerPhoto(file);
-                      }}
-                      className="hidden"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileModal(false);
+                      setShowReferralModal(true);
+                      loadReferralSummary();
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold transition-all shrink-0"
+                  >
+                    Ver Central
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Nome Completo</label>
-                  <input
-                    type="text"
-                    required
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp</label>
-                  <input
-                    type="text"
-                    required
-                    value={editWhatsapp}
-                    onChange={(e) => setEditWhatsapp(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-2">
+                {/* Action Buttons */}
+                <div className="flex gap-2.5 pt-2">
                   <button
                     type="button"
                     onClick={() => setShowProfileModal(false)}
-                    className="flex-1 py-2 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-700"
+                    className="flex-1 py-2.5 rounded-xl bg-slate-800 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-700"
                   >
-                    Cancelar
+                    Fechar
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition-colors"
+                    disabled={profileSaving}
+                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-xs font-bold text-white transition-all shadow-lg flex items-center justify-center gap-1.5"
                   >
-                    Salvar Alterações
+                    {profileSaving ? (
+                      <>
+                        <Clock className="w-4 h-4 animate-spin" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <span>Salvar Alterações</span>
+                    )}
                   </button>
                 </div>
               </form>
@@ -2140,142 +2419,187 @@ export const PassengerDashboardPage: React.FC = () => {
 
       {/* REFERRAL / INDIQUE E GANHE MODAL */}
       {showReferralModal &&
+        typeof document !== 'undefined' &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-slate-900 border border-emerald-500/30 w-full max-w-lg rounded-2xl shadow-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div
+            className="fixed inset-0 z-[9999] overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
+            onClick={() => setShowReferralModal(false)}
+          >
+            <div
+              className="bg-slate-900 border border-emerald-500/40 w-full max-w-lg rounded-3xl shadow-2xl p-5 sm:p-7 space-y-4 max-h-[92vh] overflow-y-auto relative my-auto animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                    <Gift className="w-4 h-4" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Gift className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white leading-none">Indique e Ganhe</h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Programa de Indicação VaiCar São Sebastião</p>
+                    <h3 className="text-base font-bold text-white leading-tight">Indique e Ganhe</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Programa de Indicação VaiCar São Sebastião</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowReferralModal(false)}
-                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                  className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                  aria-label="Fechar"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {referralLoading ? (
-                <div className="py-8 text-center text-xs text-slate-400 animate-pulse">
-                  Carregando informações de indicação...
+                <div className="py-12 text-center text-xs text-slate-400 space-y-3">
+                  <Clock className="w-6 h-6 text-emerald-400 animate-spin mx-auto" />
+                  <p>Carregando métricas e link de indicação do passageiro...</p>
                 </div>
               ) : (
                 <>
                   {/* Hero Banner */}
-                  <div className="bg-gradient-to-br from-emerald-950/90 via-slate-900 to-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-2">
+                  <div className="bg-gradient-to-br from-emerald-950/90 via-slate-900 to-slate-950 p-4 sm:p-5 rounded-2xl border border-emerald-500/40 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
-                        🎉 Ganhe R$ 5,00 por indicação
+                      <span className="text-xs sm:text-sm font-extrabold text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-400" />
+                        Ganhe R$ 5,00 por amigo indicado
                       </span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         Ativo
                       </span>
                     </div>
                     <p className="text-xs text-slate-200 leading-relaxed">
-                      Seu amigo ganha <strong>R$ 5,00 de desconto</strong> na primeira corrida, e você recebe <strong>R$ 5,00 em créditos</strong> assim que ele concluir a primeira viagem!
+                      Seu amigo ganha <strong className="text-emerald-400">R$ 5,00 de desconto</strong> na primeira corrida, e você recebe <strong className="text-emerald-400">R$ 5,00 em créditos</strong> assim que ele concluir a primeira viagem!
                     </p>
                   </div>
 
                   {/* Balance & Stats Cards */}
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[10px] text-slate-400 block font-medium">Disponível</span>
-                      <span className="text-xs sm:text-sm font-extrabold text-emerald-400 block mt-0.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">Disponível</span>
+                      <span className="text-base font-black text-emerald-400 block mt-0.5">
                         R$ {(referralSummary?.referralCreditBalance || 0).toFixed(2)}
                       </span>
                     </div>
-                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[10px] text-slate-400 block font-medium">Resgatado</span>
-                      <span className="text-xs sm:text-sm font-extrabold text-slate-300 block mt-0.5">
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">Resgatado</span>
+                      <span className="text-base font-black text-slate-300 block mt-0.5">
                         R$ {(referralSummary?.referralCreditRedeemed || 0).toFixed(2)}
                       </span>
                     </div>
-                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[10px] text-slate-400 block font-medium">Indicados</span>
-                      <span className="text-xs sm:text-sm font-extrabold text-white block mt-0.5">
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">Indicados</span>
+                      <span className="text-base font-black text-white block mt-0.5">
                         {referralSummary?.totalReferrals || 0}
                       </span>
                     </div>
-                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[10px] text-slate-400 block font-medium">Concluídas</span>
-                      <span className="text-xs sm:text-sm font-extrabold text-emerald-400 block mt-0.5">
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-center">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">Concluídas</span>
+                      <span className="text-base font-black text-emerald-400 block mt-0.5">
                         {referralSummary?.completedReferrals || 0}
                       </span>
                     </div>
                   </div>
 
                   {/* Referral Code Box */}
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-                    <label className="block text-[11px] font-semibold text-slate-300">
-                      Seu Código de Indicação Exclusivo:
-                    </label>
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-300">
+                        Seu Código de Indicação Exclusivo:
+                      </label>
+                      <span className="text-[10px] text-emerald-400 font-semibold">Exclusivo do seu cadastro</span>
+                    </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 py-2 px-3 rounded-lg bg-slate-900 border border-slate-700 text-center font-mono text-sm font-extrabold text-emerald-400 tracking-wider">
-                        {referralSummary?.referralCode || '...'}
+                      <div className="flex-1 py-2.5 px-3 rounded-xl bg-slate-900 border border-emerald-500/30 text-center font-mono text-base font-black text-emerald-400 tracking-widest shadow-inner">
+                        {referralSummary?.referralCode || passenger?.referralCode || '...'}
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (referralSummary?.referralCode) {
-                            navigator.clipboard.writeText(referralSummary.referralCode);
-                            setCopiedCode(true);
-                            setTimeout(() => setCopiedCode(false), 2000);
-                          }
-                        }}
-                        className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors flex items-center gap-1.5"
+                        onClick={handleCopyReferralCode}
+                        className="py-2.5 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors flex items-center gap-1.5 shrink-0 border border-slate-700"
+                        title="Copiar apenas o código"
                       >
-                        {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedCode ? 'Copiado!' : 'Copiar'}</span>
+                        {copiedCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-slate-300" />}
+                        <span>{copiedCode ? 'Copiado!' : 'Copiar Código'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* FULL REFERRAL LINK BOX - VITAL USER REQUIREMENT */}
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-300">
+                        Link Pessoal Completo de Indicação:
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-medium">Pronto para envio</span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                      <div className="flex-1 font-mono text-[11px] sm:text-xs text-emerald-300 break-all select-all px-1 py-0.5">
+                        {getCanonicalReferralUrl() || 'Carregando link...'}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCopyReferralLink}
+                        className="py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/40 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shrink-0"
+                        title="Copiar link completo"
+                      >
+                        {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedLink ? 'Copiado!' : 'Copiar Link'}</span>
                       </button>
                     </div>
 
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      Ao abrir este link, a tela de cadastro do passageiro já abre com seu código preenchido automaticamente.
+                    </p>
+
                     {/* Share Action Buttons */}
-                    <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                       <button
                         type="button"
-                        onClick={() => {
-                          const url = referralSummary?.shareUrl || `https://vaicar.app/passenger/register?ref=${referralSummary?.referralCode || ''}`;
-                          navigator.clipboard.writeText(url);
-                          setCopiedLink(true);
-                          setTimeout(() => setCopiedLink(false), 2000);
-                        }}
-                        className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors flex items-center justify-center gap-1.5 border border-slate-700"
+                        onClick={handleShareReferralLink}
+                        className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white transition-colors flex items-center justify-center gap-2 border border-slate-700"
+                        title="Compartilhar pelo celular ou copiar"
                       >
-                        {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
-                        <span>{copiedLink ? 'Link Copiado!' : 'Copiar Link'}</span>
+                        <Share2 className="w-4 h-4 text-emerald-400" />
+                        <span>Compartilhar Link</span>
                       </button>
 
                       <a
                         href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                          `Olá! Use meu código ${referralSummary?.referralCode} no VaiCar São Sebastião e ganhe R$ 5,00 de desconto na sua primeira corrida: ${referralSummary?.shareUrl || `https://vaicar.app/passenger/register?ref=${referralSummary?.referralCode || ''}`}`
+                          `Olá! Use meu código ${referralSummary?.referralCode || passenger?.referralCode} no VaiCar São Sebastião e ganhe R$ 5,00 de desconto na sua primeira corrida: ${getCanonicalReferralUrl()}`
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40"
+                        className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition-colors flex items-center justify-center gap-2 shadow-md shadow-emerald-950/40"
                       >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>WhatsApp</span>
+                        <MessageSquare className="w-4 h-4" />
+                        <span>Enviar no WhatsApp</span>
                       </a>
                     </div>
+
+                    {/* Feedback Toast */}
+                    {shareFeedback && (
+                      <div className="p-2.5 rounded-xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs text-center font-medium animate-in fade-in">
+                        {shareFeedback}
+                      </div>
+                    )}
                   </div>
 
                   {/* List of Referred Friends */}
                   <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-300 block">
-                      Histórico de Amigos Indicados ({referralSummary?.referrals?.length || 0})
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-300">
+                        Histórico de Amigos Indicados ({referralSummary?.referrals?.length || 0})
+                      </span>
+                      <span className="text-[10px] text-slate-500">Atualizado em tempo real</span>
+                    </div>
+
                     {!referralSummary?.referrals || referralSummary.referrals.length === 0 ? (
-                      <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center text-xs text-slate-400 space-y-1">
-                        <p>Nenhum amigo utilizou seu código ainda.</p>
+                      <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center text-xs text-slate-400 space-y-1">
+                        <p className="font-semibold text-slate-300">Nenhum amigo utilizou seu código ainda.</p>
                         <p className="text-[10px] text-slate-500">
-                          Compartilhe seu link pelo WhatsApp para começar a acumular créditos!
+                          Compartilhe seu link pelo WhatsApp ou redes sociais para começar a acumular créditos!
                         </p>
                       </div>
                     ) : (
@@ -2283,7 +2607,7 @@ export const PassengerDashboardPage: React.FC = () => {
                         {(Array.isArray(referralSummary.referrals) ? referralSummary.referrals : []).map((ref) => (
                           <div
                             key={ref.id}
-                            className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
+                            className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
                           >
                             <div>
                               <span className="font-bold text-white block">
@@ -2295,11 +2619,11 @@ export const PassengerDashboardPage: React.FC = () => {
                             </div>
                             <div>
                               {ref.status === 'REWARDED' ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/40">
                                   ✓ R$ {ref.rewardAmount.toFixed(2)} Recebido
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-600/30">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-600/30">
                                   ⏳ Aguardando 1ª Corrida
                                 </span>
                               )}

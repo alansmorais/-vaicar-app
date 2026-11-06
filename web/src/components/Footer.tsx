@@ -11,8 +11,8 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Brand & Market */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <img src="/vaicar_logo.png" alt="VaiCar" className="h-8 w-auto rounded object-contain" />
+            <div className="flex items-center gap-2.5">
+              <img src="/vaicar_round_logo.png" alt="VaiCar" className="h-8 w-8 rounded-full border border-emerald-500/60 object-contain shadow-sm" />
               <span className="text-xl font-black text-slate-100">
                 VAI<span className="text-emerald-500">CAR</span>
               </span>

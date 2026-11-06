@@ -6,7 +6,13 @@ import { Mail, Lock, AlertCircle, ArrowRight, KeyRound, CheckCircle2 } from 'luc
 
 export const PassengerLoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { loginEmailPassword, migrateAccount, forgotPassword, resetPassword } = useAuth();
+  const { user, profile, passenger, loading: authLoading, loginEmailPassword, migrateAccount, forgotPassword, resetPassword } = useAuth();
+
+  React.useEffect(() => {
+    if (!authLoading && (user || profile || passenger)) {
+      navigate('/passenger', { replace: true });
+    }
+  }, [authLoading, user, profile, passenger, navigate]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

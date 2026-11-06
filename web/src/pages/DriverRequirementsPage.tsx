@@ -48,11 +48,11 @@ export const DriverRequirementsPage: React.FC = () => {
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
-              Dirija ou Entregue com <span className="text-emerald-400">Dignidade e Lucro Real</span>.
+              Você dirige. <span className="text-emerald-400">Você decide.</span> Você ganha.
             </h1>
 
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Diga adeus às taxas abusivas dos aplicativos tradicionais. No VaiCar, você escolhe entre planos transparentes, recebe pagamentos 100% diretamente dos passageiros via Pix ou dinheiro e conta com suporte de quem conhece São Sebastião de ponta a ponta.
+              Autonomia, flexibilidade e transparência real no transporte de São Sebastião. Escolha entre <strong>10% de comissão por corrida concluída</strong> ou o <strong>plano mensal de R$ 100 com zero comissão</strong>. Receba pagamentos 100% diretamente dos passageiros via Pix ou dinheiro na hora.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -185,6 +185,65 @@ export const DriverRequirementsPage: React.FC = () => {
               >
                 Escolher Plano Comissão (10%)
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+ 
+      {/* How it works in practice: Pricing, Orders and Direct Earnings */}
+      <section className="py-16 bg-slate-950/80 border-b border-slate-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/30">
+              Autonomia & Controle
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-white">
+              Como Funciona a Precificação e Seus Ganhos
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400">
+              Entenda como você gerencia suas corridas, valores e recebimentos no VaiCar.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+                1
+              </div>
+              <h3 className="text-base font-bold text-white">Você define sua tarifa</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Liberdade para configurar suas taxas de km e tempo, respeitando o piso mínimo da plataforma (a partir de R$ 10,00 por corrida) para assegurar rentabilidade digna.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+                2
+              </div>
+              <h3 className="text-base font-bold text-white">Como chegam os pedidos</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Ao ficar online no cockpit, você recebe alertas sonoros e visuais com origem, destino exato, valor estimado e distância. Você tem autonomia para aceitar ou recusar.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+                3
+              </div>
+              <h3 className="text-base font-bold text-white">Recebimento direto</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                100% direto na sua mão: o passageiro paga a você no final da viagem via Pix na sua chave bancária, dinheiro vivo ou cartão. Sem intermediação financeira.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+                4
+              </div>
+              <h3 className="text-base font-bold text-white">Cockpit e extrato real</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Acompanhe seu histórico diário, total de viagens, extrato transparente no painel e conte com suporte humanizado em São Sebastião.
+              </p>
             </div>
           </div>
         </div>

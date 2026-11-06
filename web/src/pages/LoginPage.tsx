@@ -5,7 +5,13 @@ import { useAuth } from '../context/AuthContext.js';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { forgotPassword, resetPassword, loginEmailPassword } = useAuth();
+  const { user, profile, loading: authLoading, forgotPassword, resetPassword, loginEmailPassword } = useAuth();
+
+  React.useEffect(() => {
+    if (!authLoading && (user || profile)) {
+      navigate('/passenger', { replace: true });
+    }
+  }, [authLoading, user, profile, navigate]);
 
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [email, setEmail] = useState('');

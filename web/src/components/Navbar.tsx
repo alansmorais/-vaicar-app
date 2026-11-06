@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.js';
 import { ThemeToggle } from './ThemeToggle.js';
-import { Car, Bike, User, Shield, LogOut, Menu, X, MapPin, ArrowRight } from 'lucide-react';
+import { Car, Bike, User, Shield, ShieldCheck, LogOut, Menu, X, MapPin, ArrowRight } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, profile, role, logout, isAdmin } = useAuth();
@@ -34,27 +34,37 @@ export const Navbar: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="vaicar-navbar bg-white/95 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 text-slate-100 transition-colors duration-200">
+    <nav className="vaicar-navbar bg-slate-950/95 backdrop-blur-md border-b border-emerald-900/40 sticky top-0 z-50 text-white transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo & Brand */}
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-3 group" title="VaiCar — Página Inicial">
             <img
-              src="/vaicar_logo.png"
+              src="/vaicar_round_logo.png"
               alt="VaiCar — São Sebastião • SP"
-              className="vaicar-brand-logo"
+              className="vaicar-brand-logo w-[50px] h-[50px] min-w-[50px] min-h-[50px] rounded-full object-cover"
+              width="50"
+              height="50"
             />
+            <div className="flex flex-col">
+              <div className="text-xl sm:text-2xl font-black tracking-tight leading-none text-white flex items-center">
+                Vai<span className="text-emerald-400">Car</span>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-300/90 tracking-wider uppercase mt-0.5">
+                São Sebastião • SP
+              </span>
+            </div>
           </Link>
 
           {/* Desktop navigation — homepage reference order */}
-          <div className="vaicar-desktop-nav hidden md:flex items-center gap-1">
-            <Link to="/" className={`px-3 py-2 text-sm font-semibold transition-colors ${isActive('/') ? 'is-reference-active' : ''}`}>Início</Link>
-            <Link to="/como-funciona" className={`px-3 py-2 text-sm font-semibold transition-colors ${isActive("/como-funciona") ? "is-reference-active" : ""}`}>Como Funciona</Link>
-            <Link to="/como-funciona/motorista" className="px-3 py-2 text-sm font-semibold transition-colors">Para Motoristas</Link>
-            <Link to="/parcerias" className="px-3 py-2 text-sm font-semibold transition-colors">Para Empresas</Link>
-            <Link to="/como-funciona/entregador" className="px-3 py-2 text-sm font-semibold transition-colors">Entregas</Link>
-            <Link to="/#faq" className="px-3 py-2 text-sm font-semibold transition-colors">Sobre</Link>
-            <a href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3" target="_blank" rel="noopener noreferrer" className="px-3 py-2 text-sm font-semibold transition-colors">Contato</a>
+          <div className="vaicar-desktop-nav hidden md:flex items-center gap-1 lg:gap-1.5">
+            <Link to="/" className={`px-3 py-2 text-sm font-semibold !text-white hover:!text-emerald-300 transition-colors ${isActive('/') ? 'is-reference-active' : ''}`}>Início</Link>
+            <Link to="/como-funciona" className={`px-3 py-2 text-sm font-semibold !text-white hover:!text-emerald-300 transition-colors ${isActive('/como-funciona') ? 'is-reference-active' : ''}`}>Como funciona</Link>
+            <Link to="/como-funciona/motorista" className={`px-3 py-2 text-sm font-semibold !text-white hover:!text-emerald-300 transition-colors ${isActive('/como-funciona/motorista') ? 'is-reference-active' : ''}`}>Para motoristas</Link>
+            <Link to="/parcerias" className={`px-3 py-2 text-sm font-semibold !text-white hover:!text-emerald-300 transition-colors ${isActive('/parcerias') ? 'is-reference-active' : ''}`}>Para empresas</Link>
+            <Link to="/como-funciona/entregador" className={`px-3 py-2 text-sm font-semibold !text-white hover:!text-emerald-300 transition-colors ${isActive('/como-funciona/entregador') ? 'is-reference-active' : ''}`}>Entregas</Link>
+            <Link to="/#faq" className="px-3 py-2 text-sm font-semibold !text-white hover:!text-emerald-300 transition-colors">Sobre</Link>
+            <a href="https://chat.whatsapp.com/IkPEGc6SjNE8f1NIOHUCV3" target="_blank" rel="noopener noreferrer" className="px-3 py-2 text-sm font-semibold !text-white hover:!text-emerald-300 transition-colors">Contato</a>
           </div>
 
           {/* User Auth Info / Actions */}
@@ -62,7 +72,11 @@ export const Navbar: React.FC = () => {
             <ThemeToggle variant="navbar" />
             {user ? (
               <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
-                <div className="flex items-center gap-2">
+                <Link
+                  to={role === 'driver' ? '/driver' : '/passenger'}
+                  className="flex items-center gap-2 hover:opacity-85 transition-opacity"
+                  title="Acessar meu painel"
+                >
                   {profile?.photoUrl ? (
                     <img
                       src={profile.photoUrl}
@@ -82,7 +96,7 @@ export const Navbar: React.FC = () => {
                       {role === 'admin' || isAdmin ? 'Administrador' : role === 'driver' ? 'Motorista' : 'Passageiro'}
                     </span>
                   </div>
-                </div>
+                </Link>
 
                 <button
                   type="button"
@@ -178,11 +192,11 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Motorista & Entregador Mobile Group */}
-          <div className="space-y-1 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+          <div className="space-y-1 bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
             <Link
               to="/como-funciona/motorista"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-bold !text-[#174b39] hover:bg-emerald-50"
+              className="flex items-center justify-between px-2.5 py-2 rounded-lg text-sm font-bold text-emerald-400 hover:bg-slate-800"
             >
               <span className="flex items-center gap-2">💼 Portal do Motorista & Entregador</span>
               <span className="text-[10px] text-slate-400">Cockpit</span>
@@ -190,14 +204,14 @@ export const Navbar: React.FC = () => {
             <Link
               to="/como-funciona/motorista"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-2.5 py-1.5 rounded-lg text-xs font-medium !text-[#52685e] hover:!text-[#174b39] hover:bg-emerald-50"
+              className="block px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800"
             >
               → Requisitos & Planos (R$ 100/mês ou 10%)
             </Link>
             <Link
               to="/driver/register"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="block px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-slate-800"
             >
               → Cadastro para Carro, Moto e Bike
             </Link>
@@ -206,7 +220,7 @@ export const Navbar: React.FC = () => {
           <Link
             to="/como-funciona/entregador"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
+            className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-emerald-400 hover:bg-slate-800"
           >
             🛵 Página para Entregadores
           </Link>
@@ -215,17 +229,17 @@ export const Navbar: React.FC = () => {
           <Link
             to="/parcerias"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-amber-50/70 dark:bg-slate-950/80 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-sm font-bold hover:bg-amber-100/70 dark:hover:bg-slate-800"
+            className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm font-bold hover:bg-amber-500/20"
           >
             <span className="flex items-center gap-2">🏪 Parcerias para Restaurantes & Pousadas</span>
-            <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400">Novo</span>
+            <span className="text-[10px] uppercase font-bold text-amber-400">Novo</span>
           </Link>
 
           {/* Downloads Mobile */}
           <Link
             to="/download/passenger"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-xs font-semibold !text-[#24483b] hover:bg-emerald-50"
+            className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800"
           >
             📥 Baixar Aplicativos Oficiais (APKs)
           </Link>
@@ -233,7 +247,7 @@ export const Navbar: React.FC = () => {
           <Link
             to="/admin"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl text-xs font-semibold !text-[#52685e] hover:!text-[#174b39] hover:bg-emerald-50"
+            className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800"
           >
             ⚙️ Painel de Gestão Administrativa
           </Link>
@@ -262,15 +276,22 @@ export const Navbar: React.FC = () => {
                 </span>
               </div>
               <div className="flex gap-2">
+                <Link
+                  to={role === 'driver' ? '/driver' : '/passenger'}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex-1 py-2 px-3 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg text-center flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <User className="w-3.5 h-3.5" /> Meu Painel
+                </Link>
                 <button
                   type="button"
                   onClick={() => {
                     setMobileMenuOpen(false);
                     setLoginModalOpen(true);
                   }}
-                  className="flex-1 py-2 px-3 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-emerald-500/30 rounded-lg text-center"
+                  className="py-2 px-3 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-emerald-500/30 rounded-lg text-center"
                 >
-                  Trocar Perfil / Entrar
+                  Trocar
                 </button>
                 <button
                   type="button"
@@ -355,7 +376,7 @@ export const Navbar: React.FC = () => {
                 <div className="space-y-2.5">
                   {/* Option 1: Passageiro */}
                   <Link
-                    to="/passenger/login"
+                    to={user ? "/passenger" : "/passenger/login"}
                     onClick={() => setLoginModalOpen(false)}
                     className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 flex items-center justify-between group transition-all shadow-md"
                   >
@@ -365,7 +386,7 @@ export const Navbar: React.FC = () => {
                       </div>
                       <div className="text-left">
                         <span className="text-sm font-bold text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors block">
-                          Entrar como Passageiro
+                          {user ? 'Acessar Painel do Passageiro' : 'Entrar como Passageiro'}
                         </span>
                         <span className="text-[11px] text-slate-600 dark:text-slate-400 block">
                           Pedir corridas, acompanhar motoristas e entregas
@@ -377,7 +398,7 @@ export const Navbar: React.FC = () => {
 
                   {/* Option 2: Motorista */}
                   <Link
-                    to="/driver/login"
+                    to={user ? "/driver" : "/driver/login"}
                     onClick={() => setLoginModalOpen(false)}
                     className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 flex items-center justify-between group transition-all shadow-md"
                   >
@@ -387,7 +408,7 @@ export const Navbar: React.FC = () => {
                       </div>
                       <div className="text-left">
                         <span className="text-sm font-bold text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors block">
-                          Entrar como Motorista
+                          {user ? 'Acessar Central do Motorista' : 'Entrar como Motorista'}
                         </span>
                         <span className="text-[11px] text-slate-600 dark:text-slate-400 block">
                           Conduzir carro ou moto (R$ 100/mês ou 10%)
@@ -399,7 +420,7 @@ export const Navbar: React.FC = () => {
 
                   {/* Option 3: Entregador */}
                   <Link
-                    to="/driver/login?role=courier"
+                    to={user ? "/driver" : "/driver/login?role=courier"}
                     onClick={() => setLoginModalOpen(false)}
                     className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-amber-500/60 flex items-center justify-between group transition-all shadow-md"
                   >
@@ -409,7 +430,7 @@ export const Navbar: React.FC = () => {
                       </div>
                       <div className="text-left">
                         <span className="text-sm font-bold text-slate-100 group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors block">
-                          Entrar como Entregador
+                          {user ? 'Acessar Entregas (Moto / Bike)' : 'Entrar como Entregador'}
                         </span>
                         <span className="text-[11px] text-slate-600 dark:text-slate-400 block">
                           Delivery de bike (sem CNH) ou moto
@@ -418,6 +439,30 @@ export const Navbar: React.FC = () => {
                     </div>
                     <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
                   </Link>
+
+                  {/* Option 4: Admin (if isAdmin) */}
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setLoginModalOpen(false)}
+                      className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-purple-500/60 flex items-center justify-between group transition-all shadow-md"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/90 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform shrink-0">
+                          <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <span className="text-sm font-bold text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors block">
+                            Painel Administrativo
+                          </span>
+                          <span className="text-[11px] text-slate-600 dark:text-slate-400 block">
+                            Gestão de motoristas, corridas e tarifas
+                          </span>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:translate-x-1 transition-all shrink-0 ml-2" />
+                    </Link>
+                  )}
                 </div>
 
                 <div className="pt-2 border-t border-slate-800 flex flex-col gap-1.5 text-center">

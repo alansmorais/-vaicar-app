@@ -93,20 +93,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
       if (currentUser) {
+        setUser(currentUser);
         try {
           const token = await currentUser.getIdToken();
           await fetchBackendProfile(token, currentUser.uid, currentUser.email || '');
         } catch (err) {
           console.error('[AuthContext] Error getting id token:', err);
         }
-      } else if (!getAuthToken()) {
-        setAuthToken(null);
-        setProfile(null);
-        setPassenger(null);
-        setDriver(null);
-        setIsAdmin(false);
+      } else {
+        if (!getAuthToken()) {
+          setUser(null);
+          setAuthToken(null);
+          setProfile(null);
+          setPassenger(null);
+          setDriver(null);
+          setIsAdmin(false);
+        }
       }
       setLoading(false);
     });
@@ -273,7 +276,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [fetchBackendProfile]);
 
-  const role = useMemo(() => {
+  const effectiveUser = useMemo<FirebaseUser | null>(() => {
+    if (user) return user;
+    if (!profile) return null;
+    return {
+      uid: profile.uid,
+      email: profile.email,
+      displayName: profile.displayName,
+      photoURL: profile.photoUrl || null,
+      getIdToken: async () => getAuthToken() || '',
+    } as unknown as FirebaseUser;
+  }, [user, profile]);
+
+  const role: 'passenger' | 'driver' | 'admin' | null = useMemo(() => {
     if (isAdmin || profile?.role === 'admin') return 'admin';
     if (driver || profile?.role === 'driver') return 'driver';
     if (passenger || profile?.role === 'passenger') return 'passenger';
@@ -282,7 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = useMemo(
     () => ({
-      user,
+      user: effectiveUser,
       profile,
       passenger,
       driver,
@@ -298,7 +313,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout,
       refreshProfile,
     }),
-    [user, profile, passenger, driver, isAdmin, role, loading, loginEmailPassword, adminLogin, registerEmailPassword, migrateAccount, forgotPassword, resetPassword, logout, refreshProfile]
+    [effectiveUser, profile, passenger, driver, isAdmin, role, loading, loginEmailPassword, adminLogin, registerEmailPassword, migrateAccount, forgotPassword, resetPassword, logout, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

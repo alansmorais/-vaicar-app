@@ -91,8 +91,8 @@ async function runVisualValidation() {
       }
     });
 
-    page.on('pageerror', (err) => {
-      currentErrors.push(`[PAGE_ERROR] ${err.message}`);
+    page.on('pageerror', (err: any) => {
+      currentErrors.push(`[PAGE_ERROR] ${err?.message || String(err)}`);
     });
 
     page.on('requestfailed', (req) => {

@@ -8,7 +8,13 @@ export const DriverLoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isCourier = searchParams.get('role') === 'courier';
-  const { loginEmailPassword, migrateAccount, forgotPassword, resetPassword } = useAuth();
+  const { user, profile, driver, loading: authLoading, loginEmailPassword, migrateAccount, forgotPassword, resetPassword } = useAuth();
+
+  React.useEffect(() => {
+    if (!authLoading && (user || profile || driver)) {
+      navigate('/driver', { replace: true });
+    }
+  }, [authLoading, user, profile, driver, navigate]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

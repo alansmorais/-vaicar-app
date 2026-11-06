@@ -3139,30 +3139,32 @@ body:has(.vaicar-home) .vaicar-audience-card:hover .vaicar-audience-arrow {
 }
 
 
-/* Homepage header readability: solid light surface and high-contrast brand/navigation.
-   Keep the logo, brand blue and existing primary CTA styling intact. */
+/* Homepage header: dark tropical backdrop matching Tropical Premium theme */
 body:has(.vaicar-home) .vaicar-navbar {
-  position: sticky !important;
+  position: absolute !important;
   top: 0 !important;
-  background: rgba(255,255,255,.98) !important;
-  border-bottom: 1px solid #E2E8F0 !important;
-  box-shadow: 0 2px 12px rgba(15,23,42,.06) !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  background: rgba(4, 28, 24, 0.72) !important;
   backdrop-filter: blur(14px) !important;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2) !important;
+  box-shadow: none !important;
+  z-index: 60 !important;
 }
-body:has(.vaicar-home) .vaicar-navbar > div:first-child a:not(.bg-blue-600),
-body:has(.vaicar-home) .vaicar-navbar > div:first-child button:not(.bg-blue-600) {
-  color: #334155 !important;
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a,
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a span {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7) !important;
 }
-body:has(.vaicar-home) .vaicar-navbar > div:first-child a span,
-body:has(.vaicar-home) .vaicar-navbar > div:first-child a div > span:first-child {
-  color: #111827 !important;
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a:hover,
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a:hover span {
+  color: #6ee7b7 !important;
 }
-body:has(.vaicar-home) .vaicar-navbar > div:first-child a div > span:nth-child(2) {
-  color: #155DFC !important;
-}
-body:has(.vaicar-home) .vaicar-navbar a.bg-blue-600,
-body:has(.vaicar-home) .vaicar-navbar a.bg-blue-600 * {
-  color: #FFFFFF !important;
+body:has(.vaicar-home) .vaicar-navbar .vaicar-desktop-nav a.is-reference-active {
+  color: #ffffff !important;
+  border-bottom: 2px solid #10b981 !important;
 }
 body:has(.vaicar-home) .vaicar-navbar .vaicar-mobile-drawer {
   color: #111827 !important;
@@ -4217,30 +4219,65 @@ body:has(.vaicar-home) .vaicar-reference-stage {
   }
 }
 
-/* Official VaiCar logo — circular image crop inside a separate round frame */
+/* Official VaiCar logo — circular emblem with exact 1:1 proportion and zero distortion */
 .vaicar-navbar .vaicar-brand-logo {
-  display:block !important;
-  width:76px !important;
-  height:76px !important;
-  max-width:76px !important;
-  aspect-ratio:1 / 1 !important;
-  box-sizing:border-box !important;
-  object-fit:cover !important;
-  object-position:center !important;
-  padding:0 !important;
-  border:3px solid rgba(255,255,255,.98) !important;
-  border-radius:50% !important;
-  background:transparent !important;
-  box-shadow:0 4px 16px rgba(0,0,0,.24), 0 0 0 3px rgba(16,185,129,.42) !important;
-  overflow:hidden !important;
-  filter:none !important;
+  display: block !important;
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px !important;
+  min-height: 50px !important;
+  max-width: 50px !important;
+  max-height: 50px !important;
+  aspect-ratio: 1 / 1 !important;
+  box-sizing: border-box !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  padding: 0 !important;
+  border: 2px solid rgba(16, 185, 129, 0.9) !important;
+  border-radius: 9999px !important;
+  background: #090d16 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.15) !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
 }
-@media (max-width:767px) {
+@media (max-width: 767px) {
   .vaicar-navbar .vaicar-brand-logo {
-    width:58px !important;
-    height:58px !important;
-    max-width:58px !important;
-    padding:0 !important;
-    border-width:2px !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    max-width: 42px !important;
+    max-height: 42px !important;
+    border-width: 2px !important;
   }
 }
+
+/* Nav Menu Text: Must be crisp white (#ffffff) with high contrast across all views */
+.vaicar-navbar .vaicar-desktop-nav a,
+.vaicar-navbar .vaicar-desktop-nav a span {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important;
+  transition: color 0.15s ease-in-out !important;
+}
+.vaicar-navbar .vaicar-desktop-nav a:hover,
+.vaicar-navbar .vaicar-desktop-nav a:hover span {
+  color: #6ee7b7 !important; /* emerald-300 */
+}
+.vaicar-navbar .vaicar-desktop-nav a.is-reference-active {
+  color: #ffffff !important;
+  border-bottom: 2px solid #10b981 !important;
+}
+
+/* Global Navbar Surface: Dark Tropical Emerald with high contrast across all pages */
+.vaicar-navbar {
+  background: rgba(4, 28, 24, 0.96) !important;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.25) !important;
+}
+body:has(.vaicar-home) .vaicar-navbar {
+  background: rgba(5, 48, 43, 0.56) !important;
+  backdrop-filter: blur(12px) !important;
+  border-bottom: none !important;
+}
+

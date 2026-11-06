@@ -906,7 +906,7 @@ export const DriverDashboardPage: React.FC = () => {
     }
   };
 
-  if (!user) {
+  if (!user && !profile && !authDriver) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-16">
         <div className="max-w-3xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl text-center space-y-7">
