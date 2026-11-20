@@ -47,9 +47,15 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (isPagesDev
   ? 'https://vaicar.app'
   : '');
 
+export function resolveApiUrl(endpoint: string): string {
+  const apiPath = endpoint.startsWith('/api/')
+    ? endpoint
+    : `/api/v1${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  return API_BASE_URL ? `${API_BASE_URL.replace(/\/$/, '')}${apiPath}` : apiPath;
+}
+
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const apiPath = endpoint.startsWith('/api/') ? endpoint : `/api/v1${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
-  const url = API_BASE_URL ? `${API_BASE_URL.replace(/\/$/, '')}${apiPath}` : apiPath;
+  const url = resolveApiUrl(endpoint);
   const token = getAuthToken();
 
   const headers: Record<string, string> = {

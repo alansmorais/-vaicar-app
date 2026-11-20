@@ -48,6 +48,26 @@ export interface RequestRideInput {
   applyReferralCredit?: boolean;
 }
 
+export interface DriverLiveLocationSnapshot {
+  lat: number;
+  lng: number;
+  heading?: number | null;
+  speed?: number | null;
+  accuracy?: number | null;
+  updatedAt: string;
+  distanceKm?: number;
+  etaMinutes?: number;
+  isStale?: boolean;
+  secondsAgo?: number;
+}
+
+export interface RideDriverLocationResponse {
+  hasLiveLocation: boolean;
+  status: Ride['status'];
+  arrivedAt?: string;
+  driverLocation?: DriverLiveLocationSnapshot | null;
+}
+
 export const ridesApi = {
   estimate: (input: EstimateRideInput) =>
     apiFetch<EstimateRideResult>('/rides/estimate', {
@@ -100,6 +120,20 @@ export const ridesApi = {
 
   getById: (rideId: string) =>
     apiFetch<Ride>(`/rides/${rideId}`),
+
+  getDriverLocation: (rideId: string, signal?: AbortSignal) =>
+    apiFetch<RideDriverLocationResponse>(`/rides/${rideId}/driver-location`, {
+      signal,
+    }),
+
+  updateDriverLocation: (
+    rideId: string,
+    payload: { lat: number; lng: number; heading?: number; speed?: number; accuracy?: number }
+  ) =>
+    apiFetch<{ driverLocation: DriverLiveLocationSnapshot }>(`/rides/${rideId}/driver-location`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 
   rate: (rideId: string, rating: number, feedback?: string) =>
     apiFetch<Ride>(`/rides/${rideId}/rate`, {

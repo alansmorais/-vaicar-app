@@ -4,10 +4,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { WaitingTimer } from '../../components/WaitingTimer.js';
 import { ReceiptModal } from '../../components/ReceiptModal.js';
-import { MapDisplay } from '../../components/MapDisplay.js';
+import { MapDisplay, MapDriverLocation, MapRouteInfo } from '../../components/MapDisplay.js';
 import { driversApi } from '../../api/drivers.js';
 import { ridesApi } from '../../api/rides.js';
-import { getAuthToken } from '../../api/client.js';
+import { getAuthToken, resolveApiUrl } from '../../api/client.js';
+import { useGeolocation } from '../../hooks/useGeolocation.js';
+import {
+  formatTelemetryAge,
+  isGpsFresh,
+  isValidCoordinate,
+  shouldTransmitDriverLocation,
+} from '../../utils/geoNavigation.js';
 import { storageApi } from '../../api/storage.js';
 import { processDocumentOrImageFile } from '../../utils/imageUtils.js';
 import { zones } from '../../../../shared/src/tokens.js';
@@ -149,11 +156,15 @@ export const DriverDashboardPage: React.FC = () => {
   const [rideHistory, setRideHistory] = useState<Ride[]>([]);
   const [receiptToShow, setReceiptToShow] = useState<Receipt | null>(null);
 
-  // Real GPS State
-  const [driverGps, setDriverGps] = useState<{ lat: number; lng: number } | null>(null);
-  const [gpsError, setGpsError] = useState<string | null>(null);
+  // Real GPS State & Live Route Telemetry
+  const [driverLiveRouteInfo, setDriverLiveRouteInfo] = useState<MapRouteInfo | null>(null);
   // Active route map view mode: 'to_passenger' (navigating to pickup) or 'full_trip' (origin -> destination)
   const [driverRouteMode, setDriverRouteMode] = useState<'to_passenger' | 'full_trip'>('to_passenger');
+  const activeRideRef = useRef<Ride | null>(null);
+  activeRideRef.current = activeRide;
+  const isOnlineRef = useRef<boolean>(isOnline);
+  isOnlineRef.current = isOnline;
+  const lastTransmittedLocationRef = useRef<{ lat: number; lng: number; sentAtMs: number } | null>(null);
 
   // Cockpit Drawer State (Secondary Menu ☰)
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
@@ -274,9 +285,9 @@ export const DriverDashboardPage: React.FC = () => {
     driversApi.getRides().then(setRideHistory).catch(console.error);
   }, [loadActiveRide]);
 
-  // Active ride state sync interval
+  // Active ride state sync interval (stable dependency on id + status prevents interval churn)
   useEffect(() => {
-    if (!activeRide) return;
+    if (!activeRide?.id) return;
 
     const interval = setInterval(async () => {
       try {
@@ -299,7 +310,7 @@ export const DriverDashboardPage: React.FC = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [activeRide]);
+  }, [activeRide?.id, activeRide?.status]);
 
   // Stream available rides and active ride state when online
   useEffect(() => {
@@ -321,7 +332,7 @@ export const DriverDashboardPage: React.FC = () => {
           return;
         }
         // If active ride was cancelled elsewhere, return driver to search cockpit
-        if (activeRide && activeRide.status.startsWith('CANCELLED')) {
+        if (activeRideRef.current && activeRideRef.current.status.startsWith('CANCELLED')) {
           setActiveRide(null);
         }
         if (offer?.rideId) {
@@ -348,7 +359,8 @@ export const DriverDashboardPage: React.FC = () => {
     if (typeof window === 'undefined') return;
 
     const token = getAuthToken() || '';
-    const sseUrl = `/api/v1/live/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    const baseStreamUrl = resolveApiUrl('/live/stream');
+    const sseUrl = `${baseStreamUrl}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
     let es: EventSource | null = null;
     try {
@@ -360,15 +372,16 @@ export const DriverDashboardPage: React.FC = () => {
           const rideData = payload.data || payload;
           if (!rideData) return;
 
+          const currentActive = activeRideRef.current;
           if (rideData.status && typeof rideData.status === 'string' && rideData.status.startsWith('CANCELLED')) {
-            if (activeRide && activeRide.id === rideData.id) {
+            if (currentActive && currentActive.id === rideData.id) {
               setActiveRide(null);
             }
             setAvailableRides((prev) => prev.filter((r) => r.id !== rideData.id));
           } else if (payload.type === 'RIDE_CREATED' || payload.type === 'OFFER_CREATED') {
             // The authenticated pending-offer poll is authoritative; never populate
             // the alert from the legacy broadcast ride pool.
-          } else if (activeRide && activeRide.id === rideData.id) {
+          } else if (currentActive && currentActive.id === rideData.id) {
             setActiveRide(rideData);
           }
         } catch (err) {
@@ -387,7 +400,7 @@ export const DriverDashboardPage: React.FC = () => {
     return () => {
       if (es) es.close();
     };
-  }, [isOnline, activeRide?.id]);
+  }, [isOnline]);
 
   // Find current incoming ride alert (first available ride not dismissed)
   const incomingRide = useMemo(() => {
@@ -423,103 +436,73 @@ export const DriverDashboardPage: React.FC = () => {
     return () => clearInterval(timer);
   }, [incomingRide?.id]);
 
-  // Request Driver GPS on mount (and on-demand)
-  const requestDriverGps = useCallback(() => {
-    if (!navigator.geolocation) {
-      setGpsError('Seu dispositivo ou navegador não suporta geolocalização.');
-      return;
-    }
+  // Smart throttled GPS transmission to backend (driver profile + active ride telemetry + SSE broadcast)
+  const transmitDriverTelemetry = useCallback(
+    (sample: { lat: number; lng: number; heading?: number | null; speed?: number | null; accuracy?: number | null }, force = false) => {
+      if (!isOnlineRef.current && !activeRideRef.current) return;
+      if (!isValidCoordinate(sample.lat, sample.lng)) return;
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const heading = pos.coords.heading || 0;
-        setDriverGps({ lat, lng });
-        setGpsError(null);
-        if (isOnline) {
-          driversApi.updateLocation(lat, lng, heading).catch(console.error);
-        }
-      },
-      (err) => {
-        console.warn('Driver GPS prompt error:', err);
-        if (err.code === 1) {
-          setGpsError('Permissão de GPS necessária. Clique em "Ativar GPS" para permitir que o app mostre sua localização exata.');
-        } else if (err.code === 2) {
-          setGpsError('Sinal de GPS indisponível no dispositivo.');
-        } else if (err.code === 3) {
-          setGpsError('Tempo esgotado ao buscar localização GPS.');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
-    );
-  }, [isOnline]);
-
-  // Initialize driverGps from driver.currentLocation if available
-  useEffect(() => {
-    if (driver?.currentLocation?.lat && driver?.currentLocation?.lng) {
-      setDriverGps((curr) => curr || {
-        lat: driver.currentLocation!.lat,
-        lng: driver.currentLocation!.lng,
-      });
-    }
-  }, [driver?.currentLocation]);
-
-  // Request driver GPS on initial mount so browser prompts for permission right away
-  useEffect(() => {
-    requestDriverGps();
-  }, [requestDriverGps]);
-
-  // Real device GPS geolocation while online OR during an active ride (continuous tracking)
-  useEffect(() => {
-    if (!isOnline && !activeRide) return;
-
-    if (!navigator.geolocation) {
-      setGpsError('Seu dispositivo ou navegador não suporta geolocalização.');
-      return;
-    }
-
-    const reportLocation = (pos: GeolocationPosition) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      const heading = pos.coords.heading || 0;
-      setDriverGps({ lat, lng });
-      setGpsError(null);
-      driversApi.updateLocation(lat, lng, heading).catch(console.error);
-    };
-
-    const handleGpsError = (err: GeolocationPositionError) => {
-      console.warn('Geolocation notice:', err.message);
-      if (err.code === 1) {
-        setGpsError('Permissão de GPS negada. Ative a localização para que os passageiros vejam sua posição exata no mapa.');
+      const nowMs = Date.now();
+      if (!force && !shouldTransmitDriverLocation(lastTransmittedLocationRef.current, sample, nowMs)) {
+        return;
       }
-    };
 
-    navigator.geolocation.getCurrentPosition(reportLocation, handleGpsError, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 5000,
-    });
+      lastTransmittedLocationRef.current = { lat: sample.lat, lng: sample.lng, sentAtMs: nowMs };
 
-    const watchId = navigator.geolocation.watchPosition(reportLocation, handleGpsError, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 5000,
-    });
+      const heading = typeof sample.heading === 'number' && Number.isFinite(sample.heading) ? sample.heading : 0;
+      const speed = typeof sample.speed === 'number' && Number.isFinite(sample.speed) ? sample.speed : undefined;
+      const accuracy = typeof sample.accuracy === 'number' && Number.isFinite(sample.accuracy) ? sample.accuracy : undefined;
 
-    const periodicSync = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(reportLocation, () => {}, {
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 10000,
-      });
-    }, 10000);
+      driversApi.updateLocation(sample.lat, sample.lng, heading, speed, accuracy).catch(() => {});
 
-    return () => {
-      navigator.geolocation.clearWatch(watchId);
-      clearInterval(periodicSync);
-    };
-  }, [isOnline, activeRide?.id]);
+      const currentRide = activeRideRef.current;
+      if (
+        currentRide?.id &&
+        ['ACCEPTED', 'DRIVER_ARRIVING', 'ARRIVED', 'IN_PROGRESS'].includes(currentRide.status)
+      ) {
+        ridesApi
+          .updateDriverLocation(currentRide.id, {
+            lat: sample.lat,
+            lng: sample.lng,
+            heading,
+            speed,
+            accuracy,
+          })
+          .catch(() => {});
+      }
+    },
+    []
+  );
+
+  // Continuous real GPS tracking via useGeolocation (handles permissions, high accuracy, jitter filter, signal loss & background recovery)
+  const driverGeo = useGeolocation({
+    enabled: true,
+    watch: isOnline || Boolean(activeRide && !activeRide.status.startsWith('CANCELLED') && activeRide.status !== 'COMPLETED'),
+    enableHighAccuracy: true,
+    timeoutMs: 12_000,
+    staleThresholdMs: 45_000,
+    onPosition: (sample) => {
+      transmitDriverTelemetry(sample, false);
+    },
+  });
+
+  const driverGps = driverGeo.position;
+  const gpsError = driverGeo.error;
+
+  // Request Driver GPS on-demand (e.g. "Ativar GPS", "Recalibrar GPS", accepting a ride, or going online)
+  const requestDriverGps = useCallback(async () => {
+    const sample = await driverGeo.requestLocation();
+    if (sample) {
+      transmitDriverTelemetry(sample, true);
+    }
+  }, [driverGeo.requestLocation, transmitDriverTelemetry]);
+
+  // Force an immediate telemetry sync when transitioning online or starting/accepting a ride (if we already have a fresh fix)
+  useEffect(() => {
+    if ((isOnline || activeRide?.id) && driverGps && isGpsFresh(driverGps.updatedAt)) {
+      transmitDriverTelemetry(driverGps, true);
+    }
+  }, [isOnline, activeRide?.id, activeRide?.status, driverGps, transmitDriverTelemetry]);
 
   // 4-Minute Arrival Tolerance Countdown Effect
   useEffect(() => {
@@ -545,24 +528,52 @@ export const DriverDashboardPage: React.FC = () => {
   const arrivedSecs = arrivedSecondsRemaining % 60;
   const formattedArrivedTime = `${String(arrivedMinutes).padStart(2, '0')}:${String(arrivedSecs).padStart(2, '0')}`;
 
-  const effectiveDriverLocation = useMemo(() => {
-    return driverGps || (
-      driver?.currentLocation?.lat && driver?.currentLocation?.lng
-        ? { lat: driver.currentLocation.lat, lng: driver.currentLocation.lng }
-        : null
-    );
-  }, [driverGps, driver?.currentLocation]);
+  // Effective real driver GPS location:
+  // Uses live device GPS, or only a fresh (<= 60s) server-saved GPS fix. NEVER fabricates a city-center position.
+  const effectiveDriverLocation = useMemo<MapDriverLocation | null>(() => {
+    if (driverGps && isValidCoordinate(driverGps.lat, driverGps.lng)) {
+      return {
+        lat: driverGps.lat,
+        lng: driverGps.lng,
+        heading: driverGps.heading,
+        accuracy: driverGps.accuracy,
+        updatedAt: driverGps.updatedAt,
+        isStale: driverGeo.isStale,
+      };
+    }
+    if (
+      driver?.currentLocation &&
+      isValidCoordinate(driver.currentLocation.lat, driver.currentLocation.lng) &&
+      isGpsFresh(driver.currentLocation.updatedAt)
+    ) {
+      return {
+        lat: driver.currentLocation.lat,
+        lng: driver.currentLocation.lng,
+        heading: driver.currentLocation.heading ?? null,
+        accuracy: driver.currentLocation.accuracy ?? null,
+        updatedAt: driver.currentLocation.updatedAt,
+        isStale: false,
+      };
+    }
+    return null;
+  }, [driverGps, driverGeo.isStale, driver?.currentLocation]);
 
   const distToPickupKm = useMemo(() => {
+    if (activeRide?.status === 'DRIVER_ARRIVING' && driverRouteMode === 'to_passenger' && driverLiveRouteInfo) {
+      return driverLiveRouteInfo.distanceKm;
+    }
     const target = incomingRide?.origin || (activeRide?.status === 'DRIVER_ARRIVING' ? activeRide.origin : null);
     if (!target || !effectiveDriverLocation) return null;
     return calculateDistanceKm(effectiveDriverLocation.lat, effectiveDriverLocation.lng, target.lat, target.lng);
-  }, [incomingRide?.origin, activeRide?.status, activeRide?.origin, effectiveDriverLocation]);
+  }, [incomingRide?.origin, activeRide?.status, activeRide?.origin, effectiveDriverLocation, driverRouteMode, driverLiveRouteInfo]);
 
   const etaToPickupMin = useMemo(() => {
-    if (distToPickupKm === null) return 5;
+    if (activeRide?.status === 'DRIVER_ARRIVING' && driverRouteMode === 'to_passenger' && driverLiveRouteInfo) {
+      return driverLiveRouteInfo.durationMinutes;
+    }
+    if (distToPickupKm === null) return null;
     return estimateDrivingMinutes(distToPickupKm);
-  }, [distToPickupKm]);
+  }, [distToPickupKm, activeRide?.status, driverRouteMode, driverLiveRouteInfo]);
 
   const pendingPayments = useMemo(() => {
     return rideHistory.filter(
@@ -606,6 +617,7 @@ export const DriverDashboardPage: React.FC = () => {
       setActiveRide(accepted);
       setAvailableRides([]);
       setDriverRouteMode('to_passenger');
+      setDriverLiveRouteInfo(null);
       requestDriverGps();
     } catch (err: any) {
       setError(err.message || 'Não foi possível aceitar a corrida.');
@@ -645,6 +657,8 @@ export const DriverDashboardPage: React.FC = () => {
     try {
       const updated = await ridesApi.start(activeRide.id);
       setActiveRide(updated);
+      setDriverLiveRouteInfo(null);
+      requestDriverGps();
     } catch (err: any) {
       setError(err.message || 'Falha ao iniciar viagem.');
     } finally {
@@ -1009,22 +1023,28 @@ export const DriverDashboardPage: React.FC = () => {
             destination={incomingRide.destination}
             driverLocation={effectiveDriverLocation}
             mode="planning"
+            viewerRole="driver"
             pickupLabel={incomingRide.serviceType === 'delivery' ? `Coleta: ${incomingRide.passengerName}` : `Embarque: ${incomingRide.passengerName}`}
             destinationLabel={incomingRide.serviceType === 'delivery' ? `Entrega: ${incomingRide.deliveryDetails?.recipientName || 'Destinatário'}` : 'Destino da Corrida'}
             draggable={false}
             showHud={false}
+            onLocateGpsRequest={requestDriverGps}
             height="100%"
             className="h-full w-full rounded-none border-0"
           />
         ) : activeRide?.status === 'IN_PROGRESS' ? (
           <MapDisplay
-            pickup={effectiveDriverLocation ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização' } : activeRide.origin}
+            pickup={activeRide.origin}
             destination={activeRide.destination}
+            driverLocation={effectiveDriverLocation}
             mode="driver_to_destination"
-            pickupLabel={activeRide.serviceType === 'delivery' ? 'Em Trânsito' : 'Você + Passageiro'}
+            viewerRole="driver"
+            pickupLabel={activeRide.serviceType === 'delivery' ? 'Coleta' : 'Embarque'}
             destinationLabel={activeRide.serviceType === 'delivery' ? `Entrega: ${activeRide.deliveryDetails?.recipientName || 'Destinatário'}` : 'Destino Final'}
             draggable={false}
             showHud={false}
+            onRouteInfoChange={setDriverLiveRouteInfo}
+            onLocateGpsRequest={requestDriverGps}
             height="100%"
             className="h-full w-full rounded-none border-0"
           />
@@ -1033,35 +1053,44 @@ export const DriverDashboardPage: React.FC = () => {
             <MapDisplay
               pickup={activeRide.origin}
               destination={activeRide.destination}
+              driverLocation={effectiveDriverLocation}
               mode="planning"
+              viewerRole="driver"
               pickupLabel={activeRide.serviceType === 'delivery' ? `Coleta: ${activeRide.passengerName}` : `Embarque: ${activeRide.passengerName}`}
               destinationLabel={activeRide.serviceType === 'delivery' ? `Entrega: ${activeRide.deliveryDetails?.recipientName || 'Destinatário'}` : 'Destino Final'}
               draggable={false}
               showHud={false}
+              onLocateGpsRequest={requestDriverGps}
               height="100%"
               className="h-full w-full rounded-none border-0"
             />
           ) : (
             <MapDisplay
-              pickup={effectiveDriverLocation ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização' } : activeRide.origin}
-              destination={activeRide.origin}
+              pickup={activeRide.origin}
+              destination={activeRide.destination}
+              driverLocation={effectiveDriverLocation}
               mode="driver_to_pickup"
-              pickupLabel="Você (Sua Localização)"
-              destinationLabel={activeRide.serviceType === 'delivery' ? `Coleta: ${activeRide.passengerName}` : `Passageiro: ${activeRide.passengerName}`}
+              viewerRole="driver"
+              pickupLabel={activeRide.serviceType === 'delivery' ? `Coleta: ${activeRide.passengerName}` : `Embarque: ${activeRide.passengerName}`}
+              destinationLabel={activeRide.serviceType === 'delivery' ? `Entrega: ${activeRide.deliveryDetails?.recipientName || 'Destinatário'}` : 'Destino Final'}
               draggable={false}
               showHud={false}
+              onRouteInfoChange={setDriverLiveRouteInfo}
+              onLocateGpsRequest={requestDriverGps}
               height="100%"
               className="h-full w-full rounded-none border-0"
             />
           )
         ) : (
           <MapDisplay
-            pickup={effectiveDriverLocation ? { lat: effectiveDriverLocation.lat, lng: effectiveDriverLocation.lng, address: 'Sua Localização' } : { lat: -23.8055, lng: -45.4011, address: 'Centro de São Sebastião' }}
+            pickup={null}
+            destination={null}
             driverLocation={effectiveDriverLocation}
             mode="planning"
-            pickupLabel="Você (Sua Localização)"
+            viewerRole="driver"
             draggable={false}
             showHud={false}
+            onLocateGpsRequest={requestDriverGps}
             height="100%"
             className="h-full w-full rounded-none border-0"
           />
@@ -1243,7 +1272,9 @@ export const DriverDashboardPage: React.FC = () => {
                 <div className="flex items-center gap-2 font-bold text-white">
                   <MapPin className={`w-4 h-4 shrink-0 ${incomingRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`} />
                   <span>
-                    {distToPickupKm !== null ? `${distToPickupKm} km • ~${etaToPickupMin} min` : 'Poucos minutos'} até {incomingRide.serviceType === 'delivery' ? 'o local de coleta' : 'o passageiro'}
+                    {distToPickupKm !== null && etaToPickupMin !== null
+                      ? `${distToPickupKm} km • ~${etaToPickupMin} min`
+                      : 'Distância indisponível (ative o GPS)'} até {incomingRide.serviceType === 'delivery' ? 'o local de coleta' : 'o passageiro'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300 pt-1.5 border-t border-slate-800/80 font-medium">
@@ -1304,7 +1335,12 @@ export const DriverDashboardPage: React.FC = () => {
                     </span>
                     <span className={`text-xs font-bold flex items-center gap-1 ${activeRide.serviceType === 'delivery' ? 'text-cyan-400' : 'text-emerald-400'}`}>
                       <MapPin className="w-3.5 h-3.5" />
-                      {distToPickupKm !== null ? `${distToPickupKm} km • ~${etaToPickupMin} min` : 'A caminho'} até {activeRide.serviceType === 'delivery' ? 'a coleta' : 'o embarque'}
+                      {distToPickupKm !== null && etaToPickupMin !== null
+                        ? `${distToPickupKm} km • ~${etaToPickupMin} min`
+                        : 'Aguardando GPS'} até {activeRide.serviceType === 'delivery' ? 'a coleta' : 'o embarque'}
+                    </span>
+                    <span className="text-[11px] text-slate-400 block truncate max-w-[210px] mt-0.5">
+                      {activeRide.origin.address}
                     </span>
                   </div>
                 </div>
@@ -1522,9 +1558,13 @@ export const DriverDashboardPage: React.FC = () => {
                 <div className="text-right">
                   <span className="text-sm font-extrabold text-white flex items-center justify-end gap-1">
                     <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                    ~{activeRide.durationMinutes || 12} min • {activeRide.distanceKm || 6.4} km
+                    {driverLiveRouteInfo
+                      ? `~${driverLiveRouteInfo.durationMinutes} min • ${driverLiveRouteInfo.distanceKm} km`
+                      : `~${activeRide.durationMinutes || 12} min • ${activeRide.distanceKm || 6.4} km`}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-medium">💵 {activeRide.paymentMethod} direto</span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {driverLiveRouteInfo?.recalculated ? '🔄 Rota recalculada • ' : ''}💵 {activeRide.paymentMethod} direto
+                  </span>
                 </div>
               </div>
 
@@ -2193,9 +2233,16 @@ export const DriverDashboardPage: React.FC = () => {
                     <span className="font-bold text-white block">Localização & GPS</span>
                     <p className="text-slate-400 text-[11px]">
                       {driverGps
-                        ? `GPS ativo e sincronizado: (${driverGps.lat.toFixed(4)}, ${driverGps.lng.toFixed(4)})`
-                        : 'GPS do dispositivo aguardando permissão.'}
+                        ? `GPS ativo (${driverGps.lat.toFixed(4)}, ${driverGps.lng.toFixed(4)})${
+                            driverGps.accuracy ? ` • precisão ±${driverGps.accuracy}m` : ''
+                          } • atualizado ${formatTelemetryAge(driverGps.updatedAt)}`
+                        : 'GPS do dispositivo aguardando permissão ou sinal.'}
                     </p>
+                    {driverGeo.isLowAccuracy && (
+                      <p className="text-amber-400 text-[11px] font-semibold">
+                        ⚠️ Precisão baixa detectada. Mova-se para área aberta ou recalibre o GPS.
+                      </p>
+                    )}
                     <button
                       type="button"
                       onClick={requestDriverGps}

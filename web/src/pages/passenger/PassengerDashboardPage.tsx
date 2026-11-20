@@ -1,16 +1,24 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
-import { MapDisplay } from '../../components/MapDisplay.js';
+import { MapDisplay, MapDriverLocation, MapRouteInfo } from '../../components/MapDisplay.js';
 import { PlaceAutocompleteInput } from '../../components/PlaceAutocompleteInput.js';
 import { WaitingTimer } from '../../components/WaitingTimer.js';
 import { ReceiptModal } from '../../components/ReceiptModal.js';
-import { ridesApi, EstimateRideResult } from '../../api/rides.js';
+import { ridesApi, EstimateRideResult, DriverLiveLocationSnapshot } from '../../api/rides.js';
 import { mapsApi } from '../../api/maps.js';
 import { driversApi, PublicDriverMarker } from '../../api/drivers.js';
 import { passengersApi } from '../../api/passengers.js';
 import { storageApi } from '../../api/storage.js';
+import { getAuthToken, resolveApiUrl } from '../../api/client.js';
+import { useGeolocation } from '../../hooks/useGeolocation.js';
+import {
+  formatTelemetryAge,
+  isGpsFresh,
+  isValidCoordinate,
+  validateOperationalPoint,
+} from '../../utils/geoNavigation.js';
 import { processImageFile } from '../../utils/imageUtils.js';
 import { Ride, RideStatus, PaymentMethod, Receipt, ServiceType, PassengerReferralSummary } from '../../../../shared/src/types.js';
 import {
@@ -52,6 +60,7 @@ import { ReportModal } from '../../components/ReportModal.js';
 export const PassengerDashboardPage: React.FC = () => {
   const { user, profile, passenger, logout, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   // Locations state: clean initial state with zero preset/hardcoded coordinates
@@ -59,63 +68,114 @@ export const PassengerDashboardPage: React.FC = () => {
   const [pickupInput, setPickupInput] = useState('');
   const [destination, setDestination] = useState<{ address: string; lat: number; lng: number } | null>(null);
   const [destinationInput, setDestinationInput] = useState('');
+  const [pickupAreaError, setPickupAreaError] = useState<string | null>(null);
+  const [destinationAreaError, setDestinationAreaError] = useState<string | null>(null);
+  const [liveRouteInfo, setLiveRouteInfo] = useState<MapRouteInfo | null>(null);
+  const [assignedDriverSnapshot, setAssignedDriverSnapshot] = useState<DriverLiveLocationSnapshot | null>(null);
 
   // State-change notification tracking (prevents duplicate notifications across polling cycles)
   const lastNotifiedStatusRef = useRef<string | null>(null);
+  const hasAutoFilledGpsRef = useRef<boolean>(false);
+  const manualPickupEditedRef = useRef<boolean>(false);
 
   // Real device GPS states
-  const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [hasUserGps, setHasUserGps] = useState(false);
 
-  // Request passenger GPS location and reverse geocode
-  const requestPassengerGps = useCallback(async () => {
-    if (!navigator.geolocation) {
-      setGpsError('Seu dispositivo ou navegador não suporta geolocalização.');
+  // Active ride state (declared early so geolocation watch can react to active trip state)
+  const [activeRide, setActiveRide] = useState<Ride | null>(null);
+
+  const passengerGeo = useGeolocation({
+    enabled: true,
+    watch: Boolean(activeRide),
+    enableHighAccuracy: true,
+    timeoutMs: 12_000,
+    staleThresholdMs: 45_000,
+  });
+
+  const gpsLoading = passengerGeo.isLocating;
+
+  // Apply validated initial pickup/destination if navigated from HomePage search card
+  useEffect(() => {
+    const state = location.state as {
+      initialPickup?: { address: string; lat: number; lng: number } | null;
+      initialDestination?: { address: string; lat: number; lng: number } | null;
+    } | null;
+
+    if (!state) return;
+
+    if (state.initialPickup && validateOperationalPoint(state.initialPickup.lat, state.initialPickup.lng).valid) {
+      setPickup(state.initialPickup);
+      setPickupInput(state.initialPickup.address);
+      manualPickupEditedRef.current = true;
+    }
+    if (
+      state.initialDestination &&
+      validateOperationalPoint(state.initialDestination.lat, state.initialDestination.lng).valid
+    ) {
+      setDestination(state.initialDestination);
+      setDestinationInput(state.initialDestination.address);
+    }
+  }, [location.state]);
+
+  const applyGpsToPickup = useCallback(async (lat: number, lng: number, isManualRequest: boolean) => {
+    setHasUserGps(true);
+    const validation = validateOperationalPoint(lat, lng, 'Sua localização GPS atual');
+    if (!validation.valid) {
+      if (isManualRequest) {
+        setGpsError(
+          validation.message ||
+            'Sua localização atual está fora de São Sebastião. Digite um endereço de embarque em São Sebastião.'
+        );
+      }
       return;
     }
 
-    setGpsLoading(true);
     setGpsError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setHasUserGps(true);
-        try {
-          const res = await mapsApi.reverseGeocode(lat, lng);
-          const address = res.address || `Meu Local (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-          setPickup({ lat, lng, address });
-          setPickupInput(address);
-          setGpsError(null);
-        } catch (err) {
-          console.warn('Reverse geocode failed, using coordinates:', err);
-          const fallback = `Meu Local (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-          setPickup({ lat, lng, address: fallback });
-          setPickupInput(fallback);
-        } finally {
-          setGpsLoading(false);
-        }
-      },
-      (err) => {
-        console.warn('Passenger GPS error:', err);
-        setGpsLoading(false);
-        if (err.code === 1) {
-          setGpsError('Permissão de GPS necessária. Clique em "Permitir" para definir seu local de partida exato.');
-        } else if (err.code === 2) {
-          setGpsError('Sinal de GPS indisponível no dispositivo.');
-        } else if (err.code === 3) {
-          setGpsError('Tempo esgotado ao buscar GPS.');
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 5000,
-      }
-    );
+    setPickupAreaError(null);
+    try {
+      const res = await mapsApi.reverseGeocode(lat, lng);
+      const address = res.address || `Meu Local (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      setPickup({ lat, lng, address });
+      setPickupInput(address);
+    } catch {
+      const fallback = `Meu Local (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      setPickup({ lat, lng, address: fallback });
+      setPickupInput(fallback);
+    }
   }, []);
+
+  // Auto-suggest pickup from initial real GPS fix (before ride request, if user hasn't typed pickup yet)
+  useEffect(() => {
+    if (
+      !activeRide &&
+      !pickup &&
+      !manualPickupEditedRef.current &&
+      !hasAutoFilledGpsRef.current &&
+      passengerGeo.position
+    ) {
+      hasAutoFilledGpsRef.current = true;
+      applyGpsToPickup(passengerGeo.position.lat, passengerGeo.position.lng, false);
+    }
+  }, [activeRide, pickup, passengerGeo.position, applyGpsToPickup]);
+
+  // Surface geolocation permission / timeout errors cleanly
+  useEffect(() => {
+    if (passengerGeo.error) {
+      setGpsError(passengerGeo.error);
+    } else if (passengerGeo.position) {
+      setHasUserGps(true);
+    }
+  }, [passengerGeo.error, passengerGeo.position]);
+
+  // Request passenger GPS location on demand and reverse geocode
+  const requestPassengerGps = useCallback(async () => {
+    setGpsError(null);
+    const sample = await passengerGeo.requestLocation();
+    if (!sample) return;
+    manualPickupEditedRef.current = false;
+    await applyGpsToPickup(sample.lat, sample.lng, true);
+  }, [passengerGeo.requestLocation, applyGpsToPickup]);
 
   // Drivers and estimate
   const [onlineDrivers, setOnlineDrivers] = useState<PublicDriverMarker[]>([]);
@@ -131,8 +191,7 @@ export const PassengerDashboardPage: React.FC = () => {
   const [recipientPhone, setRecipientPhone] = useState('');
   const [packageNotes, setPackageNotes] = useState('');
 
-  // Active ride state
-  const [activeRide, setActiveRide] = useState<Ride | null>(null);
+  // Receipt modal state
   const [receiptToShow, setReceiptToShow] = useState<Receipt | null>(null);
 
   // Rating modal state
@@ -244,11 +303,7 @@ export const PassengerDashboardPage: React.FC = () => {
 
     if (!user && !profile && !passenger) {
       setActiveRide(null);
-      setPickup(null);
-      setPickupInput('');
-      setDestination(null);
-      setDestinationInput('');
-      setEstimate(null);
+      setAssignedDriverSnapshot(null);
       return;
     }
 
@@ -278,22 +333,13 @@ export const PassengerDashboardPage: React.FC = () => {
         }
         lastNotifiedStatusRef.current = active.status;
       } else {
-        // If null or terminal state (COMPLETED, CANCELLED_*, etc.), ensure completely empty UI
         setActiveRide(null);
-        setPickup(null);
-        setPickupInput('');
-        setDestination(null);
-        setDestinationInput('');
-        setEstimate(null);
+        setAssignedDriverSnapshot(null);
         lastNotifiedStatusRef.current = null;
       }
     } catch {
       setActiveRide(null);
-      setPickup(null);
-      setPickupInput('');
-      setDestination(null);
-      setDestinationInput('');
-      setEstimate(null);
+      setAssignedDriverSnapshot(null);
       lastNotifiedStatusRef.current = null;
     }
   }, [user, profile, passenger]);
@@ -358,25 +404,78 @@ export const PassengerDashboardPage: React.FC = () => {
     }
   }, []);
 
-  // Polling active ride and driver GPS when ride is active (refreshes every 2.5s)
+  // Polling active ride and authoritative assigned-driver GPS when ride is active (refreshes every 2.5s)
   useEffect(() => {
-    if (!activeRide) return;
+    if (!activeRide) {
+      setAssignedDriverSnapshot(null);
+      return;
+    }
+
+    // Seed driver snapshot from ride document if already present
+    if (
+      activeRide.driverLocation &&
+      isValidCoordinate(activeRide.driverLocation.lat, activeRide.driverLocation.lng)
+    ) {
+      setAssignedDriverSnapshot((prev) => {
+        if (prev?.updatedAt && activeRide.driverLocation?.updatedAt) {
+          if (new Date(prev.updatedAt).getTime() >= new Date(activeRide.driverLocation.updatedAt).getTime()) {
+            return prev;
+          }
+        }
+        return {
+          lat: activeRide.driverLocation!.lat,
+          lng: activeRide.driverLocation!.lng,
+          heading: activeRide.driverLocation!.heading ?? null,
+          speed: activeRide.driverLocation!.speed ?? null,
+          accuracy: activeRide.driverLocation!.accuracy ?? null,
+          updatedAt: activeRide.driverLocation!.updatedAt || new Date().toISOString(),
+        };
+      });
+    }
 
     // Terminal statuses where polling should immediately halt
-    const terminalStatuses = ['CANCELLED_BY_PASSENGER', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_SYSTEM', 'CANCELLED_BY_ADMIN'];
+    const terminalStatuses = [
+      'CANCELLED_BY_PASSENGER',
+      'CANCELLED_BY_DRIVER',
+      'CANCELLED_BY_SYSTEM',
+      'CANCELLED_BY_ADMIN',
+    ];
     if (terminalStatuses.includes(activeRide.status)) {
       return;
     }
 
-    const interval = setInterval(async () => {
+    let cancelled = false;
+
+    const pollActiveState = async () => {
       try {
-        const [updated, drivers] = await Promise.all([
+        const [updated, driverLocRes] = await Promise.all([
           ridesApi.getById(activeRide.id),
-          driversApi.getOnlineDrivers(),
+          ridesApi.getDriverLocation(activeRide.id).catch(() => null),
         ]);
 
+        if (cancelled) return;
+
         setActiveRide(updated);
-        setOnlineDrivers(Array.isArray(drivers) ? drivers : (Array.isArray((drivers as any)?.drivers) ? (drivers as any).drivers : []));
+
+        if (
+          driverLocRes?.hasLiveLocation &&
+          driverLocRes.driverLocation &&
+          isValidCoordinate(driverLocRes.driverLocation.lat, driverLocRes.driverLocation.lng)
+        ) {
+          setAssignedDriverSnapshot(driverLocRes.driverLocation);
+        } else if (
+          updated.driverLocation &&
+          isValidCoordinate(updated.driverLocation.lat, updated.driverLocation.lng)
+        ) {
+          setAssignedDriverSnapshot({
+            lat: updated.driverLocation.lat,
+            lng: updated.driverLocation.lng,
+            heading: updated.driverLocation.heading ?? null,
+            speed: updated.driverLocation.speed ?? null,
+            accuracy: updated.driverLocation.accuracy ?? null,
+            updatedAt: updated.driverLocation.updatedAt || new Date().toISOString(),
+          });
+        }
 
         // State-change notification trigger (fires once per state change, never duplicates on poll)
         if (lastNotifiedStatusRef.current !== updated.status) {
@@ -408,17 +507,24 @@ export const PassengerDashboardPage: React.FC = () => {
       } catch (err) {
         console.error('Ride/driver poll error:', err);
       }
-    }, 2500);
+    };
 
-    return () => clearInterval(interval);
+    pollActiveState();
+    const interval = setInterval(pollActiveState, 2500);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [activeRide?.id, activeRide?.status, activeRide?.paymentStatus, activeRide?.paymentApprovedByDriver, notifyRideStatusChange]);
 
-  // Real-time SSE event listener for immediate ride status updates & instant cancellation broadcast
+  // Real-time SSE event listener for immediate ride status & driver GPS updates
   useEffect(() => {
     if (typeof window === 'undefined' || !activeRide) return;
 
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
-    const sseUrl = `/api/v1/live/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    const token = getAuthToken() || '';
+    const baseStreamUrl = resolveApiUrl('/live/stream');
+    const sseUrl = `${baseStreamUrl}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
     let es: EventSource | null = null;
     try {
@@ -440,8 +546,35 @@ export const PassengerDashboardPage: React.FC = () => {
         }
       };
 
+      const handleDriverLocationEvent = (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          const data = payload.data || payload;
+          if (
+            data &&
+            data.rideId === activeRide.id &&
+            data.driverLocation &&
+            isValidCoordinate(data.driverLocation.lat, data.driverLocation.lng)
+          ) {
+            setAssignedDriverSnapshot({
+              lat: data.driverLocation.lat,
+              lng: data.driverLocation.lng,
+              heading: data.driverLocation.heading ?? null,
+              speed: data.driverLocation.speed ?? null,
+              accuracy: data.driverLocation.accuracy ?? null,
+              updatedAt: data.driverLocation.updatedAt || new Date().toISOString(),
+              isStale: false,
+              secondsAgo: 0,
+            });
+          }
+        } catch (err) {
+          console.debug('[SSE] Failed to parse driver location event:', err);
+        }
+      };
+
       es.addEventListener('RIDE_UPDATED', handleRideEvent);
       es.addEventListener('RIDE_CANCELLED', handleRideEvent);
+      es.addEventListener('DRIVER_LOCATION_UPDATED', handleDriverLocationEvent);
       es.addEventListener('message', handleRideEvent);
     } catch (err) {
       console.warn('[SSE] EventSource init failed:', err);
@@ -454,36 +587,71 @@ export const PassengerDashboardPage: React.FC = () => {
     };
   }, [activeRide?.id, notifyRideStatusChange]);
 
-  // Assigned driver resolution and real-time GPS telemetry validation
-  const assignedDriver = useMemo(() => {
+  // Authoritative assigned driver location resolution:
+  // Primary source is GET/SSE /rides/:id/driver-location; fallback to onlineDrivers only if not busy.
+  const assignedDriverFallback = useMemo(() => {
     if (!activeRide?.driverId) return null;
     return onlineDrivers.find((d) => d.uid === activeRide.driverId) || null;
   }, [activeRide?.driverId, onlineDrivers]);
 
-  // Evaluates driver telemetry freshness: fresh if updatedAt is within the last 60 seconds
+  const effectiveAssignedDriverSnapshot = useMemo<DriverLiveLocationSnapshot | null>(() => {
+    if (assignedDriverSnapshot && isValidCoordinate(assignedDriverSnapshot.lat, assignedDriverSnapshot.lng)) {
+      return assignedDriverSnapshot;
+    }
+    if (
+      assignedDriverFallback?.currentLocation &&
+      isValidCoordinate(assignedDriverFallback.currentLocation.lat, assignedDriverFallback.currentLocation.lng)
+    ) {
+      return {
+        lat: assignedDriverFallback.currentLocation.lat,
+        lng: assignedDriverFallback.currentLocation.lng,
+        heading: assignedDriverFallback.currentLocation.heading ?? null,
+        updatedAt: assignedDriverFallback.currentLocation.updatedAt,
+      };
+    }
+    return null;
+  }, [assignedDriverSnapshot, assignedDriverFallback]);
+
+  // Evaluates driver telemetry freshness: fresh if updatedAt is within the last 60 seconds and not marked stale
   const isDriverGpsFresh = useMemo(() => {
-    if (!assignedDriver?.currentLocation?.updatedAt) return false;
-    const updatedTime = new Date(assignedDriver.currentLocation.updatedAt).getTime();
-    if (isNaN(updatedTime)) return false;
-    return (Date.now() - updatedTime) <= 60000;
-  }, [assignedDriver?.currentLocation?.updatedAt]);
+    if (!effectiveAssignedDriverSnapshot?.updatedAt) return false;
+    if (effectiveAssignedDriverSnapshot.isStale) return false;
+    return isGpsFresh(effectiveAssignedDriverSnapshot.updatedAt);
+  }, [effectiveAssignedDriverSnapshot?.updatedAt, effectiveAssignedDriverSnapshot?.isStale]);
 
-  // Live driver position: only supplied when fresh (never shows stale/frozen coordinates as live)
-  const liveDriverLocation = useMemo(() => {
-    if (!assignedDriver?.currentLocation) return null;
-    if (!isDriverGpsFresh) return null;
-    return assignedDriver.currentLocation;
-  }, [assignedDriver?.currentLocation, isDriverGpsFresh]);
+  // Driver location passed to MapDisplay: includes explicit isStale flag so delayed positions are clearly labeled
+  const liveDriverLocation = useMemo<MapDriverLocation | null>(() => {
+    if (!effectiveAssignedDriverSnapshot) return null;
+    return {
+      lat: effectiveAssignedDriverSnapshot.lat,
+      lng: effectiveAssignedDriverSnapshot.lng,
+      heading: effectiveAssignedDriverSnapshot.heading,
+      accuracy: effectiveAssignedDriverSnapshot.accuracy,
+      updatedAt: effectiveAssignedDriverSnapshot.updatedAt,
+      isStale: !isDriverGpsFresh,
+    };
+  }, [effectiveAssignedDriverSnapshot, isDriverGpsFresh]);
 
-  // Dynamic tooltip for assigned driver marker based on real ride status (only approaching states show "a caminho")
+  // Dynamic map navigation mode synchronized with the driver's real state
+  const passengerMapMode = useMemo<'planning' | 'driver_to_pickup' | 'driver_to_destination'>(() => {
+    if (!activeRide) return 'planning';
+    if (activeRide.status === 'IN_PROGRESS') return 'driver_to_destination';
+    if (activeRide.driverId && ['ACCEPTED', 'DRIVER_ARRIVING', 'ARRIVED'].includes(activeRide.status)) {
+      return 'driver_to_pickup';
+    }
+    return 'planning';
+  }, [activeRide]);
+
+  // Dynamic tooltip for assigned driver marker based on real ride status
   const assignedTooltip = useMemo(() => {
     if (!activeRide?.driverId) return undefined;
-    if (activeRide.status === 'DRIVER_ARRIVING') return 'Seu motorista está se aproximando!';
-    if (activeRide.status === 'ACCEPTED') return 'Seu motorista está a caminho!';
-    if (activeRide.status === 'ARRIVED') return 'Motorista no local de embarque!';
-    if (activeRide.status === 'IN_PROGRESS') return 'Viagem em andamento';
+    if (!isDriverGpsFresh) return 'Última posição conhecida';
+    if (activeRide.status === 'DRIVER_ARRIVING') return 'Motorista se aproximando';
+    if (activeRide.status === 'ACCEPTED') return 'Motorista a caminho';
+    if (activeRide.status === 'ARRIVED') return 'Motorista no embarque';
+    if (activeRide.status === 'IN_PROGRESS') return 'Em viagem';
     return undefined;
-  }, [activeRide?.driverId, activeRide?.status]);
+  }, [activeRide?.driverId, activeRide?.status, isDriverGpsFresh]);
 
   const handleCheckPaymentStatus = async () => {
     if (!activeRide) return;
@@ -526,46 +694,90 @@ export const PassengerDashboardPage: React.FC = () => {
   }, [pickup, destination, serviceType, useReferralCredit, referralSummary?.referralCreditBalance]);
 
   const handleSelectPickup = useCallback((place: { address: string; lat: number; lng: number }) => {
+    const validation = validateOperationalPoint(place.lat, place.lng, 'O ponto de embarque');
+    if (!validation.valid) {
+      setPickup(null);
+      setPickupAreaError(validation.message || 'Embarque fora da área operacional de São Sebastião.');
+      setError(validation.message || 'Embarque fora da área operacional de São Sebastião.');
+      return;
+    }
+    manualPickupEditedRef.current = true;
+    setPickupAreaError(null);
     setPickup(place);
     setPickupInput(place.address);
     setError(null);
   }, []);
 
   const handlePickupMarkerChange = useCallback((lat: number, lng: number, address?: string) => {
+    const validation = validateOperationalPoint(lat, lng, 'O ponto de embarque');
+    if (!validation.valid) {
+      setPickupAreaError(validation.message || 'Embarque fora da área operacional de São Sebastião.');
+      setError(validation.message || 'Embarque fora da área operacional de São Sebastião.');
+      return;
+    }
+    manualPickupEditedRef.current = true;
     const finalAddress = address || `Ponto ajustado (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    setPickupAreaError(null);
     setPickup({ lat, lng, address: finalAddress });
     setPickupInput(finalAddress);
     setError(null);
   }, []);
 
   const handleSelectDestination = useCallback((place: { address: string; lat: number; lng: number }) => {
+    const validation = validateOperationalPoint(place.lat, place.lng, 'O destino');
+    if (!validation.valid) {
+      setDestination(null);
+      setDestinationAreaError(validation.message || 'Destino fora da área operacional de São Sebastião.');
+      setError(validation.message || 'Destino fora da área operacional de São Sebastião.');
+      return;
+    }
+    setDestinationAreaError(null);
     setDestination(place);
     setDestinationInput(place.address);
     setError(null);
   }, []);
 
   const handleDestinationMarkerChange = useCallback((lat: number, lng: number, address?: string) => {
+    const validation = validateOperationalPoint(lat, lng, 'O destino');
+    if (!validation.valid) {
+      setDestinationAreaError(validation.message || 'Destino fora da área operacional de São Sebastião.');
+      setError(validation.message || 'Destino fora da área operacional de São Sebastião.');
+      return;
+    }
     const finalAddress = address || `Destino no mapa (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    setDestinationAreaError(null);
     setDestination({ lat, lng, address: finalAddress });
     setDestinationInput(finalAddress);
     setError(null);
   }, []);
 
   const handleRequestRide = async () => {
-    if (!pickup) {
+    if (!pickup || !isValidCoordinate(pickup.lat, pickup.lng)) {
       setError(
         serviceType === 'delivery'
-          ? 'Selecione o local de retirada (coleta) da encomenda.'
-          : 'Selecione seu local de partida (embarque).'
+          ? 'Informe e confirme um endereço válido para retirada (coleta) em São Sebastião.'
+          : 'Informe e confirme um endereço válido de embarque em São Sebastião.'
       );
       return;
     }
-    if (!destination) {
+    const pickupCheck = validateOperationalPoint(pickup.lat, pickup.lng, 'O ponto de embarque');
+    if (!pickupCheck.valid) {
+      setPickupAreaError(pickupCheck.message || null);
+      setError(pickupCheck.message || 'O ponto de embarque está fora de São Sebastião.');
+      return;
+    }
+    if (!destination || !isValidCoordinate(destination.lat, destination.lng)) {
       setError(
         serviceType === 'delivery'
-          ? 'Selecione o endereço de entrega da encomenda.'
-          : 'Selecione um destino para a corrida.'
+          ? 'Informe e confirme um endereço válido de entrega em São Sebastião.'
+          : 'Informe e confirme um endereço válido de destino em São Sebastião.'
       );
+      return;
+    }
+    const destCheck = validateOperationalPoint(destination.lat, destination.lng, 'O destino');
+    if (!destCheck.valid) {
+      setDestinationAreaError(destCheck.message || null);
+      setError(destCheck.message || 'O destino informado está fora de São Sebastião.');
       return;
     }
     if (!user && !profile && !passenger) {
@@ -1115,10 +1327,34 @@ export const PassengerDashboardPage: React.FC = () => {
                           Placa: {activeRide.vehicle.plate}
                         </span>
                       )}
-                      {!isDriverGpsFresh && (
+                      {liveRouteInfo && (activeRide.status === 'ACCEPTED' || activeRide.status === 'DRIVER_ARRIVING' || activeRide.status === 'IN_PROGRESS') && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 mt-1 font-bold">
+                          <Navigation className="w-3.5 h-3.5 shrink-0" />
+                          <span>
+                            {activeRide.status === 'IN_PROGRESS'
+                              ? `Faltam ${liveRouteInfo.distanceKm} km (~${liveRouteInfo.durationMinutes} min até o destino)`
+                              : `A ${liveRouteInfo.distanceKm} km (~${liveRouteInfo.durationMinutes} min até o embarque)`}
+                          </span>
+                        </div>
+                      )}
+                      {effectiveAssignedDriverSnapshot ? (
+                        isDriverGpsFresh ? (
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                            <span>GPS ao vivo • atualizado {formatTelemetryAge(effectiveAssignedDriverSnapshot.updatedAt)}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-[11px] text-amber-400 mt-1 font-semibold">
+                            <Clock className="w-3.5 h-3.5 animate-pulse shrink-0" />
+                            <span>
+                              Última posição conhecida ({formatTelemetryAge(effectiveAssignedDriverSnapshot.updatedAt)}) — aguardando atualização do GPS...
+                            </span>
+                          </div>
+                        )
+                      ) : (
                         <div className="flex items-center gap-1.5 text-[11px] text-amber-400 mt-1 font-semibold">
-                          <Clock className="w-3.5 h-3.5 animate-pulse" />
-                          <span>Aguardando sinal de GPS recente do condutor...</span>
+                          <Clock className="w-3.5 h-3.5 animate-pulse shrink-0" />
+                          <span>Aguardando sinal de GPS real do condutor...</span>
                         </div>
                       )}
                     </div>
@@ -1398,22 +1634,34 @@ export const PassengerDashboardPage: React.FC = () => {
 
               {/* Pickup PlaceAutocompleteInput */}
               <PlaceAutocompleteInput
-                label={serviceType === 'delivery' ? 'De onde você vai enviar a encomenda?' : 'De onde você vai?'}
-                placeholder="Digite seu local de partida, rua ou ponto de referência..."
+                label={serviceType === 'delivery' ? 'De onde você vai enviar a encomenda?' : 'Endereço de embarque'}
+                placeholder="Digite rua, número ou bairro em São Sebastião..."
                 value={pickupInput}
                 onChange={(value) => {
+                  manualPickupEditedRef.current = true;
                   setPickupInput(value);
+                  setPickupAreaError(null);
                   if (pickup?.address !== value) setPickup(null);
+                  setEstimate(null);
+                }}
+                onClear={() => {
+                  manualPickupEditedRef.current = true;
+                  setPickup(null);
+                  setPickupAreaError(null);
                   setEstimate(null);
                 }}
                 onSelectPlace={handleSelectPickup}
                 onUseCurrentLocation={requestPassengerGps}
                 isLocating={gpsLoading}
+                confirmed={Boolean(pickup)}
+                externalError={pickupAreaError}
                 icon="pickup"
                 helperText={
-                  hasUserGps
-                    ? '📍 Localização exata obtida via GPS do dispositivo.'
-                    : 'Digite o endereço completo, use o GPS ou ajuste o pino no mapa.'
+                  passengerGeo.isLowAccuracy && hasUserGps
+                    ? `⚠️ GPS com baixa precisão (~${passengerGeo.position?.accuracy}m). Confirme ou ajuste o pino verde no mapa.`
+                    : hasUserGps && pickup
+                      ? '📍 Localização obtida via GPS real. Você pode editar o texto ou ajustar o pino verde no mapa.'
+                      : 'Digite o endereço completo em São Sebastião, use o GPS ou ajuste o pino verde no mapa.'
                 }
               />
               {!pickupInput.trim() && (
@@ -1424,27 +1672,35 @@ export const PassengerDashboardPage: React.FC = () => {
                     disabled={gpsLoading}
                     className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/50 hover:bg-emerald-900 text-emerald-300 font-semibold transition-colors flex items-center gap-1"
                   >
-                    🎯 Usar Meu GPS
+                    🎯 Usar Meu GPS Atual
                   </button>
                 </div>
               )}
 
               {/* Destination PlaceAutocompleteInput */}
               <PlaceAutocompleteInput
-                label={serviceType === 'delivery' ? 'Para onde você quer entregar?' : 'Para onde você vai?'}
-                placeholder="Digite seu destino, endereço, praia ou bairro..."
+                label={serviceType === 'delivery' ? 'Endereço de entrega' : 'Para onde você vai?'}
+                placeholder="Digite o destino (rua, número, bairro) em São Sebastião..."
                 value={destinationInput}
                 onChange={(value) => {
                   setDestinationInput(value);
+                  setDestinationAreaError(null);
                   if (destination?.address !== value) setDestination(null);
                   setEstimate(null);
                 }}
+                onClear={() => {
+                  setDestination(null);
+                  setDestinationAreaError(null);
+                  setEstimate(null);
+                }}
                 onSelectPlace={handleSelectDestination}
+                confirmed={Boolean(destination)}
+                externalError={destinationAreaError}
                 icon="destination"
                 helperText={
                   serviceType === 'delivery'
-                    ? 'Onde a encomenda deve ser entregue. Você também pode arrastar o pino vermelho ou clicar no mapa.'
-                    : 'Busca aberta para qualquer cidade ou região. Você também pode arrastar o pino vermelho ou clicar no mapa.'
+                    ? 'Atendimento em São Sebastião (Costa Sul, Centro e Costa Norte). Ajuste o pino vermelho se desejar.'
+                    : 'Atendimento em São Sebastião (Costa Sul, Centro e Costa Norte). Você também pode arrastar o pino vermelho ou clicar no mapa.'
                 }
               />
 
@@ -1912,7 +2168,7 @@ export const PassengerDashboardPage: React.FC = () => {
               {/* Request CTA */}
               <button
                 onClick={handleRequestRide}
-                disabled={loading || !destination || Boolean(passenger?.isBlocked)}
+                disabled={loading || !pickup || !destination || Boolean(passenger?.isBlocked)}
                 className={`w-full py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl transition-all ${
                   passenger?.isBlocked
                     ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
@@ -1940,22 +2196,31 @@ export const PassengerDashboardPage: React.FC = () => {
         {/* Right Map View */}
         <div className="lg:col-span-7 flex flex-col space-y-3">
           <MapDisplay
-            pickup={pickup}
-            destination={destination}
-            onPickupChange={handlePickupMarkerChange}
-            onDestinationChange={handleDestinationMarkerChange}
+            pickup={activeRide ? activeRide.origin : pickup}
+            destination={activeRide ? activeRide.destination : destination}
+            onPickupChange={activeRide ? undefined : handlePickupMarkerChange}
+            onDestinationChange={activeRide ? undefined : handleDestinationMarkerChange}
+            draggable={!activeRide}
+            mode={passengerMapMode}
+            viewerRole="passenger"
             drivers={activeRide ? [] : displayOnlineDrivers}
             selectedDriverId={selectedDriverId}
             onDriverSelect={(d) => setSelectedDriverId(d.uid)}
             pickupLabel={serviceType === 'delivery' ? 'Coleta' : 'Embarque'}
             destinationLabel={serviceType === 'delivery' ? 'Entrega' : 'Destino'}
             driverLocation={activeRide?.driverId ? liveDriverLocation : null}
+            passengerLocation={passengerGeo.position}
             assignedDriverTooltip={assignedTooltip}
-            height="560px"
+            onRouteInfoChange={setLiveRouteInfo}
+            onLocateGpsRequest={activeRide ? () => { passengerGeo.requestLocation(); } : requestPassengerGps}
+            height="100%"
+            className="h-[380px] sm:h-[480px] lg:h-[560px]"
             hudTitle={
-              activeRide?.driverId && !isDriverGpsFresh
-                ? 'Aguardando atualização de GPS do condutor...'
-                : undefined
+              activeRide?.driverId && !effectiveAssignedDriverSnapshot
+                ? 'Aguardando GPS do condutor...'
+                : activeRide?.driverId && !isDriverGpsFresh
+                  ? 'Última posição conhecida do condutor'
+                  : undefined
             }
           />
 

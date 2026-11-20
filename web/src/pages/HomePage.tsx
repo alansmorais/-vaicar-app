@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Car,
   Bike,
@@ -30,10 +30,11 @@ import {
   Hotel,
   ExternalLink,
 } from 'lucide-react';
-import { ridesApi } from '../api/rides.js';
-import { mapsApi, KnownLocation } from '../api/maps.js';
+import { mapsApi } from '../api/maps.js';
 import { deliveriesApi } from '../api/deliveries.js';
-import { getAuthToken } from '../api/client.js';
+import { PlaceAutocompleteInput } from '../components/PlaceAutocompleteInput.js';
+import { useGeolocation } from '../hooks/useGeolocation.js';
+import { validateOperationalPoint } from '../utils/geoNavigation.js';
 import { DeliveryWaitlistRole } from '../../../shared/src/types.js';
 
 interface DestinationCard {
@@ -170,12 +171,21 @@ const FAQ_ITEMS: FaqItem[] = [
 ];
 
 export const HomePage: React.FC = () => {
-  const [popularPlaces, setPopularPlaces] = useState<KnownLocation[]>([]);
-  const [originIndex, setOriginIndex] = useState<number>(0);
-  const [destinationIndex, setDestinationIndex] = useState<number>(4); // Maresias
-  const [estimate, setEstimate] = useState<{ fareAmount: number; distanceKm: number; durationMinutes: number } | null>(null);
-  const [loadingEstimate, setLoadingEstimate] = useState(false);
-  const [routeMetrics, setRouteMetrics] = useState<{ distanceKm: number; durationMinutes: number } | null>(null);
+  const navigate = useNavigate();
+
+  // Free-text address search state (zero predefined/hardcoded destination lists)
+  const [pickup, setPickup] = useState<{ address: string; lat: number; lng: number } | null>(null);
+  const [pickupInput, setPickupInput] = useState('');
+  const [destination, setDestination] = useState<{ address: string; lat: number; lng: number } | null>(null);
+  const [destinationInput, setDestinationInput] = useState('');
+  const [bookingGpsError, setBookingGpsError] = useState<string | null>(null);
+
+  const homeGeo = useGeolocation({
+    enabled: false,
+    watch: false,
+    enableHighAccuracy: true,
+    timeoutMs: 12_000,
+  });
 
   // Delivery waitlist form state
   const [waitlistName, setWaitlistName] = useState('');
@@ -195,49 +205,38 @@ export const HomePage: React.FC = () => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
-  const handleSelectDestination = (searchKey: string) => {
-    if (!popularPlaces.length) return;
-    const idx = popularPlaces.findIndex((p) => p.name.toLowerCase().includes(searchKey.toLowerCase()));
-    if (idx !== -1) {
-      setDestinationIndex(idx);
-      document.getElementById('simulador')?.scrollIntoView({ behavior: 'smooth' });
+  const handleUseHomeGps = useCallback(async () => {
+    setBookingGpsError(null);
+    const sample = await homeGeo.requestLocation();
+    if (!sample) {
+      if (homeGeo.error) setBookingGpsError(homeGeo.error);
+      return;
     }
-  };
+    const check = validateOperationalPoint(sample.lat, sample.lng, 'Sua localização atual');
+    if (!check.valid) {
+      setBookingGpsError(check.message || 'Sua localização atual está fora de São Sebastião.');
+      return;
+    }
+    try {
+      const rev = await mapsApi.reverseGeocode(sample.lat, sample.lng);
+      const addr = rev.address || `Meu Local (${sample.lat.toFixed(4)}, ${sample.lng.toFixed(4)})`;
+      setPickup({ address: addr, lat: sample.lat, lng: sample.lng });
+      setPickupInput(addr);
+    } catch {
+      const addr = `Meu Local (${sample.lat.toFixed(4)}, ${sample.lng.toFixed(4)})`;
+      setPickup({ address: addr, lat: sample.lat, lng: sample.lng });
+      setPickupInput(addr);
+    }
+  }, [homeGeo.requestLocation, homeGeo.error]);
 
-  useEffect(() => {
-    mapsApi.getPopularPlaces().then((places) => {
-      // The API may return a non-array payload in older or misconfigured environments.
-      // Never allow that response to crash the public homepage render.
-      const payload = places as unknown;
-      const locations = Array.isArray(payload)
-        ? payload
-        : payload && typeof payload === 'object' && Array.isArray((payload as { places?: unknown }).places)
-          ? (payload as { places: KnownLocation[] }).places
-          : [];
-      setPopularPlaces(locations as KnownLocation[]);
-    }).catch((error) => {
-      console.error('[HomePage] Could not load popular places:', error);
-      setPopularPlaces([]);
+  const handleStartRideSearch = () => {
+    navigate('/passenger', {
+      state: {
+        initialPickup: pickup,
+        initialDestination: destination,
+      },
     });
-
-  }, []);
-
-  useEffect(() => {
-    const token = getAuthToken();
-    if (!token) return;
-    if (popularPlaces.length >= 2 && popularPlaces[originIndex] && popularPlaces[destinationIndex]) {
-      setLoadingEstimate(true);
-      const origin = popularPlaces[originIndex];
-      const destination = popularPlaces[destinationIndex];
-      ridesApi.estimate({
-        origin: { address: origin.address, lat: origin.lat, lng: origin.lng },
-        destination: { address: destination.address, lat: destination.lat, lng: destination.lng },
-      })
-        .then((res) => setEstimate(res))
-        .catch((err) => console.debug('[HomePage] Estimate notice:', err))
-        .finally(() => setLoadingEstimate(false));
-    }
-  }, [originIndex, destinationIndex, popularPlaces]);
+  };
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -308,25 +307,58 @@ export const HomePage: React.FC = () => {
                   <Link to="/parcerias" className="vaicar-booking-tab"><Store aria-hidden="true" /><span>Para Empresas</span></Link>
                 </div>
                 <div className="vaicar-booking-fields">
-                  <label className="vaicar-booking-field">
-                    <MapPin aria-hidden="true" />
-                    <span className="sr-only">Ponto de Partida</span>
-                    <select aria-label="Onde você está?" value={originIndex} onChange={(e) => setOriginIndex(Number(e.target.value))}>
-                      <option value="" disabled>Onde você está?</option>
-                      {popularPlaces.map((p, idx) => <option key={p.name} value={idx}>{p.name}</option>)}
-                    </select>
-                  </label>
-                  <label className="vaicar-booking-field is-destination">
-                    <MapPin aria-hidden="true" />
-                    <span className="sr-only">Ponto de Destino</span>
-                    <select aria-label="Para onde vai?" value={destinationIndex} onChange={(e) => setDestinationIndex(Number(e.target.value))}>
-                      <option value="" disabled>Para onde vai?</option>
-                      {popularPlaces.map((p, idx) => <option key={p.name} value={idx}>{p.name}</option>)}
-                    </select>
-                  </label>
+                  <PlaceAutocompleteInput
+                    label="Endereço de embarque"
+                    placeholder="Onde você está? (rua, número, bairro)"
+                    value={pickupInput}
+                    onChange={(val) => {
+                      setPickupInput(val);
+                      if (pickup?.address !== val) setPickup(null);
+                      setBookingGpsError(null);
+                    }}
+                    onClear={() => {
+                      setPickup(null);
+                      setBookingGpsError(null);
+                    }}
+                    onSelectPlace={(place) => {
+                      setPickup(place);
+                      setPickupInput(place.address);
+                      setBookingGpsError(null);
+                    }}
+                    onUseCurrentLocation={handleUseHomeGps}
+                    isLocating={homeGeo.isLocating}
+                    confirmed={Boolean(pickup)}
+                    externalError={bookingGpsError}
+                    icon="pickup"
+                    compact
+                  />
+                  <PlaceAutocompleteInput
+                    label="Endereço de destino"
+                    placeholder="Para onde você vai? (em São Sebastião)"
+                    value={destinationInput}
+                    onChange={(val) => {
+                      setDestinationInput(val);
+                      if (destination?.address !== val) setDestination(null);
+                    }}
+                    onClear={() => setDestination(null)}
+                    onSelectPlace={(place) => {
+                      setDestination(place);
+                      setDestinationInput(place.address);
+                    }}
+                    confirmed={Boolean(destination)}
+                    icon="destination"
+                    compact
+                  />
                 </div>
-                <Link to="/passenger" className="vaicar-booking-submit"><span>Ver Motoristas Disponíveis</span><ArrowRight aria-hidden="true" /></Link>
-                <p className="vaicar-booking-safe"><ShieldCheck aria-hidden="true" />Pagamento 100% seguro no app</p>
+                <button
+                  type="button"
+                  onClick={handleStartRideSearch}
+                  className="vaicar-booking-submit"
+                >
+                  <span>Ver Motoristas Disponíveis</span>
+                  <ArrowRight aria-hidden="true" />
+                </button>
+                <p className="vaicar-booking-safe"><ShieldCheck aria-hidden="true" />Pagamento direto ao motorista parceiro</p>
               </div>
             </div>
           </div>
@@ -364,10 +396,10 @@ export const HomePage: React.FC = () => {
           {DESTINATION_CARDS.map((dest, index) => {
             const labels = ['Maresias', 'Juquehy', 'Boiçucanga', 'Camburi', 'Guaecá', 'Centro Histórico', 'Cachoeiras', 'Toque-Toque'];
             return (
-              <button type="button" key={dest.name} className="vaicar-city-photo" onClick={() => handleSelectDestination(dest.searchKey)} aria-label={`Selecionar destino ${labels[index]}`}>
+              <div key={dest.name} className="vaicar-city-photo">
                 <img src={dest.image} alt={dest.alt} loading="lazy" />
                 <span>{labels[index]}</span>
-              </button>
+              </div>
             );
           })}
         </div>
