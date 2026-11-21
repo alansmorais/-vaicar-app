@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Location Pin Silhouette for VaiCar Passageiro -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,22 C39.6,22 28,33.6 28,48 C28,67.5 54,86 54,86 C54,86 80,67.5 80,48 C80,33.6 68.4,22 54,22 Z" />
+    <!-- Inner Emerald Circle -->
+    <path
+        android:fillColor="#07966F"
+        android:pathData="M54,34 A14,14 0 1,0 54,62 A14,14 0 1,0 54,34 Z" />
+    <!-- Crisp White 'V' Emblem -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,41 L50.5,41 L54,51.5 L57.5,41 L62,41 L56.2,57 L51.8,57 Z" />
+</vector>

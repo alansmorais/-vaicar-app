@@ -676,22 +676,41 @@ export const PassengerDashboardPage: React.FC = () => {
     }
   };
 
-  // Recalculate estimate only when both pickup and destination coordinates exist
+  // Recalculate backend estimate only when planning a ride with valid São Sebastião coordinates
   useEffect(() => {
-    if (pickup?.lat && pickup?.lng && destination?.lat && destination?.lng) {
-      ridesApi
-        .estimate({
-          origin: { address: pickup.address, lat: pickup.lat, lng: pickup.lng },
-          destination: { address: destination.address, lat: destination.lat, lng: destination.lng },
-          serviceType,
-          applyReferralCredit: useReferralCredit && (referralSummary?.referralCreditBalance ?? 0) >= 5,
-        })
-        .then(setEstimate)
-        .catch(console.error);
-    } else {
+    if (
+      activeRide ||
+      !pickup ||
+      !destination ||
+      !validateOperationalPoint(pickup.lat, pickup.lng).valid ||
+      !validateOperationalPoint(destination.lat, destination.lng).valid
+    ) {
       setEstimate(null);
+      return;
     }
-  }, [pickup, destination, serviceType, useReferralCredit, referralSummary?.referralCreditBalance]);
+
+    let cancelled = false;
+    ridesApi
+      .estimate({
+        origin: { address: pickup.address, lat: pickup.lat, lng: pickup.lng },
+        destination: { address: destination.address, lat: destination.lat, lng: destination.lng },
+        serviceType,
+        applyReferralCredit: useReferralCredit && (referralSummary?.referralCreditBalance ?? 0) >= 5,
+      })
+      .then((res) => {
+        if (!cancelled) setEstimate(res);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('[PassengerDashboard] Estimate error:', err);
+          setEstimate(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRide, pickup, destination, serviceType, useReferralCredit, referralSummary?.referralCreditBalance]);
 
   const handleSelectPickup = useCallback((place: { address: string; lat: number; lng: number }) => {
     const validation = validateOperationalPoint(place.lat, place.lng, 'O ponto de embarque');

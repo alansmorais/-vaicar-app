@@ -6,7 +6,7 @@ on:
     paths: ["app/**", "*.gradle.kts", "settings.gradle.kts", "gradle.properties", ".github/workflows/vaicar-android-build.yml"]
   pull_request:
     branches: [vaicar-next]
-    paths: ["app/**", "*.gradle.kts", "settings.gradle.kts", ".github/workflows/vaicar-android-build.yml"]
+    paths: ["app/**", "*.gradle.kts", "settings.gradle.kts", "gradle.properties", ".github/workflows/vaicar-android-build.yml"]
   workflow_dispatch:
 
 permissions:
@@ -22,21 +22,70 @@ jobs:
     steps:
       - name: Check out branch
         uses: actions/checkout@v4
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Build native debug APK
-        run: gradle --no-daemon :app:assembleDebug
-      - name: Upload debug APK
+
+      - name: Run Android unit tests (Passenger + Driver)
+        run: gradle --no-daemon :app:testPassengerDebugUnitTest :app:testDriverDebugUnitTest
+
+      - name: Build independent debug APKs (Passenger + Driver)
+        run: gradle --no-daemon :app:assemblePassengerDebug :app:assembleDriverDebug
+
+      - name: Package and verify APK manifests & checksums
+        run: |
+          mkdir -p artifacts
+          cp app/build/outputs/apk/passenger/debug/app-passenger-debug.apk artifacts/VaiCar-Passageiro-debug.apk
+          cp app/build/outputs/apk/driver/debug/app-driver-debug.apk artifacts/VaiCar-Motorista-debug.apk
+
+          AAPT2=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -name aapt2 2>/dev/null | sort -V | tail -n 1)
+          echo "=== APK Build Manifest ===" > artifacts/build-manifest.txt
+          echo "Commit: ${{ github.sha }}" >> artifacts/build-manifest.txt
+          echo "Branch: ${{ github.ref_name }}" >> artifacts/build-manifest.txt
+          echo "BuiltAt: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> artifacts/build-manifest.txt
+          echo "" >> artifacts/build-manifest.txt
+          ls -lh artifacts/*.apk >> artifacts/build-manifest.txt
+          echo "" >> artifacts/build-manifest.txt
+          sha256sum artifacts/*.apk >> artifacts/build-manifest.txt
+
+          if [ -n "$AAPT2" ]; then
+            echo "" >> artifacts/build-manifest.txt
+            echo "=== aapt2 badging: VaiCar-Passageiro-debug.apk ===" >> artifacts/build-manifest.txt
+            "$AAPT2" dump badging artifacts/VaiCar-Passageiro-debug.apk | grep -E "package:|application-label:|uses-permission:|sdkVersion:|targetSdkVersion:" >> artifacts/build-manifest.txt
+            echo "" >> artifacts/build-manifest.txt
+            echo "=== aapt2 badging: VaiCar-Motorista-debug.apk ===" >> artifacts/build-manifest.txt
+            "$AAPT2" dump badging artifacts/VaiCar-Motorista-debug.apk | grep -E "package:|application-label:|uses-permission:|sdkVersion:|targetSdkVersion:" >> artifacts/build-manifest.txt
+
+            "$AAPT2" dump badging artifacts/VaiCar-Passageiro-debug.apk | grep "name='com.vaicar.passenger'"
+            "$AAPT2" dump badging artifacts/VaiCar-Motorista-debug.apk | grep "name='com.vaicar.driver'"
+          fi
+
+          cat artifacts/build-manifest.txt
+
+      - name: Upload VaiCar Passageiro Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: vaicar-native-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: VaiCar-Passageiro-debug-apk
+          path: |
+            artifacts/VaiCar-Passageiro-debug.apk
+            artifacts/build-manifest.txt
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
+
+      - name: Upload VaiCar Motorista Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: VaiCar-Motorista-debug-apk
+          path: |
+            artifacts/VaiCar-Motorista-debug.apk
+            artifacts/build-manifest.txt
+          if-no-files-found: error
+          retention-days: 30

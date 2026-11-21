@@ -14,7 +14,6 @@ import {
   MessageCircle,
   Download,
   Package,
-  Smartphone,
   AlertCircle,
   Sparkles,
   Send,
@@ -24,11 +23,6 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
-  Percent,
-  Award,
-  UtensilsCrossed,
-  Hotel,
-  ExternalLink,
 } from 'lucide-react';
 import { mapsApi } from '../api/maps.js';
 import { deliveriesApi } from '../api/deliveries.js';

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer Steering Ring for VaiCar Motorista -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#34D399"
+        android:strokeWidth="7"
+        android:pathData="M54,25 A29,29 0 1,0 54,83 A29,29 0 1,0 54,25 Z" />
+    <!-- Steering Spokes -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M29,51 L79,51 M54,54 L54,81" />
+    <!-- Center Hub with VaiCar 'V' -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,42 A12,12 0 1,0 54,66 A12,12 0 1,0 54,42 Z" />
+    <path
+        android:fillColor="#174B3B"
+        android:pathData="M48,49 L51.5,49 L54,56.5 L56.5,49 L60,49 L55.6,60 L52.4,60 Z" />
+</vector>
