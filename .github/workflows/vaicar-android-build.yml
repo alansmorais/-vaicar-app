@@ -69,6 +69,12 @@ jobs:
           fi
 
           cat artifacts/build-manifest.txt
+          {
+            echo "## VaiCar Android Independent APKs"
+            echo '```'
+            cat artifacts/build-manifest.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload VaiCar Passageiro Debug APK
         uses: actions/upload-artifact@v4

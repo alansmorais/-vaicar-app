@@ -1072,6 +1072,31 @@ fun RoleAppHost() {
 
                                 HorizontalDivider(color = VaiCarColors.SurfaceVariant)
 
+                                Text("Requisitos do Motorista", fontWeight = FontWeight.Bold, color = VaiCarColors.Forest, fontSize = 13.sp)
+                                val reqItems = listOf(
+                                    "Cadastro aprovado pela equipe VaiCar" to isApproved,
+                                    "CNH cadastrada (${currentDriver.cnhNumber?.takeIf { it.isNotBlank() } ?: "pendente"})" to !currentDriver.cnhNumber.isNullOrBlank(),
+                                    "Veículo cadastrado com placa" to (!currentDriver.vehicle?.plate.isNullOrBlank()),
+                                    "Permissão de GPS real concedida" to gpsState.hasPermission,
+                                    "Sinal GPS ativo em tempo real" to (gpsState.sample != null)
+                                )
+                                reqItems.forEach { (reqLabel, ok) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(reqLabel, fontSize = 12.sp, color = VaiCarColors.Graphite, modifier = Modifier.weight(1f))
+                                        StatusPill(
+                                            text = if (ok) "OK" else "PENDENTE",
+                                            background = if (ok) VaiCarColors.EmeraldSoft else VaiCarColors.AmberSoft,
+                                            foreground = if (ok) VaiCarColors.EmeraldDark else VaiCarColors.Amber
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(color = VaiCarColors.SurfaceVariant)
+
                                 Text("Diagnóstico GPS Real", fontWeight = FontWeight.Bold, color = VaiCarColors.Forest, fontSize = 13.sp)
                                 val sample = gpsState.sample
                                 Text(
